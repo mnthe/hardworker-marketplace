@@ -1,0 +1,21 @@
+{
+  "name": "ultrawork",
+  "version": "1.0.0",
+  "description": "Strict verification-first development mode with Session ID-based isolation, mandatory planning, success criteria, evidence collection, and zero tolerance for partial completion.",
+  "author": {
+    "name": "mnthe"
+  },
+  "keywords": [
+    "ultrawork",
+    "verification",
+    "planning",
+    "task-management",
+    "tdd",
+    "evidence-based"
+  ],
+  "license": "MIT",
+  "commands": "./commands/",
+  "agents": "./agents/",
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
+}
