@@ -15,7 +15,13 @@
   ],
   "license": "MIT",
   "commands": "./commands/",
-  "agents": "./agents/",
+  "agents": [
+    "./agents/explorer/AGENT.md",
+    "./agents/planner/AGENT.md",
+    "./agents/reviewer/AGENT.md",
+    "./agents/verifier/AGENT.md",
+    "./agents/worker/AGENT.md"
+  ],
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json"
 }
