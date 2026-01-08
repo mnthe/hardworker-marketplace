@@ -1,6 +1,6 @@
 {
   "name": "teamwork",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Multi-session collaboration plugin with role-based workers, file-per-task storage, and dashboard status. Works with vanilla Claude Code.",
   "author": {
     "name": "mnthe"

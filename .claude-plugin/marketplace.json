@@ -8,22 +8,34 @@
       "name": "ultrawork",
       "source": "./plugins/ultrawork",
       "description": "Strict verification-first development mode with session isolation, mandatory planning, success criteria, and evidence collection",
-      "version": "1.0.0",
+      "version": "0.0.1",
       "author": {
         "name": "mnthe"
       },
-      "keywords": ["ultrawork", "verification", "planning", "tdd", "evidence-based"],
+      "keywords": [
+        "ultrawork",
+        "verification",
+        "planning",
+        "tdd",
+        "evidence-based"
+      ],
       "category": "productivity"
     },
     {
       "name": "teamwork",
       "source": "./plugins/teamwork",
       "description": "Multi-session collaboration plugin with role-based workers, file-per-task storage, and dashboard status",
-      "version": "1.0.0",
+      "version": "0.0.1",
       "author": {
         "name": "mnthe"
       },
-      "keywords": ["teamwork", "collaboration", "multi-session", "workers", "parallel"],
+      "keywords": [
+        "teamwork",
+        "collaboration",
+        "multi-session",
+        "workers",
+        "parallel"
+      ],
       "category": "productivity"
     }
   ]
