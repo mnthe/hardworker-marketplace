@@ -8,9 +8,9 @@
 ├── context.json        # Explorer summaries (JSON)
 ├── design.md           # Design document (Markdown)
 ├── exploration/        # Detailed exploration (Markdown)
-│   ├── exp-1.md
-│   ├── exp-2.md
-│   └── exp-3.md
+│   ├── overview.md     # Project overview (always first)
+│   ├── exp-1.md        # Targeted exploration
+│   └── exp-N.md        # (dynamic count based on goal)
 └── tasks/              # Task files (JSON)
     ├── 1.json
     ├── 2.json
@@ -84,7 +84,8 @@ Team name derived from git repo root folder name.
 
 | Phase | Description |
 |-------|-------------|
-| `PLANNING` | Planner agent running |
+| `EXPLORATION` | Explorer agents gathering context |
+| `PLANNING` | Design and task decomposition |
 | `EXECUTION` | Workers executing tasks |
 | `VERIFICATION` | Verify task running |
 | `COMPLETE` | All criteria met |
@@ -114,10 +115,11 @@ Team name derived from git repo root folder name.
 ## State Transitions
 
 ```
-PLANNING → EXECUTION    (planner completes)
-EXECUTION → VERIFICATION (all impl tasks done)
-VERIFICATION → COMPLETE (verify passes)
+EXPLORATION → PLANNING    (explorers complete)
+PLANNING → EXECUTION      (planner completes)
+EXECUTION → VERIFICATION  (all impl tasks done)
+VERIFICATION → COMPLETE   (verify passes)
 
-Any → FAILED          (unrecoverable error)
-Any → CANCELLED       (user cancels)
+Any → FAILED              (unrecoverable error)
+Any → CANCELLED           (user cancels)
 ```

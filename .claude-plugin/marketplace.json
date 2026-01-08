@@ -8,7 +8,7 @@
       "name": "ultrawork",
       "source": "./plugins/ultrawork",
       "description": "Strict verification-first development mode with session isolation, mandatory planning, success criteria, and evidence collection",
-      "version": "0.0.2",
+      "version": "0.0.3",
       "author": {
         "name": "mnthe"
       },

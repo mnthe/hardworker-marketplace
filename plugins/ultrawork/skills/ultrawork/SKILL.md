@@ -39,10 +39,16 @@ Ultrawork enforces **verification-first development**:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ PHASE 1: EXPLORATION (Orchestrator)                         │
+│ PHASE 1: EXPLORATION (Orchestrator) - Dynamic               │
 │                                                             │
-│ → Spawn explorer sub-agents in parallel                     │
-│ → Explorers write to exploration/*.md                       │
+│ Stage 1: Quick overview (1 haiku explorer)                  │
+│   → exploration/overview.md                                 │
+│                                                             │
+│ Stage 2: Analyze overview + goal → generate hints           │
+│                                                             │
+│ Stage 3: Targeted exploration (N explorers, parallel)       │
+│   → exploration/exp-1.md, exp-2.md, ...                     │
+│                                                             │
 │ → Update context.json with summaries                        │
 └─────────────────────┬───────────────────────────────────────┘
                       │
@@ -90,9 +96,9 @@ Ultrawork enforces **verification-first development**:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ PHASE 1: EXPLORATION (Orchestrator)                         │
+│ PHASE 1: EXPLORATION (Orchestrator) - Dynamic               │
 │                                                             │
-│ → Same as interactive                                       │
+│ → Same as interactive (overview → analyze → targeted)       │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
@@ -120,9 +126,9 @@ Ultrawork enforces **verification-first development**:
 ├── context.json        # Explorer summaries (JSON)
 ├── design.md           # Design document (Markdown)
 ├── exploration/        # Detailed exploration (Markdown)
-│   ├── exp-1.md
-│   ├── exp-2.md
-│   └── exp-3.md
+│   ├── overview.md     # Project overview (always first)
+│   ├── exp-1.md        # Targeted exploration
+│   └── exp-N.md        # (dynamic count based on goal)
 └── tasks/              # Task files (JSON)
     ├── 1.json
     ├── 2.json

@@ -35,51 +35,100 @@ This creates session directory without starting execution.
 
 ---
 
-## Step 2: Exploration Phase
+## Step 2: Exploration Phase (Dynamic)
 
-Spawn explorer agents in parallel:
+Exploration happens in two stages: Overview first, then targeted based on analysis.
+
+### Stage 2a: Quick Overview
+
+Spawn ONE overview explorer first:
 
 ```python
-# Explorer 1: Project structure
 Task(
   subagent_type="ultrawork:explorer:explorer",
   model="haiku",
-  run_in_background=True,
   prompt="""
 ULTRAWORK_SESSION: {session_dir}
-EXPLORER_ID: exp-1
-SEARCH_HINT: Project structure and entry points
-"""
-)
+EXPLORER_ID: overview
+EXPLORATION_MODE: overview
 
-# Explorer 2: Architecture related to goal
-Task(
-  subagent_type="ultrawork:explorer:explorer",
-  model="sonnet",
-  run_in_background=True,
-  prompt="""
-ULTRAWORK_SESSION: {session_dir}
-EXPLORER_ID: exp-2
-SEARCH_HINT: Architecture patterns related to: {goal}
-"""
-)
-
-# Explorer 3: Test patterns
-Task(
-  subagent_type="ultrawork:explorer:explorer",
-  model="haiku",
-  run_in_background=True,
-  prompt="""
-ULTRAWORK_SESSION: {session_dir}
-EXPLORER_ID: exp-3
-SEARCH_HINT: Test file patterns and existing tests
+Perform quick project overview:
+- Project type (Next.js, Express, CLI, library, etc.)
+- Directory structure (src/, app/, lib/, etc.)
+- Tech stack (from package.json, requirements.txt, etc.)
+- Key entry points
+- Existing patterns (auth, db, api, etc.)
 """
 )
 ```
 
-Wait for all explorers. They will create:
-- `exploration/exp-1.md`, `exp-2.md`, `exp-3.md` (detailed findings)
-- `context.json` (summary with links)
+Wait for overview to complete. Read the result:
+```bash
+cat {session_dir}/exploration/overview.md
+```
+
+### Stage 2b: Analyze & Plan Targeted Exploration
+
+Based on **Overview + Goal**, decide what areas need detailed exploration.
+
+**Decision Matrix:**
+
+| Goal Keywords | Detected Stack | Explore Areas |
+|---------------|----------------|---------------|
+| auth, login, user | Next.js | middleware, api/auth, existing user model |
+| auth, login, user | Express | routes, passport config, session |
+| api, endpoint | Any | existing routes, controllers, schemas |
+| database, model | Prisma | schema.prisma, migrations, existing models |
+| database, model | TypeORM | entities, migrations |
+| test, coverage | Any | existing tests, test config, mocks |
+| ui, component | React/Next | components/, design system, styles |
+| bug, fix, error | Any | related files from error context |
+
+**Generate exploration hints dynamically:**
+
+```python
+# Analyze overview + goal
+hints = analyze_exploration_needs(overview, goal)
+
+# Example outputs:
+# Goal: "Add user authentication"
+# Overview: Next.js with Prisma, no existing auth
+# → hints = [
+#     "Authentication patterns: middleware, session, JWT",
+#     "Database: user model patterns in existing Prisma schema",
+#     "API routes: existing route patterns in app/api/"
+# ]
+```
+
+### Stage 2c: Targeted Exploration
+
+Spawn explorers for each identified area (parallel):
+
+```python
+for i, hint in enumerate(hints):
+    Task(
+      subagent_type="ultrawork:explorer:explorer",
+      model="haiku",  # or sonnet for complex areas
+      run_in_background=True,
+      prompt=f"""
+ULTRAWORK_SESSION: {session_dir}
+EXPLORER_ID: exp-{i+1}
+
+SEARCH_HINT: {hint}
+
+CONTEXT: {overview_summary}
+"""
+    )
+```
+
+Wait for all targeted explorers using TaskOutput.
+
+### Exploration Output
+
+Explorers will create:
+- `exploration/overview.md` - Project overview
+- `exploration/exp-1.md`, `exp-2.md`, ... - Targeted findings
+- `context.json` - Aggregated summary with links
 
 ---
 
@@ -88,10 +137,16 @@ Wait for all explorers. They will create:
 Read and summarize exploration results:
 
 ```bash
+# Read lightweight summary
 cat {session_dir}/context.json
+
+# Read overview first
+cat {session_dir}/exploration/overview.md
+
+# Read targeted explorations
 cat {session_dir}/exploration/exp-1.md
 cat {session_dir}/exploration/exp-2.md
-cat {session_dir}/exploration/exp-3.md
+# ... (as many as were created)
 ```
 
 Present to user:

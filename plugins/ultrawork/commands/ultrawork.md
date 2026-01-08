@@ -35,60 +35,100 @@ Parse the output to get:
 
 ---
 
-## Step 2: Exploration Phase
+## Step 2: Exploration Phase (Dynamic)
 
-<CRITICAL>
-**SPAWN EXPLORER AGENTS NOW - ALWAYS (both interactive and auto modes).**
-</CRITICAL>
+Exploration happens in two stages: Overview first, then targeted exploration.
 
-Spawn 3 explorer agents in parallel:
+### Stage 2a: Quick Overview
+
+Spawn ONE overview explorer first:
 
 ```python
-# Explorer 1: Project structure (fast)
 Task(
   subagent_type="ultrawork:explorer:explorer",
   model="haiku",
-  run_in_background=True,
   prompt="""
 ULTRAWORK_SESSION: {session_dir}
-EXPLORER_ID: exp-1
+EXPLORER_ID: overview
+EXPLORATION_MODE: overview
 
-SEARCH_HINT: Project structure and entry points
-"""
-)
-
-# Explorer 2: Architecture analysis (thorough)
-Task(
-  subagent_type="ultrawork:explorer:explorer",
-  model="sonnet",
-  run_in_background=True,
-  prompt="""
-ULTRAWORK_SESSION: {session_dir}
-EXPLORER_ID: exp-2
-
-SEARCH_HINT: Architecture patterns related to: {goal}
-"""
-)
-
-# Explorer 3: Test patterns (fast)
-Task(
-  subagent_type="ultrawork:explorer:explorer",
-  model="haiku",
-  run_in_background=True,
-  prompt="""
-ULTRAWORK_SESSION: {session_dir}
-EXPLORER_ID: exp-3
-
-SEARCH_HINT: Test file patterns and existing tests
+Perform quick project overview:
+- Project type (Next.js, Express, CLI, library, etc.)
+- Directory structure (src/, app/, lib/, etc.)
+- Tech stack (from package.json, requirements.txt, etc.)
+- Key entry points
+- Existing patterns (auth, db, api, etc.)
 """
 )
 ```
 
-Wait for all explorers using TaskOutput.
+Wait for overview to complete. Read the result:
+```bash
+cat {session_dir}/exploration/overview.md
+```
 
-Explorers will:
-- Write detailed findings to `exploration/exp-N.md`
-- Update `context.json` with summaries
+### Stage 2b: Analyze & Plan Targeted Exploration
+
+Based on **Overview + Goal**, decide what areas need detailed exploration.
+
+**Decision Matrix:**
+
+| Goal Keywords | Detected Stack | Explore Areas |
+|---------------|----------------|---------------|
+| auth, login, user | Next.js | middleware, api/auth, existing user model |
+| auth, login, user | Express | routes, passport config, session |
+| api, endpoint | Any | existing routes, controllers, schemas |
+| database, model | Prisma | schema.prisma, migrations, existing models |
+| database, model | TypeORM | entities, migrations |
+| test, coverage | Any | existing tests, test config, mocks |
+| ui, component | React/Next | components/, design system, styles |
+| bug, fix, error | Any | related files from error context |
+
+**Generate exploration hints dynamically:**
+
+```python
+# Analyze overview + goal
+hints = analyze_exploration_needs(overview, goal)
+
+# Example outputs:
+# Goal: "Add user authentication"
+# Overview: Next.js with Prisma, no existing auth
+# → hints = [
+#     "Authentication patterns: middleware, session, JWT",
+#     "Database: user model patterns in existing Prisma schema",
+#     "API routes: existing route patterns in app/api/"
+# ]
+```
+
+### Stage 2c: Targeted Exploration
+
+Spawn explorers for each identified area (parallel):
+
+```python
+for i, hint in enumerate(hints):
+    Task(
+      subagent_type="ultrawork:explorer:explorer",
+      model="haiku",  # or sonnet for complex areas
+      run_in_background=True,
+      prompt=f"""
+ULTRAWORK_SESSION: {session_dir}
+EXPLORER_ID: exp-{i+1}
+
+SEARCH_HINT: {hint}
+
+CONTEXT: {overview_summary}
+"""
+    )
+```
+
+Wait for all targeted explorers using TaskOutput.
+
+### Exploration Output
+
+Explorers will create:
+- `exploration/overview.md` - Project overview
+- `exploration/exp-1.md`, `exp-2.md`, ... - Targeted findings
+- `context.json` - Aggregated summary with links
 
 ---
 

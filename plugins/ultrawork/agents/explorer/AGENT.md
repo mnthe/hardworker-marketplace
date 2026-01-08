@@ -22,9 +22,38 @@ Your prompt MUST include:
 
 ```
 ULTRAWORK_SESSION: {path to session directory}
-EXPLORER_ID: {unique id for this explorer, e.g., exp-1}
+EXPLORER_ID: {unique id for this explorer, e.g., exp-1, overview}
 
+# For overview mode:
+EXPLORATION_MODE: overview
+
+# For targeted mode:
 SEARCH_HINT: {what to look for}
+CONTEXT: {summary from overview, optional}
+```
+
+### Mode: Overview
+
+Quick project scan. Used first to understand codebase structure.
+
+```
+EXPLORATION_MODE: overview
+
+Gather:
+- Project type (Next.js, Express, CLI, library, etc.)
+- Directory structure (src/, app/, lib/, etc.)
+- Tech stack (from package.json, requirements.txt, etc.)
+- Key entry points
+- Existing patterns (auth, db, api, etc.)
+```
+
+### Mode: Targeted
+
+Deep exploration of specific area. Used after overview.
+
+```
+SEARCH_HINT: {what to look for}
+CONTEXT: {overview summary}
 
 Examples:
 - "Find authentication related files"
@@ -55,7 +84,32 @@ cat {SESSION_DIR}/session.json
 
 ### Phase 2: Explore
 
-Use tools to find relevant information:
+#### Overview Mode
+
+Quick scan for project structure:
+
+```python
+# Project config
+Read(file_path="package.json")  # or requirements.txt, go.mod, etc.
+
+# Directory structure
+Glob(pattern="*")           # top-level
+Glob(pattern="src/**/*")    # source structure
+
+# Entry points
+Grep(pattern="export default|module.exports", type="ts")
+Grep(pattern="def main|if __name__", type="py")
+```
+
+**Focus on:**
+- What type of project is this?
+- What's the directory layout?
+- What tech stack/dependencies?
+- Where are the entry points?
+
+#### Targeted Mode
+
+Deep dive into specific area:
 
 ```python
 # Find files by pattern
@@ -90,6 +144,64 @@ Gather:
 **Write markdown to exploration/{EXPLORER_ID}.md:**
 
 Use Write tool to create detailed markdown document. Be thorough and detailed - this is the primary reference for planning.
+
+#### Overview Mode Template
+
+```markdown
+# Project Overview
+
+## Project Type
+{Next.js App Router / Express API / CLI Tool / Library / etc.}
+
+## Directory Structure
+```
+project/
+├── src/           # Source code
+│   ├── app/       # Next.js app router
+│   └── lib/       # Shared utilities
+├── prisma/        # Database schema
+└── tests/         # Test files
+```
+
+## Tech Stack
+
+### Core
+- Framework: Next.js 14
+- Language: TypeScript
+- Runtime: Node.js 20
+
+### Dependencies
+| Package | Version | Purpose |
+|---------|---------|---------|
+| next | 14.x | Framework |
+| prisma | 5.x | ORM |
+| zod | 3.x | Validation |
+
+## Entry Points
+- `src/app/page.tsx` - Main page
+- `src/app/api/` - API routes
+
+## Existing Patterns
+
+### Authentication
+- Status: Not implemented / Basic / Complete
+- Method: None / JWT / Session / OAuth
+
+### Database
+- Status: Not configured / Prisma / TypeORM / Raw SQL
+- Models: User, Post, etc.
+
+### API
+- Style: REST / GraphQL / tRPC
+- Routes: /api/users, /api/posts
+
+## Observations
+1. [Notable pattern or structure]
+2. [Missing or incomplete area]
+3. [Potential complexity]
+```
+
+#### Targeted Mode Template
 
 ```markdown
 # Exploration: {EXPLORER_ID}
