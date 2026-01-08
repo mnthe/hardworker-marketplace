@@ -1,9 +1,20 @@
 # Ultrawork State Schema
 
-## File Location
+## Directory Structure
 
 ```
-~/.claude/ultrawork/{team-name}/session.json
+~/.claude/ultrawork/{team-name}/sessions/{session-id}/
+├── session.json        # Session metadata (JSON)
+├── context.json        # Explorer summaries (JSON)
+├── design.md           # Design document (Markdown)
+├── exploration/        # Detailed exploration (Markdown)
+│   ├── exp-1.md
+│   ├── exp-2.md
+│   └── exp-3.md
+└── tasks/              # Task files (JSON)
+    ├── 1.json
+    ├── 2.json
+    └── verify.json
 ```
 
 Team name derived from git repo root folder name.

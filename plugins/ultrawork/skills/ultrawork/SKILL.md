@@ -15,34 +15,61 @@ Ultrawork enforces **verification-first development**:
 ## Activation
 
 ```
-/ultrawork "your goal here"
+/ultrawork "your goal here"           # Interactive mode (default)
+/ultrawork --auto "your goal here"    # Auto mode (no user interaction)
 ```
+
+---
+
+## Mode Comparison
+
+| Aspect | Interactive (default) | Auto (--auto) |
+|--------|----------------------|---------------|
+| Exploration | Orchestrator spawns explorers | Same |
+| Planning | Orchestrator runs planning skill | Planner sub-agent |
+| User Questions | AskUserQuestion for decisions | Auto-decide from context |
+| Confirmation | User approves plan | No confirmation |
+| Best For | Important features, unclear requirements | Well-defined tasks, CI/CD |
+
+---
 
 ## How It Works
 
+### Interactive Mode (Default)
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ PHASE 1: PLANNING                                           │
+│ PHASE 1: EXPLORATION (Orchestrator)                         │
 │                                                             │
-│ → Spawn planner agent (opus)                                │
-│ → Planner spawns explorers (sonnet) for context             │
-│ → Creates Task Graph with success criteria                  │
-│ → Includes verification task                                │
+│ → Spawn explorer sub-agents in parallel                     │
+│ → Explorers write to exploration/*.md                       │
+│ → Update context.json with summaries                        │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ PHASE 2: EXECUTION                                          │
+│ PHASE 2: PLANNING (Orchestrator - Main Agent)               │
+│                                                             │
+│ → Read context.json and exploration/*.md                    │
+│ → Use planning skill for design                             │
+│ → AskUserQuestion for decisions (one at a time)             │
+│ → Write design.md                                           │
+│ → Decompose into tasks                                      │
+│ → User confirms plan                                        │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│ PHASE 3: EXECUTION                                          │
 │                                                             │
 │ → Spawn workers for unblocked tasks                         │
 │ → Workers report evidence on completion                     │
-│ → TaskUpdate as tasks complete                              │
 │ → Next tasks unblock automatically                          │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ PHASE 3: VERIFICATION                                       │
+│ PHASE 4: VERIFICATION                                       │
 │                                                             │
 │ → Verification task runs                                    │
 │ → All evidence collected and validated                      │
@@ -51,7 +78,7 @@ Ultrawork enforces **verification-first development**:
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ PHASE 4: COMPLETE                                           │
+│ PHASE 5: COMPLETE                                           │
 │                                                             │
 │ → All criteria met with evidence                            │
 │ → Session marked complete                                   │
@@ -59,11 +86,50 @@ Ultrawork enforces **verification-first development**:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## State Management
+### Auto Mode (--auto)
 
-Session state stored in: `~/.claude/ultrawork/{team-name}/session.json`
+```
+┌─────────────────────────────────────────────────────────────┐
+│ PHASE 1: EXPLORATION (Orchestrator)                         │
+│                                                             │
+│ → Same as interactive                                       │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│ PHASE 2: PLANNING (Planner Sub-Agent)                       │
+│                                                             │
+│ → Read context.json and exploration/*.md                    │
+│ → Auto-decide based on context (no user questions)          │
+│ → Write design.md                                           │
+│ → Decompose into tasks                                      │
+│ → No confirmation needed                                    │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+                      ▼
+          [Same execution and verification phases]
+```
 
-Check status anytime: `/ultrawork-status`
+---
+
+## Session Directory Structure
+
+```
+~/.claude/ultrawork/{team-name}/sessions/{session-id}/
+├── session.json        # Session metadata (JSON)
+├── context.json        # Explorer summaries (JSON)
+├── design.md           # Design document (Markdown)
+├── exploration/        # Detailed exploration (Markdown)
+│   ├── exp-1.md
+│   ├── exp-2.md
+│   └── exp-3.md
+└── tasks/              # Task files (JSON)
+    ├── 1.json
+    ├── 2.json
+    └── verify.json
+```
+
+---
 
 ## Zero Tolerance Rules
 
@@ -86,20 +152,27 @@ Check status anytime: `/ultrawork-status`
 | "Feature works" | Demo or test proving it |
 | "Bug fixed" | Before/after showing fix |
 
+---
+
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
-| `/ultrawork "goal"` | Start session |
+| `/ultrawork "goal"` | Start session (interactive) |
+| `/ultrawork --auto "goal"` | Start session (auto) |
 | `/ultrawork-status` | Check current state |
 | `/ultrawork-evidence` | List collected evidence |
 | `/ultrawork-cancel` | Cancel session |
 
+---
+
 ## Integration
 
 Ultrawork uses:
-- **planner agent** for task decomposition
-- **Task system** for state tracking
-- **orchestration patterns** for execution
+- **explorer agents** for context gathering
+- **planning skill** for design decisions
+- **planner agent** for auto-mode planning
+- **worker agents** for task execution
+- **verifier agent** for final verification
 
 Read references/ for detailed protocols.
