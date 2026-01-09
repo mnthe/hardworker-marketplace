@@ -108,17 +108,7 @@ case "$PHASE" in
 │                                                      │
 │ 1. Read exploration/overview.md                      │
 │ 2. Analyze goal + overview → generate search hints   │
-│ 3. Spawn targeted explorers:                         │
-│                                                      │
-│ for hint in hints:                                   │
-│   Task(                                              │
-│     subagent_type=\"ultrawork:explorer\",              │
-│     model=\"haiku\",                                   │
-│     run_in_background=True,                          │
-│     prompt=\"SESSION_ID: $SESSION_ID                  │
-│             EXPLORER_ID: exp-{i}                     │
-│             SEARCH_HINT: {hint}\"                     │
-│   )                                                  │
+│ 3. Spawn targeted explorers (parallel in single msg) │
 │                                                      │
 │ ALLOWED: Read overview.md, spawn explorers           │
 │ BLOCKED: Direct exploration, file edits              │
@@ -134,7 +124,6 @@ case "$PHASE" in
 ┌─ GATE 1-2: EXPLORATION [IN PROGRESS] ───────────────┐
 │ Stage: $EXPLORATION_STAGE                            │
 │ Wait for all explorers to complete                   │
-│ Poll with: TaskOutput(task_id=..., block=False)      │
 └──────────────────────────────────────────────────────┘
 
 ┌─ GATE 3: PLANNING [LOCKED] ─────────────────────────┐

@@ -265,9 +265,8 @@ for i, hint in enumerate(hints):
 ```
 
 This ensures:
-1. `expected_explorers` is set before any background tasks start
-2. If interrupted, resume check knows what's missing
-3. `exploration_complete` auto-updates when all explorers finish
+1. `expected_explorers` is set before spawning
+2. `exploration_complete` auto-updates when all explorers finish
 
 ### Stage 2c: Targeted Exploration
 
@@ -277,16 +276,16 @@ This ensures:
 "${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --exploration-stage targeted
 ```
 
-Spawn explorers for each identified area (parallel):
+Spawn explorers for each identified area (parallel, in single message):
 
 ```python
 # Get session_dir via: Bash('"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir')
 
+# Call multiple Tasks in single message = automatic parallel execution
 for i, hint in enumerate(hints):
     Task(
       subagent_type="ultrawork:explorer:explorer",
       model="haiku",  # or sonnet for complex areas
-      run_in_background=True,
       prompt=f"""
 SESSION_ID: {SESSION_ID}
 EXPLORER_ID: exp-{i+1}
@@ -296,22 +295,7 @@ SEARCH_HINT: {hint}
 CONTEXT: {overview_summary}
 """
     )
-```
-
-**Wait for all explorers using polling pattern:**
-
-```python
-pending_tasks = [task_id_1, task_id_2, ...]
-
-while pending_tasks:
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
-    if phase.output.strip() == "CANCELLED":
-        return
-
-    for task_id in pending_tasks[:]:
-        result = TaskOutput(task_id=task_id, block=False, timeout=1000)
-        if result.status in ["completed", "error"]:
-            pending_tasks.remove(task_id)
+# All explorers run in parallel and results are collected
 ```
 
 **After all explorers complete, update exploration_stage to "complete":**
@@ -351,19 +335,7 @@ Options:
 - include_verify_task: true
 """
 )
-```
-
-**Wait for planner using polling pattern:**
-
-```python
-while True:
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
-    if phase.output.strip() == "CANCELLED":
-        return  # Exit cleanly
-
-    result = TaskOutput(task_id=planner_task_id, block=False, timeout=5000)
-    if result.status in ["completed", "error"]:
-        break
+# Foreground execution - waits for completion
 ```
 
 Skip to Step 4 (Plan Review).

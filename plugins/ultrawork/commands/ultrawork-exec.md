@@ -36,23 +36,16 @@ The orchestrator MUST delegate work to sub-agents. Direct execution is prohibite
 
 ---
 
-## Interruptibility (Background + Polling)
+## Sub-agent Execution
 
-To allow user interruption during execution, use **background execution with polling**.
+Sub-agents can be run in **foreground** (default) or **background** mode. Choose based on the situation:
 
-```python
-# Poll pattern for all Task waits
-while True:
-    # Check if session was cancelled
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
-    if phase.output.strip() == "CANCELLED":
-        return  # Exit cleanly
+| Mode | When to Use |
+|------|-------------|
+| **Foreground** | Sequential tasks, need result immediately |
+| **Background** | Parallel execution with worker pool limits |
 
-    # Non-blocking check
-    result = TaskOutput(task_id=task_id, block=False, timeout=5000)
-    if result.status in ["completed", "error"]:
-        break
-```
+**Parallel execution**: Call multiple Tasks in a single message for automatic parallelization.
 
 ---
 
@@ -214,15 +207,9 @@ while iteration <= max_iterations:
 
 ```python
 def run_execution_phase(SESSION_ID, max_workers):
-    active_workers = {}  # task_id -> agent_task_id
     # Get session_dir via: Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir')
 
     while True:
-        # Cancel check at start of each loop
-        phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
-        if phase.output.strip() == "CANCELLED":
-            return "CANCELLED"
-
         # Get current task states
         tasks_output = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session {SESSION_ID} --format json')
         tasks = json.loads(tasks_output.output)
@@ -230,25 +217,22 @@ def run_execution_phase(SESSION_ID, max_workers):
         # Categorize tasks (exclude verify task for now)
         non_verify_tasks = [t for t in tasks if t["id"] != "verify"]
         unblocked = [t for t in non_verify_tasks if t["status"] == "pending" and all_deps_complete(t, tasks)]
-        in_progress = [t for t in non_verify_tasks if t["status"] == "in_progress"]
         all_done = all(t["status"] == "resolved" for t in non_verify_tasks)
 
         if all_done:
             return "DONE"  # Move to verification
 
-        # Spawn workers for unblocked tasks (respect max_workers)
-        for task in unblocked:
-            if max_workers > 0 and len(active_workers) >= max_workers:
-                break
-
+        # Spawn workers for unblocked tasks
+        # Call multiple Tasks in single message = automatic parallel execution
+        batch = unblocked[:max_workers] if max_workers > 0 else unblocked
+        for task in batch:
             # Mark task as in_progress
             Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {SESSION_ID} --id {task["id"]} --status in_progress')
 
             model = "opus" if task["complexity"] == "complex" else "sonnet"
-            agent_result = Task(
+            Task(
                 subagent_type="ultrawork:worker:worker",
                 model=model,
-                run_in_background=True,
                 prompt=f"""
 SESSION_ID: {SESSION_ID}
 TASK_ID: {task["id"]}
@@ -260,23 +244,8 @@ SUCCESS CRITERIA:
 {task["criteria"]}
 """
             )
-            active_workers[task["id"]] = agent_result.task_id
             print(f"→ Started: {task['id']} - {task['subject']}")
-
-        # Poll active workers (non-blocking)
-        for task_id, agent_task_id in list(active_workers.items()):
-            result = TaskOutput(task_id=agent_task_id, block=False, timeout=1000)
-            if result.status == "completed":
-                del active_workers[task_id]
-                print(f"✓ Completed: {task_id}")
-            elif result.status == "error":
-                del active_workers[task_id]
-                # Mark task as failed
-                Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {SESSION_ID} --id {task_id} --status failed')
-                print(f"✗ Failed: {task_id}")
-
-        # Brief pause to avoid tight loop (yield control)
-        # This allows cancel check to run
+        # All workers in batch complete before next iteration
 ```
 
 ---
@@ -287,21 +256,15 @@ SUCCESS CRITERIA:
 def run_verification_phase(SESSION_ID):
     # Get session_dir via: Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir')
 
-    # Cancel check before verification
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
-    if phase.output.strip() == "CANCELLED":
-        return "CANCELLED"
-
     # Update phase
     Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --phase VERIFICATION')
 
     print("## Running Verification...")
 
-    # Spawn verifier
-    verifier_result = Task(
+    # Spawn verifier (foreground - waits for completion)
+    result = Task(
         subagent_type="ultrawork:verifier:verifier",
         model="opus",
-        run_in_background=True,
         prompt=f"""
 SESSION_ID: {SESSION_ID}
 
@@ -313,21 +276,11 @@ Return: PASS or FAIL with details
 """
     )
 
-    # Poll verifier with cancel check
-    while True:
-        phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
-        if phase.output.strip() == "CANCELLED":
-            return "CANCELLED"
-
-        result = TaskOutput(task_id=verifier_result.task_id, block=False, timeout=5000)
-        if result.status == "completed":
-            # Parse verifier output
-            if "PASS" in result.output:
-                return "PASS"
-            else:
-                return "FAIL"
-        elif result.status == "error":
-            return "FAIL"
+    # Parse verifier output
+    if "PASS" in result.output:
+        return "PASS"
+    else:
+        return "FAIL"
 ```
 
 ---

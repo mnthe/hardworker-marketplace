@@ -515,40 +515,29 @@ AskUserQuestion(questions=[{
 "${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --phase EXECUTION
 ```
 
-### 5b. Execution Loop with Polling
+### 5b. Execution Loop
 
 ```python
-active_workers = {}  # task_id -> agent_task_id
 # Get session_dir via: Bash('"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir')
 
 while True:
-    # Cancel check at start of each loop
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
-    if phase.output.strip() == "CANCELLED":
-        print("Session cancelled. Stopping execution.")
-        return
-
     # Find unblocked pending tasks
     tasks_output = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session {SESSION_ID} --format json')
     tasks = json.loads(tasks_output.output)
 
     unblocked = [t for t in tasks if t["status"] == "pending" and all_deps_complete(t, tasks)]
-    in_progress = [t for t in tasks if t["status"] == "in_progress"]
     all_done = all(t["status"] == "resolved" for t in tasks)
 
     if all_done:
         break  # Move to verification
 
-    # Spawn workers for unblocked tasks (respect max_workers)
-    for task in unblocked:
-        if len(active_workers) >= max_workers and max_workers > 0:
-            break
-
+    # Spawn workers for unblocked tasks
+    # Option A: Parallel in single message (automatic parallelization)
+    for task in unblocked[:max_workers] if max_workers > 0 else unblocked:
         model = "opus" if task["complexity"] == "complex" else "sonnet"
-        agent_result = Task(
+        Task(
             subagent_type="ultrawork:worker:worker",
             model=model,
-            run_in_background=True,
             prompt=f"""
 SESSION_ID: {SESSION_ID}
 TASK_ID: {task["id"]}
@@ -560,14 +549,7 @@ SUCCESS CRITERIA:
 {task["criteria"]}
 """
         )
-        active_workers[task["id"]] = agent_result.task_id
-
-    # Poll active workers (non-blocking)
-    for task_id, agent_task_id in list(active_workers.items()):
-        result = TaskOutput(task_id=agent_task_id, block=False, timeout=1000)
-        if result.status in ["completed", "error"]:
-            del active_workers[task_id]
-            # Task file is updated by worker agent
+    # All workers in this batch complete before next iteration
 ```
 
 ### 5c. Verification Phase
@@ -577,19 +559,13 @@ When all tasks complete, spawn verifier:
 ```python
 # Get session_dir via: Bash('"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir')
 
-# Cancel check before verification
-phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
-if phase.output.strip() == "CANCELLED":
-    return
-
 # Update phase
 Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --phase VERIFICATION')
 
-# Spawn verifier
-verifier_result = Task(
+# Spawn verifier (foreground - waits for completion)
+Task(
     subagent_type="ultrawork:verifier:verifier",
     model="opus",
-    run_in_background=True,
     prompt=f"""
 SESSION_ID: {SESSION_ID}
 
@@ -598,16 +574,6 @@ Check for blocked patterns.
 Run final tests.
 """
 )
-
-# Poll verifier with cancel check
-while True:
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
-    if phase.output.strip() == "CANCELLED":
-        return
-
-    result = TaskOutput(task_id=verifier_result.task_id, block=False, timeout=5000)
-    if result.status in ["completed", "error"]:
-        break
 ```
 
 ### 5d. Completion
