@@ -5,24 +5,24 @@ description: "Quick project overview exploration - direct execution without agen
 
 # Overview Exploration Skill
 
-프로젝트 개요를 빠르게 파악하는 직접 탐색 스킬입니다. Agent spawn 없이 직접 실행합니다.
+Quick project overview exploration skill executed directly without agent spawn.
 
 ---
 
 ## When to Use
 
-- ultrawork 세션 시작 시 (GATE 1)
-- 프로젝트 구조 파악이 필요할 때
-- Targeted exploration 전 컨텍스트 수집
+- At the start of ultrawork sessions (GATE 1)
+- When project structure understanding is needed
+- Context collection before targeted exploration
 
 ---
 
 ## Execution Steps
 
-### Step 1: 프로젝트 설정 파일 확인
+### Step 1: Check Project Config Files
 
 ```python
-# 언어/프레임워크 감지
+# Detect language/framework
 Glob(pattern="package.json")      # Node.js/JS
 Glob(pattern="go.mod")            # Go
 Glob(pattern="requirements.txt")  # Python
@@ -31,18 +31,18 @@ Glob(pattern="pom.xml")           # Java/Maven
 Glob(pattern="*.csproj")          # .NET
 ```
 
-발견된 파일 읽기:
+Read discovered files:
 ```python
-Read(file_path="package.json")  # 또는 해당 설정 파일
+Read(file_path="package.json")  # or the relevant config file
 ```
 
-### Step 2: 디렉토리 구조 파악
+### Step 2: Understand Directory Structure
 
 ```python
-# 최상위 구조
+# Top-level structure
 Glob(pattern="*", path=".")
 
-# 주요 소스 디렉토리
+# Main source directories
 Glob(pattern="src/*")
 Glob(pattern="app/*")
 Glob(pattern="lib/*")
@@ -50,24 +50,24 @@ Glob(pattern="internal/*")
 Glob(pattern="cmd/*")
 ```
 
-### Step 3: 핵심 패턴 탐색
+### Step 3: Explore Core Patterns
 
 ```python
-# 설정 파일들
+# Config files
 Glob(pattern="**/*.config.*")
 Glob(pattern="**/.*rc")
 Glob(pattern="**/*.json", path=".")
 
-# 테스트 구조
+# Test structure
 Glob(pattern="**/*_test.*")
 Glob(pattern="**/*.test.*")
 Glob(pattern="**/test/**/*")
 ```
 
-### Step 4: 기존 문서 확인 (있다면)
+### Step 4: Check Existing Documentation (if any)
 
 ```python
-# README, CLAUDE.md 등
+# README, CLAUDE.md, etc.
 Read(file_path="README.md")
 Read(file_path="CLAUDE.md")
 Read(file_path=".claude/CLAUDE.md")
@@ -77,49 +77,49 @@ Read(file_path=".claude/CLAUDE.md")
 
 ## Output Format
 
-탐색 완료 후 다음 형식으로 요약:
+Summarize in the following format after exploration:
 
 ```markdown
-## Overview 탐색 결과
+## Overview Exploration Results
 
-**프로젝트 유형**: {Next.js / Express / Go CLI / Python Library / etc.}
+**Project Type**: {Next.js / Express / Go CLI / Python Library / etc.}
 
-**기술 스택**:
+**Tech Stack**:
 - Language: {TypeScript / Go / Python / etc.}
 - Framework: {Next.js / Express / Gin / etc.}
-- Database: {PostgreSQL / MongoDB / etc.} (있다면)
+- Database: {PostgreSQL / MongoDB / etc.} (if any)
 - Test: {Jest / pytest / go test / etc.}
 
-**디렉토리 구조**:
+**Directory Structure**:
 ```
 project/
-├── src/           # {설명}
-├── app/           # {설명}
-├── lib/           # {설명}
-└── tests/         # {설명}
+├── src/           # {description}
+├── app/           # {description}
+├── lib/           # {description}
+└── tests/         # {description}
 ```
 
-**핵심 진입점**:
+**Key Entry Points**:
 - {main entry file}
 - {api routes if any}
 
-**기존 패턴**:
+**Existing Patterns**:
 - {auth: implemented/not found}
 - {database: prisma/typeorm/raw sql/not found}
 - {api: rest/graphql/trpc/not found}
 
-**관련 파일** (Goal 기준):
-- {file1}: {이유}
-- {file2}: {이유}
+**Relevant Files** (based on Goal):
+- {file1}: {reason}
+- {file2}: {reason}
 ```
 
 ---
 
 ## Session Integration
 
-ultrawork 세션에서 사용 시:
+When using within an ultrawork session:
 
-### 1. exploration_stage 업데이트
+### 1. Update exploration_stage
 
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" \
@@ -127,16 +127,16 @@ ultrawork 세션에서 사용 시:
   --exploration-stage overview
 ```
 
-### 2. overview.md 저장
+### 2. Save overview.md
 
 ```python
 Write(
   file_path="{session_dir}/exploration/overview.md",
-  content="{위 형식의 탐색 결과}"
+  content="{exploration results in above format}"
 )
 ```
 
-### 3. context.json 초기화
+### 3. Initialize context.json
 
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/scripts/context-init.sh" \
@@ -148,19 +148,19 @@ Write(
 
 ## Time Budget
 
-- 목표: **30초 이내** 완료
-- 최대 Read: 5-7개 파일
-- 최대 Glob: 10개 패턴
+- Target: Complete within **30 seconds**
+- Max Read: 5-7 files
+- Max Glob: 10 patterns
 
-**과도한 탐색 금지** - Overview는 빠른 파악이 목적입니다.
-Targeted exploration이 상세 탐색을 담당합니다.
+**No excessive exploration** - Overview aims for quick understanding.
+Targeted exploration handles detailed investigation.
 
 ---
 
 ## Next Steps
 
-Overview 완료 후:
+After Overview completion:
 
-1. Goal + Overview 분석 → Targeted exploration hints 생성
-2. `Task(subagent_type="ultrawork:explorer")` 로 상세 탐색
-3. 모든 탐색 완료 → Planning phase 진행
+1. Analyze Goal + Overview → Generate targeted exploration hints
+2. Detailed exploration via `Task(subagent_type="ultrawork:explorer")`
+3. All exploration complete → Proceed to Planning phase

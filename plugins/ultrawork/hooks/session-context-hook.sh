@@ -66,19 +66,19 @@ case "$PHASE" in
       # Gate system for interactive planning
       case "$EXPLORATION_STAGE" in
         not_started)
-          NEXT_ACTION="⛔ GATE SYSTEM - Skill 기반 탐색
+          NEXT_ACTION="⛔ GATE SYSTEM - Skill-based Exploration
 
 ┌─ GATE 1: OVERVIEW [CURRENT] ────────────────────────┐
 │                                                      │
-│ FIRST ACTION (필수):                                 │
+│ FIRST ACTION (required):                             │
 │ Skill(skill=\"ultrawork:overview-exploration\")        │
 │                                                      │
-│ 직접 탐색 (Agent spawn 없음):                        │
-│ ✓ Glob, Read, Grep 사용하여 프로젝트 구조 파악       │
-│ ✓ overview.md 작성                                   │
-│ ✗ 파일 수정 금지 (Edit, Write - overview.md 제외)    │
+│ Direct exploration (no agent spawn):                 │
+│ ✓ Use Glob, Read, Grep to understand project        │
+│ ✓ Write overview.md                                  │
+│ ✗ No file edits (Edit, Write - except overview.md)  │
 │                                                      │
-│ Skill이 안내하는 절차를 따르세요.                    │
+│ Follow the procedure guided by the skill.           │
 └──────────────────────────────────────────────────────┘
 
 ┌─ GATE 2: TARGETED EXPLORATION [LOCKED] ─────────────┐

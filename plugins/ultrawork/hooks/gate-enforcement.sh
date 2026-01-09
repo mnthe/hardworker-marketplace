@@ -83,19 +83,19 @@ Current Phase: PLANNING
 Blocked Tool: $TOOL
 Target File: $FILE_PATH
 
-PLANNING 단계에서는 직접 파일 수정이 금지됩니다.
+Direct file modifications are prohibited during PLANNING phase.
 
-올바른 절차:
-1. design.md 작성 (Write 허용)
-2. task-create.sh로 태스크 생성
-3. 사용자 승인 받기
-4. EXECUTION 단계로 전환
-5. Worker agent가 실제 작업 수행
+Correct procedure:
+1. Write design.md (Write allowed)
+2. Create tasks with task-create.sh
+3. Get user approval
+4. Transition to EXECUTION phase
+5. Worker agent performs actual work
 
-허용된 파일:
-- design.md (계획 문서)
-- session.json, context.json (세션 상태)
-- exploration/*.md (탐색 결과)"}
+Allowed files:
+- design.md (planning document)
+- session.json, context.json (session state)
+- exploration/*.md (exploration results)"}
 EOF
 
 exit 0

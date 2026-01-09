@@ -223,12 +223,12 @@ For each unclear aspect, ask in order:
 **1. Scope Clarification** (if ambiguous)
 ```python
 AskUserQuestion(questions=[{
-  "question": "이 기능의 범위가 어디까지인가요?",
+  "question": "What is the scope of this feature?",
   "header": "Scope",
   "options": [
-    {"label": "MVP만 (Recommended)", "description": "핵심 기능만 구현"},
-    {"label": "전체 구현", "description": "모든 세부 기능 포함"},
-    {"label": "프로토타입", "description": "동작 확인용 최소 구현"}
+    {"label": "MVP only (Recommended)", "description": "Core functionality only"},
+    {"label": "Full implementation", "description": "Include all detailed features"},
+    {"label": "Prototype", "description": "Minimal implementation for validation"}
   ],
   "multiSelect": False
 }])
@@ -237,12 +237,12 @@ AskUserQuestion(questions=[{
 **2. Architecture Choice** (if multiple approaches)
 ```python
 AskUserQuestion(questions=[{
-  "question": "어떤 아키텍처 패턴을 사용할까요?",
+  "question": "Which architecture pattern should we use?",
   "header": "Architecture",
   "options": [
-    {"label": "기존 패턴 따름 (Recommended)", "description": "프로젝트 일관성 유지"},
-    {"label": "새 패턴 도입", "description": "더 나은 구조로 변경"},
-    {"label": "하이브리드", "description": "점진적 마이그레이션"}
+    {"label": "Follow existing patterns (Recommended)", "description": "Maintain project consistency"},
+    {"label": "Introduce new pattern", "description": "Change to better structure"},
+    {"label": "Hybrid", "description": "Gradual migration"}
   ],
   "multiSelect": False
 }])
@@ -251,12 +251,12 @@ AskUserQuestion(questions=[{
 **3. Library Selection** (if choices exist)
 ```python
 AskUserQuestion(questions=[{
-  "question": "어떤 라이브러리를 사용할까요?",
+  "question": "Which library should we use?",
   "header": "Library",
   "options": [
-    {"label": "next-auth (Recommended)", "description": "Next.js 표준, OAuth 지원"},
-    {"label": "passport.js", "description": "유연한 전략 패턴"},
-    {"label": "직접 구현", "description": "의존성 최소화"}
+    {"label": "next-auth (Recommended)", "description": "Next.js standard, OAuth support"},
+    {"label": "passport.js", "description": "Flexible strategy pattern"},
+    {"label": "Custom implementation", "description": "Minimize dependencies"}
   ],
   "multiSelect": False
 }])
@@ -265,12 +265,12 @@ AskUserQuestion(questions=[{
 **4. Priority/Order** (if multiple features)
 ```python
 AskUserQuestion(questions=[{
-  "question": "어떤 기능을 먼저 구현할까요?",
+  "question": "Which feature should we implement first?",
   "header": "Priority",
   "options": [
-    {"label": "인증 먼저", "description": "다른 기능의 기반"},
-    {"label": "UI 먼저", "description": "빠른 피드백"},
-    {"label": "API 먼저", "description": "프론트/백엔드 병렬 작업"}
+    {"label": "Auth first", "description": "Foundation for other features"},
+    {"label": "UI first", "description": "Quick feedback"},
+    {"label": "API first", "description": "Parallel frontend/backend work"}
   ],
   "multiSelect": False
 }])
@@ -303,11 +303,11 @@ Present design in sections (200-300 words each):
 Ask for confirmation:
 ```python
 AskUserQuestion(questions=[{
-  "question": "Overview가 맞나요?",
+  "question": "Does the overview look correct?",
   "header": "Confirm",
   "options": [
-    {"label": "네, 계속", "description": "다음 섹션으로"},
-    {"label": "수정 필요", "description": "피드백 있음"}
+    {"label": "Yes, continue", "description": "Proceed to next section"},
+    {"label": "Needs revision", "description": "I have feedback"}
   ],
   "multiSelect": False
 }])
@@ -433,12 +433,12 @@ Present task breakdown for approval:
 
 ```python
 AskUserQuestion(questions=[{
-  "question": "계획이 완성되었습니다. 어떻게 할까요?",
+  "question": "Planning is complete. What would you like to do?",
   "header": "Next",
   "options": [
-    {"label": "저장만", "description": "나중에 /ultrawork-exec로 실행"},
-    {"label": "바로 실행", "description": "지금 실행 시작"},
-    {"label": "수정", "description": "태스크 수정"}
+    {"label": "Save only", "description": "Execute later with /ultrawork-exec"},
+    {"label": "Execute now", "description": "Start execution immediately"},
+    {"label": "Modify", "description": "Edit tasks"}
   ],
   "multiSelect": False
 }])
