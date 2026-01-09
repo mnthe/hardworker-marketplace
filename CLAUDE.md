@@ -245,6 +245,27 @@ Commands delegate to agents or scripts:
 Command (.md) → Agent (AGENT.md) → Script (.sh) → State (JSON)
 ```
 
+### Script Modification Rules
+
+**When modifying scripts, you MUST check and sync all calling components:**
+
+```
+When modifying Script (.sh), check:
+├── Agents (agents/*/AGENT.md)    → Agents that call the script
+├── Skills (skills/*.md)          → Skills that call the script
+└── Commands (commands/*.md)      → Commands that call the script
+```
+
+**How to check:**
+```bash
+# Find files that reference a specific script
+grep -r "script-name.sh" agents/ skills/ commands/
+```
+
+**Why this matters:**
+- Script interface changes (parameters, output format) require caller updates
+- Script deletion/rename causes errors in callers
+
 ### Hook System
 
 Lifecycle hooks for automation:
