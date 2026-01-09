@@ -105,8 +105,7 @@ Each task is stored as a separate JSON file in the `tasks/` directory.
   "evidence": [
     "npx prisma migrate deploy: All migrations applied successfully",
     "npm test: All tests passed"
-  ],
-  "retry_count": 0
+  ]
 }
 ```
 
@@ -120,7 +119,6 @@ Each task is stored as a separate JSON file in the `tasks/` directory.
 | `complexity` | string | `trivial`, `standard`, `complex` |
 | `criteria` | string[] | Success criteria list |
 | `evidence` | string[] | Evidence strings (command outputs, results) |
-| `retry_count` | number | Current retry attempt |
 
 ## Phase Values
 

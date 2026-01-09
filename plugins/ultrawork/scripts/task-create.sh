@@ -82,8 +82,7 @@ cat > "$TASK_FILE" << EOF
   "blockedBy": $BLOCKED_BY_JSON,
   "complexity": "$COMPLEXITY",
   "criteria": $CRITERIA_JSON,
-  "evidence": [],
-  "retry_count": 0
+  "evidence": []
 }
 EOF
 
