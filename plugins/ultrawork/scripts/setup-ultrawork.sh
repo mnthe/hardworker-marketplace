@@ -206,6 +206,9 @@ cat > "$SESSION_FILE" <<EOF
   "phase": "PLANNING",
   "exploration_stage": "not_started",
   "iteration": 1,
+  "plan": {
+    "approved_at": null
+  },
   "options": {
     "max_workers": $MAX_WORKERS,
     "max_iterations": $MAX_ITERATIONS,

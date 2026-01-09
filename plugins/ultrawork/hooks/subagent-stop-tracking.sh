@@ -43,13 +43,10 @@ WORKER_EXISTS=$(jq -e --arg aid "$AGENT_ID" '
 ' "$SESSION_FILE" 2>/dev/null || echo "false")
 
 if [[ "$WORKER_EXISTS" != "true" ]]; then
-  # Check if this task_id exists in our session
+  # Check if this task_id exists in our session (tasks are stored as individual files)
   if [[ -n "$TASK_ID" ]]; then
-    TASK_EXISTS=$(jq -e --arg tid "$TASK_ID" '
-      .child_tasks // [] | any(. == $tid)
-    ' "$SESSION_FILE" 2>/dev/null || echo "false")
-
-    if [[ "$TASK_EXISTS" != "true" ]]; then
+    TASK_FILE="$SESSION_DIR/tasks/$TASK_ID.json"
+    if [[ ! -f "$TASK_FILE" ]]; then
       exit 0  # Not an ultrawork worker
     fi
   else

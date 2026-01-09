@@ -1,6 +1,6 @@
 #!/bin/bash
 # task-update.sh - Update task status and evidence
-# Usage: task-update.sh --session <ID> --id <task_id> [--status open|resolved] [--add-evidence "..."]
+# Usage: task-update.sh --session <ID> --id <task_id> [--status open|resolved] [--add-evidence "..."] [--retry-count N]
 
 set -euo pipefail
 
@@ -12,6 +12,7 @@ SESSION_ID=""
 TASK_ID=""
 NEW_STATUS=""
 ADD_EVIDENCE=""
+RETRY_COUNT=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -19,8 +20,9 @@ while [[ $# -gt 0 ]]; do
     --id) TASK_ID="$2"; shift 2 ;;
     --status) NEW_STATUS="$2"; shift 2 ;;
     --add-evidence) ADD_EVIDENCE="$2"; shift 2 ;;
+    --retry-count) RETRY_COUNT="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: task-update.sh --session <ID> --id <task_id> [--status open|resolved] [--add-evidence \"...\"]"
+      echo "Usage: task-update.sh --session <ID> --id <task_id> [--status open|resolved] [--add-evidence \"...\"] [--retry-count N]"
       exit 0
       ;;
     *) shift ;;
@@ -52,6 +54,10 @@ if [[ -n "$ADD_EVIDENCE" ]]; then
   # Escape quotes in evidence
   ESCAPED_EVIDENCE=$(echo "$ADD_EVIDENCE" | sed 's/"/\\"/g')
   JQ_EXPR="$JQ_EXPR | .evidence += [\"$ESCAPED_EVIDENCE\"]"
+fi
+
+if [[ -n "$RETRY_COUNT" ]]; then
+  JQ_EXPR="$JQ_EXPR | .retry_count = $RETRY_COUNT"
 fi
 
 # Update file

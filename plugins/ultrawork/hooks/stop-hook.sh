@@ -88,7 +88,16 @@ esac
 
 # Enhanced evidence validation
 EVIDENCE_COUNT=$(jq '.evidence_log | length' "$SESSION_FILE" 2>/dev/null || echo "0")
-COMPLETED_TASKS=$(jq '[.child_tasks[]? | select(.status == "completed")] | length' "$SESSION_FILE" 2>/dev/null || echo "0")
+# Count completed tasks from tasks directory (tasks are stored as individual files)
+TASKS_DIR="$SESSION_DIR/tasks"
+COMPLETED_TASKS=0
+if [[ -d "$TASKS_DIR" ]]; then
+  for task_file in "$TASKS_DIR"/*.json; do
+    [[ -e "$task_file" ]] || continue
+    task_status=$(jq -r '.status // "open"' "$task_file" 2>/dev/null || echo "open")
+    [[ "$task_status" == "resolved" ]] && ((COMPLETED_TASKS++)) || true
+  done
+fi
 
 # Check for blocked phrases in recent evidence
 BLOCKED_PHRASES=("should work" "probably works" "basic implementation" "TODO:" "FIXME:" "you can extend")

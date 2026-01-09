@@ -50,8 +50,12 @@ PLAN_ONLY=$(grep -o '"plan_only": *[^,}]*' "$SESSION_FILE" | cut -d':' -f2 | tr 
 MAX_WORKERS=$(grep -o '"max_workers": *[0-9]*' "$SESSION_FILE" | cut -d':' -f2 | tr -d ' ' || echo "0")
 AUTO_MODE=$(grep -o '"auto_mode": *[^,}]*' "$SESSION_FILE" | cut -d':' -f2 | tr -d ' ' || echo "false")
 
-# Count tasks and evidence (tr -d '[:space:]' removes all whitespace including newlines)
-CHILD_TASKS=$(grep -o '"child_tasks": *\[[^]]*\]' "$SESSION_FILE" 2>/dev/null | grep -o '"[^"]*"' 2>/dev/null | wc -l | tr -d '[:space:]') || CHILD_TASKS="0"
+# Count tasks from tasks directory (tasks are stored as individual files)
+TASKS_DIR="$SESSION_DIR/tasks"
+TASK_COUNT=0
+if [[ -d "$TASKS_DIR" ]]; then
+  TASK_COUNT=$(find "$TASKS_DIR" -name "*.json" -type f 2>/dev/null | wc -l | tr -d '[:space:]') || TASK_COUNT="0"
+fi
 EVIDENCE_COUNT=$(grep -c '"criteria":' "$SESSION_FILE" 2>/dev/null | tr -d '[:space:]') || EVIDENCE_COUNT="0"
 PLANNER_STATUS=$(grep -o '"status": *"[^"]*"' "$SESSION_FILE" | head -1 | cut -d'"' -f4 || echo "unknown")
 
@@ -201,7 +205,7 @@ Session ID: $SESSION_ID
 Goal: $GOAL
 Phase: $PHASE
 Exploration: $EXPLORATION_STAGE
-Tasks: $CHILD_TASKS
+Tasks: $TASK_COUNT
 Evidence: $EVIDENCE_COUNT items
 
 Options:

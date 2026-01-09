@@ -683,7 +683,9 @@ Check verifier result and update session:
 "${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --phase COMPLETE
 
 # If FAIL and iterations remaining
-"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --phase EXECUTION --increment-iteration
+current_iteration=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field iteration)
+next_iteration=$((current_iteration + 1))
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --phase EXECUTION --iteration $next_iteration
 # Loop back to 5b
 ```
 
