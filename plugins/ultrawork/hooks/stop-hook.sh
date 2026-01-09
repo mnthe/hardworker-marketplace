@@ -152,28 +152,49 @@ if [[ "$PHASE" == "EXECUTION" ]]; then
   fi
 fi
 
-# Check for retry marker (execute->verify loop)
-TRANSCRIPT_PATH=$(echo "$HOOK_INPUT" | jq -r '.transcript_path // ""')
-if [[ -n "$TRANSCRIPT_PATH" && -f "$TRANSCRIPT_PATH" ]]; then
-  # Check if last output contains retry marker
-  if grep -q "__ULTRAWORK_RETRY__" "$TRANSCRIPT_PATH" 2>/dev/null; then
-    ITERATION=$(jq -r '.iteration // 1' "$SESSION_FILE")
-    MAX_ITERATIONS=$(jq -r '.options.max_iterations // 5' "$SESSION_FILE")
+# Ralph Loop: Check session status for auto-continuation
+AUTO_LOOP=$(jq -r '.options.auto_loop // false' "$SESSION_FILE" 2>/dev/null || echo "false")
+ITERATION=$(jq -r '.iteration // 1' "$SESSION_FILE" 2>/dev/null || echo "1")
+MAX_ITERATIONS=$(jq -r '.options.max_iterations // 10' "$SESSION_FILE" 2>/dev/null || echo "10")
 
-    if [[ $ITERATION -lt $MAX_ITERATIONS ]]; then
-      # Continue with execution loop
-      jq -n \
-        --arg session_id "$SESSION_ID" \
-        --arg goal "$GOAL" \
-        --arg iteration "$ITERATION" \
-        --arg max "$MAX_ITERATIONS" \
-        '{
-          "decision": "block",
-          "reason": ("Continue execution after verification failure.\n\nIteration: " + $iteration + "/" + $max),
-          "systemMessage": ("🔄 ULTRAWORK [" + $session_id + "]: Retry iteration " + $iteration + " - " + $goal)
-        }'
-      exit 0
-    fi
+if [[ "$AUTO_LOOP" == "true" ]] && [[ "$PHASE" == "EXECUTION" || "$PHASE" == "VERIFICATION" ]]; then
+  # Count pending/in_progress tasks
+  TASKS_DIR="$SESSION_DIR/tasks"
+  PENDING_COUNT=0
+  IN_PROGRESS_COUNT=0
+
+  if [[ -d "$TASKS_DIR" ]]; then
+    for task_file in "$TASKS_DIR"/*.json; do
+      [[ -e "$task_file" ]] || continue
+      task_status=$(jq -r '.status // "open"' "$task_file" 2>/dev/null || echo "open")
+      case "$task_status" in
+        open|pending) ((PENDING_COUNT++)) || true ;;
+        in_progress) ((IN_PROGRESS_COUNT++)) || true ;;
+      esac
+    done
+  fi
+
+  REMAINING=$((PENDING_COUNT + IN_PROGRESS_COUNT))
+
+  # If tasks remain and under max iterations, continue
+  if [[ $REMAINING -gt 0 && $ITERATION -lt $MAX_ITERATIONS ]]; then
+    # Increment iteration
+    jq --argjson iter "$((ITERATION + 1))" '.iteration = $iter' "$SESSION_FILE" > "${SESSION_FILE}.tmp"
+    mv "${SESSION_FILE}.tmp" "$SESSION_FILE"
+
+    jq -n \
+      --arg session_id "$SESSION_ID" \
+      --arg goal "$GOAL" \
+      --arg iteration "$ITERATION" \
+      --arg max "$MAX_ITERATIONS" \
+      --arg pending "$PENDING_COUNT" \
+      --arg in_progress "$IN_PROGRESS_COUNT" \
+      '{
+        "decision": "block",
+        "reason": ("RALPH LOOP: Continuing execution\n\nIteration: " + $iteration + "/" + $max + "\nPending tasks: " + $pending + "\nIn progress: " + $in_progress + "\n\nContinue working on remaining tasks."),
+        "systemMessage": ("🔄 ULTRAWORK [" + $session_id + "]: Loop " + $iteration + "/" + $max + " - " + $pending + " tasks remaining")
+      }'
+    exit 0
   fi
 fi
 

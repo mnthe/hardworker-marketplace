@@ -1,6 +1,6 @@
 ---
 name: ultrawork
-description: "Use when starting complex implementation work requiring verification guarantees. Activates strict mode with mandatory planning, success criteria, evidence collection, and zero tolerance for partial completion."
+description: "For LARGE, COMPLEX tasks only. Suggest when: (1) Multi-file or multi-step implementation, (2) Major refactoring or architecture changes, (3) New feature spanning multiple components. NOT for: simple fixes, single-file edits, quick questions. Activates strict verification with planning, success criteria, and evidence collection."
 ---
 
 # Ultrawork Mode

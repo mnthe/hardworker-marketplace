@@ -171,15 +171,29 @@ $SCRIPTS/task-update.sh --session {SESSION_ID} --id verify \
 $SCRIPTS/session-update.sh --session {SESSION_ID} --phase COMPLETE
 ```
 
-**On FAIL:**
+**On FAIL (Ralph Loop: Create fix tasks and return to EXECUTION):**
 
 ```bash
-# Update verify task (keep status open)
+# 1. Create fix tasks for each issue found
+$SCRIPTS/task-create.sh --session {SESSION_ID} \
+  --subject "Fix: [specific issue from verification]" \
+  --description "Verification failed: [detailed reason]. Fix this issue." \
+  --criteria '["Issue resolved","Evidence collected"]'
+
+# 2. Update verify task with failure details
 $SCRIPTS/task-update.sh --session {SESSION_ID} --id verify \
-  --add-evidence "VERDICT: FAIL" \
-  --add-evidence "Task 2: Missing evidence for 'API responds with 200'" \
-  --add-evidence "Blocked pattern 'TODO' found in task 3"
+  --add-evidence "VERDICT: FAIL - Created fix tasks" \
+  --add-evidence "Issue: [specific issue]"
+
+# 3. Return to EXECUTION phase for fix tasks
+$SCRIPTS/session-update.sh --session {SESSION_ID} --phase EXECUTION
 ```
+
+**IMPORTANT:** When verification fails:
+1. Create specific fix tasks (not vague "fix everything")
+2. Each fix task = one specific issue
+3. Set phase to EXECUTION → stop-hook's ralph loop will continue
+4. After fixes, orchestrator will re-run verification
 
 ## Output Format
 
