@@ -20,6 +20,15 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use-evidence.sh"
           }
         ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/gate-status-notification.sh"
+          }
+        ]
       }
     ],
     "Stop": [

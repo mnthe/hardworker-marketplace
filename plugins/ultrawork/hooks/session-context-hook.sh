@@ -33,6 +33,7 @@ fi
 # Parse session state
 PHASE=$(grep -o '"phase": *"[^"]*"' "$SESSION_FILE" | cut -d'"' -f4 || echo "")
 GOAL=$(grep -o '"goal": *"[^"]*"' "$SESSION_FILE" | cut -d'"' -f4 || echo "unknown")
+EXPLORATION_STAGE=$(grep -o '"exploration_stage": *"[^"]*"' "$SESSION_FILE" | cut -d'"' -f4 || echo "not_started")
 
 # Terminal states - no injection needed
 if [[ "$PHASE" == "COMPLETE" || "$PHASE" == "CANCELLED" || "$PHASE" == "FAILED" ]]; then
@@ -58,11 +59,118 @@ case "$PHASE" in
 2. Once planner returns, update session.json with child_tasks
 3. Transition to EXECUTION phase"
     else
-      NEXT_ACTION="1. Run exploration (spawn ultrawork:explorer agents)
-2. Read context.json and exploration/*.md
-3. Present findings, clarify requirements with AskUserQuestion
-4. Write design.md and create tasks with task-create.sh
-5. Get user approval, then transition to EXECUTION phase"
+      # Gate system for interactive planning
+      case "$EXPLORATION_STAGE" in
+        not_started)
+          NEXT_ACTION="⛔ GATE SYSTEM - You CANNOT skip gates
+
+┌─ GATE 1: EXPLORATION [CURRENT - BLOCKING] ──────────┐
+│                                                      │
+│ YOU MUST DO THIS FIRST:                              │
+│ Task(                                                │
+│   subagent_type=\"ultrawork:explorer\",                │
+│   model=\"haiku\",                                     │
+│   prompt=\"ULTRAWORK_SESSION: $SESSION_DIR            │
+│           EXPLORER_ID: overview                      │
+│           EXPLORATION_MODE: overview\"                │
+│ )                                                    │
+│                                                      │
+│ UNTIL THIS COMPLETES:                                │
+│ ✗ No direct codebase exploration (Glob, Grep, Read)  │
+│ ✗ No external commands (glab, curl, git diff, etc.)  │
+│ ✗ No file edits (Edit, Write)                        │
+│ ✗ No task creation (TodoWrite for planning)          │
+│                                                      │
+│ ✓ ONLY: Task(ultrawork:explorer), session scripts    │
+└──────────────────────────────────────────────────────┘
+
+┌─ GATE 2: TARGETED EXPLORATION [LOCKED] ─────────────┐
+│ Unlocks when: overview.md exists                     │
+└──────────────────────────────────────────────────────┘
+
+┌─ GATE 3: PLANNING [LOCKED] ─────────────────────────┐
+│ Unlocks when: exploration_stage == \"complete\"        │
+└──────────────────────────────────────────────────────┘
+
+┌─ GATE 4: EXECUTION [LOCKED] ────────────────────────┐
+│ Unlocks when: design.md + tasks/*.json exist         │
+└──────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════
+⚠️ ANY ACTION OTHER THAN SPAWNING EXPLORER = VIOLATION
+═══════════════════════════════════════════════════════"
+          ;;
+        overview)
+          NEXT_ACTION="⛔ GATE SYSTEM - You CANNOT skip gates
+
+┌─ GATE 1: EXPLORATION [COMPLETE] ✓ ──────────────────┐
+└──────────────────────────────────────────────────────┘
+
+┌─ GATE 2: TARGETED EXPLORATION [CURRENT] ────────────┐
+│                                                      │
+│ 1. Read exploration/overview.md                      │
+│ 2. Analyze goal + overview → generate search hints   │
+│ 3. Spawn targeted explorers:                         │
+│                                                      │
+│ for hint in hints:                                   │
+│   Task(                                              │
+│     subagent_type=\"ultrawork:explorer\",              │
+│     model=\"haiku\",                                   │
+│     run_in_background=True,                          │
+│     prompt=\"ULTRAWORK_SESSION: $SESSION_DIR          │
+│             EXPLORER_ID: exp-{i}                     │
+│             SEARCH_HINT: {hint}\"                     │
+│   )                                                  │
+│                                                      │
+│ ALLOWED: Read overview.md, spawn explorers           │
+│ BLOCKED: Direct exploration, file edits              │
+└──────────────────────────────────────────────────────┘
+
+┌─ GATE 3: PLANNING [LOCKED] ─────────────────────────┐
+│ Unlocks when: exploration_stage == \"complete\"        │
+└──────────────────────────────────────────────────────┘"
+          ;;
+        analyzing|targeted)
+          NEXT_ACTION="⛔ GATE SYSTEM
+
+┌─ GATE 1-2: EXPLORATION [IN PROGRESS] ───────────────┐
+│ Stage: $EXPLORATION_STAGE                            │
+│ Wait for all explorers to complete                   │
+│ Poll with: TaskOutput(task_id=..., block=False)      │
+└──────────────────────────────────────────────────────┘
+
+┌─ GATE 3: PLANNING [LOCKED] ─────────────────────────┐
+│ Unlocks when: exploration_stage == \"complete\"        │
+└──────────────────────────────────────────────────────┘"
+          ;;
+        complete)
+          NEXT_ACTION="⛔ GATE SYSTEM
+
+┌─ GATE 1-2: EXPLORATION [COMPLETE] ✓ ────────────────┐
+└──────────────────────────────────────────────────────┘
+
+┌─ GATE 3: PLANNING [CURRENT] ────────────────────────┐
+│                                                      │
+│ 1. Read context.json and exploration/*.md            │
+│ 2. Present findings to user                          │
+│ 3. AskUserQuestion for clarifications                │
+│ 4. Write design.md                                   │
+│ 5. Create tasks with task-create.sh (NOT TodoWrite)  │
+│ 6. Get user approval                                 │
+│                                                      │
+│ ALLOWED: Read exploration/*, AskUserQuestion,        │
+│          Write design.md, task-create.sh             │
+│ BLOCKED: Direct code edits, TodoWrite for tasks      │
+└──────────────────────────────────────────────────────┘
+
+┌─ GATE 4: EXECUTION [LOCKED] ────────────────────────┐
+│ Unlocks when: design.md + tasks/*.json + approval    │
+└──────────────────────────────────────────────────────┘"
+          ;;
+        *)
+          NEXT_ACTION="Unknown exploration_stage: $EXPLORATION_STAGE - check session.json"
+          ;;
+      esac
     fi
     ;;
   EXECUTION)
@@ -93,6 +201,7 @@ ACTIVE ULTRAWORK SESSION
 Session ID: $SESSION_ID
 Goal: $GOAL
 Phase: $PHASE
+Exploration: $EXPLORATION_STAGE
 Team: $TEAM_NAME
 Tasks: $CHILD_TASKS
 Evidence: $EVIDENCE_COUNT items

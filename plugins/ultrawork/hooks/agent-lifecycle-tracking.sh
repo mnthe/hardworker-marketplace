@@ -15,9 +15,8 @@ source "$PLUGIN_ROOT/scripts/session-utils.sh"
 HOOK_INPUT=$(cat)
 TOOL=$(echo "$HOOK_INPUT" | jq -r '.tool // ""')
 
-# Only process Task tool usage
+# Only process Task tool usage - exit silently for other tools
 if [[ "$TOOL" != "Task" ]]; then
-  jq -n '{"decision": "allow"}'
   exit 0
 fi
 
