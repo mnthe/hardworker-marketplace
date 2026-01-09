@@ -209,7 +209,7 @@ task_result = Task(subagent_type="...", run_in_background=True, ...)
 
 while True:
     # Cancel check
-    phase = Bash(f'session-get.sh --session {session_dir} --field phase')
+    phase = Bash(f'session-get.sh --session {SESSION_ID} --field phase')
     if phase.output.strip() == "CANCELLED":
         return  # Exit cleanly
 

@@ -123,15 +123,16 @@ When using within an ultrawork session:
 
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" \
-  --session {session_dir}/session.json \
+  --session {SESSION_ID} \
   --exploration-stage overview
 ```
 
 ### 2. Save overview.md
 
 ```python
+session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
 Write(
-  file_path="{session_dir}/exploration/overview.md",
+  file_path=f"{session_dir}/exploration/overview.md",
   content="{exploration results in above format}"
 )
 ```
@@ -140,7 +141,7 @@ Write(
 
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/scripts/context-init.sh" \
-  --session {session_dir} \
+  --session {SESSION_ID} \
   --overview-complete
 ```
 

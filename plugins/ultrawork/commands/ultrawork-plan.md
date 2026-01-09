@@ -48,7 +48,7 @@ To allow user interruption during exploration, use **background execution with p
 # Poll pattern for all Task waits
 while True:
     # Check if session was cancelled
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
     if phase.output.strip() == "CANCELLED":
         return  # Exit cleanly
 
@@ -86,14 +86,13 @@ If the hook says `CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then
 "${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session {SESSION_ID} --plan-only "goal"
 ```
 
-### Variables used in this document
+### Session Directory
 
-| Variable | Source | Example Value |
-|----------|--------|---------------|
-| `SESSION_ID` | Hook output `CLAUDE_SESSION_ID` | `37b6a60f-8e3e-4631-8f62-8eaf3d235642` |
-| `session_dir` | Setup script output | `~/.claude/ultrawork/sessions/37b6a60f-8e3e-4631-8f62-8eaf3d235642/` |
+The session directory is always: `~/.claude/ultrawork/sessions/{SESSION_ID}/`
 
-**Note:** In code examples below, `{session_dir}` represents a Python f-string variable or the actual session directory path. Always substitute with real values when executing.
+For example, if `SESSION_ID` is `37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then:
+- Session directory: `~/.claude/ultrawork/sessions/37b6a60f-8e3e-4631-8f62-8eaf3d235642/`
+- Session file: `~/.claude/ultrawork/sessions/37b6a60f-8e3e-4631-8f62-8eaf3d235642/session.json`
 
 ---
 
@@ -107,11 +106,14 @@ If the hook says `CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then
 
 Replace `<YOUR_SESSION_ID_HERE>` with the actual UUID from `CLAUDE_SESSION_ID` in system-reminder.
 
-This creates session at: `~/.claude/ultrawork/sessions/{session_id}/`
+**After initialization, set session_dir variable for subsequent operations:**
 
-Parse the output to get:
-- Session ID
-- Session directory path
+```python
+SESSION_ID = "37b6a60f-8e3e-4631-8f62-8eaf3d235642"  # From hook output
+session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+```
+
+Parse the setup output to get:
 - Goal
 - Options (auto_mode)
 
@@ -122,6 +124,9 @@ Parse the output to get:
 **Before starting exploration, check session state to determine where to resume:**
 
 ```python
+# SESSION_ID from hook output, session_dir derived from it
+session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+
 # Read session.json
 session = Bash(f'cat {session_dir}/session.json')
 exploration_stage = session.get("exploration_stage", "not_started")
@@ -197,7 +202,7 @@ Skill(skill="ultrawork:overview-exploration")
 The skill will:
 1. Update exploration_stage to "overview"
 2. Directly explore project structure using Glob, Read, Grep
-3. Write `{session_dir}/exploration/overview.md`
+3. Write `exploration/overview.md` (in session directory)
 4. Initialize `context.json`
 
 **Time budget**: ~30 seconds, max 5-7 file reads
@@ -209,7 +214,7 @@ This is synchronous - no polling needed. Proceed to Stage 2b after skill complet
 **Update exploration_stage to "analyzing":**
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir}/session.json --exploration-stage analyzing
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --exploration-stage analyzing
 ```
 
 Based on **Overview + Goal**, decide what areas need detailed exploration.
@@ -252,7 +257,7 @@ for i, hint in enumerate(hints):
     expected_ids += f",exp-{i+1}"
 
 # Initialize context.json with expected explorers
-"${CLAUDE_PLUGIN_ROOT}/scripts/context-init.sh" --session {session_dir} --expected "{expected_ids}"
+"${CLAUDE_PLUGIN_ROOT}/scripts/context-init.sh" --session {SESSION_ID} --expected "{expected_ids}"
 ```
 
 This ensures:
@@ -265,12 +270,14 @@ This ensures:
 **Update exploration_stage to "targeted":**
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir}/session.json --exploration-stage targeted
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --exploration-stage targeted
 ```
 
 Spawn explorers for each identified area (parallel):
 
 ```python
+session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+
 for i, hint in enumerate(hints):
     Task(
       subagent_type="ultrawork:explorer:explorer",
@@ -293,7 +300,7 @@ CONTEXT: {overview_summary}
 pending_tasks = [task_id_1, task_id_2, ...]
 
 while pending_tasks:
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
     if phase.output.strip() == "CANCELLED":
         return
 
@@ -306,7 +313,7 @@ while pending_tasks:
 **After all explorers complete, update exploration_stage to "complete":**
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir}/session.json --exploration-stage complete
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --exploration-stage complete
 ```
 
 ### Exploration Output
@@ -325,10 +332,12 @@ Explorers will create:
 Spawn Planner sub-agent:
 
 ```python
+session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+
 Task(
   subagent_type="ultrawork:planner:planner",
   model="opus",
-  prompt="""
+  prompt=f"""
 ULTRAWORK_SESSION: {session_dir}
 
 Goal: {goal}
@@ -344,7 +353,7 @@ Options:
 
 ```python
 while True:
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
     if phase.output.strip() == "CANCELLED":
         return  # Exit cleanly
 
@@ -365,14 +374,16 @@ Reference: `skills/planning/SKILL.md`
 
 #### 3a. Read Context
 
-```bash
+```python
+session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+
 # Read lightweight summary
-cat {session_dir}/context.json
+Read(f"{session_dir}/context.json")
 
 # Read detailed exploration as needed
-cat {session_dir}/exploration/exp-1.md
-cat {session_dir}/exploration/exp-2.md
-cat {session_dir}/exploration/exp-3.md
+Read(f"{session_dir}/exploration/exp-1.md")
+Read(f"{session_dir}/exploration/exp-2.md")
+Read(f"{session_dir}/exploration/exp-3.md")
 ```
 
 #### 3b. Present Findings to User
@@ -436,6 +447,8 @@ AskUserQuestion(questions=[{
 Write comprehensive design to `design.md`:
 
 ```python
+session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+
 Write(
   file_path=f"{session_dir}/design.md",
   content=design_content
@@ -449,7 +462,7 @@ See `skills/planning/SKILL.md` Phase 4 for template.
 Decompose design into tasks. Write each task:
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/task-create.sh" --session {session_dir} \
+"${CLAUDE_PLUGIN_ROOT}/scripts/task-create.sh" --session {SESSION_ID} \
   --id "1" \
   --subject "Setup NextAuth provider" \
   --description "Configure NextAuth with credentials" \
@@ -462,7 +475,7 @@ Always include verify task at end.
 #### 3g. Update Session Phase
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase PLANNING_COMPLETE
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --phase PLANNING_COMPLETE
 ```
 
 ---
@@ -471,9 +484,11 @@ Always include verify task at end.
 
 **Read the plan:**
 
-```bash
-ls {session_dir}/tasks/
-cat {session_dir}/design.md
+```python
+session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+
+Bash(f"ls {session_dir}/tasks/")
+Read(f"{session_dir}/design.md")
 ```
 
 Display plan summary:
@@ -518,11 +533,11 @@ AskUserQuestion(questions=[{
 
 ## Output
 
-Planning creates:
-- `{session_dir}/design.md` - comprehensive design document
-- `{session_dir}/tasks/*.json` - task files
-- `{session_dir}/context.json` - exploration summaries
-- `{session_dir}/exploration/*.md` - detailed exploration
+Planning creates (in `~/.claude/ultrawork/sessions/{session_id}/`):
+- `design.md` - comprehensive design document
+- `tasks/*.json` - task files
+- `context.json` - exploration summaries
+- `exploration/*.md` - detailed exploration
 
 Run `/ultrawork-exec` to execute the plan.
 

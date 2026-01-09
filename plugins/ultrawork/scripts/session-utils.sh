@@ -23,6 +23,33 @@ get_session_dir() {
   echo "$(get_sessions_dir)/$session_id"
 }
 
+# Get session.json path for a session ID
+get_session_file() {
+  local session_id="$1"
+  echo "$(get_session_dir "$session_id")/session.json"
+}
+
+# Validate session ID and return session file path
+# Usage: SESSION_FILE=$(resolve_session_id "$SESSION_ID") || exit 1
+resolve_session_id() {
+  local session_id="$1"
+
+  if [[ -z "$session_id" ]]; then
+    echo "Error: --session <ID> required" >&2
+    return 1
+  fi
+
+  local session_file=$(get_session_file "$session_id")
+
+  if [[ ! -f "$session_file" ]]; then
+    echo "Error: Session not found: $session_id" >&2
+    echo "Expected file: $session_file" >&2
+    return 1
+  fi
+
+  echo "$session_file"
+}
+
 # Get Claude session_id from environment variable
 # Hooks must set ULTRAWORK_STDIN_SESSION_ID before calling this
 get_claude_session_id() {

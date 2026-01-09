@@ -44,7 +44,7 @@ To allow user interruption during execution, use **background execution with pol
 # Poll pattern for all Task waits
 while True:
     # Check if session was cancelled
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
     if phase.output.strip() == "CANCELLED":
         return  # Exit cleanly
 
@@ -82,14 +82,14 @@ If the hook says `CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then
 "${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase
 ```
 
-### Script calls with SESSION_DIR
+### Script calls with SESSION_ID
 
-Once session is loaded, SESSION_DIR is: `~/.claude/ultrawork/sessions/{actual_session_id}/`
+All scripts accept session ID directly and derive the directory internally:
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session <SESSION_DIR> --field phase
-"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session <SESSION_DIR> ...
-"${CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session <SESSION_DIR> --format json
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session <SESSION_ID> --field phase
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session <SESSION_ID> --phase EXECUTION
+"${CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session <SESSION_ID> --format json
 ```
 
 ---
@@ -99,16 +99,19 @@ Once session is loaded, SESSION_DIR is: `~/.claude/ultrawork/sessions/{actual_se
 Find and load the existing session:
 
 ```bash
-# Session directory from hook or argument
-SESSION_DIR="$HOME/.claude/ultrawork/sessions/{SESSION_ID}"
+# Get SESSION_ID from hook output (see "Session ID Handling" section)
+# Session directory is automatically: ~/.claude/ultrawork/sessions/{SESSION_ID}/
 
 # Verify session exists and has tasks
-ls {session_dir}/tasks/
+ls ~/.claude/ultrawork/sessions/{SESSION_ID}/tasks/
 ```
 
 Read session state:
 
 ```python
+SESSION_ID = "37b6a60f-8e3e-4631-8f62-8eaf3d235642"  # From hook output
+session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+
 session = Read(f"{session_dir}/session.json")
 goal = session["goal"]
 phase = session["phase"]
@@ -168,39 +171,39 @@ Starting workers...
 ```python
 while iteration <= max_iterations:
     # Update phase and iteration
-    Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase EXECUTION --iteration {iteration}')
+    Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --phase EXECUTION --iteration {iteration}')
 
     print(f"## Iteration {iteration}/{max_iterations}")
 
     # Run execution phase
-    execution_result = run_execution_phase(session_dir, max_workers)
+    execution_result = run_execution_phase(SESSION_ID, max_workers)
 
     if execution_result == "CANCELLED":
         return
 
     # Skip verify if requested
     if skip_verify:
-        Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase COMPLETE')
+        Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --phase COMPLETE')
         print("## Execution Complete (verification skipped)")
         return
 
     # Run verification phase
-    verification_result = run_verification_phase(session_dir)
+    verification_result = run_verification_phase(SESSION_ID)
 
     if verification_result == "CANCELLED":
         return
     elif verification_result == "PASS":
-        Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase COMPLETE')
+        Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --phase COMPLETE')
         print("## Execution Complete - All criteria verified")
         return
     else:
         # FAIL - retry if iterations remain
         if iteration < max_iterations:
             print(f"## Verification Failed - Retrying ({iteration + 1}/{max_iterations})")
-            reset_failed_tasks(session_dir)
+            reset_failed_tasks(SESSION_ID)
             iteration += 1
         else:
-            Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase FAILED')
+            Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --phase FAILED')
             print("## Execution Failed - Max iterations reached")
             return
 ```
@@ -210,17 +213,18 @@ while iteration <= max_iterations:
 ## Step 4: Execution Phase Implementation
 
 ```python
-def run_execution_phase(session_dir, max_workers):
+def run_execution_phase(SESSION_ID, max_workers):
     active_workers = {}  # task_id -> agent_task_id
+    session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
 
     while True:
         # Cancel check at start of each loop
-        phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+        phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
         if phase.output.strip() == "CANCELLED":
             return "CANCELLED"
 
         # Get current task states
-        tasks_output = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session {session_dir} --format json')
+        tasks_output = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session {SESSION_ID} --format json')
         tasks = json.loads(tasks_output.output)
 
         # Categorize tasks (exclude verify task for now)
@@ -238,7 +242,7 @@ def run_execution_phase(session_dir, max_workers):
                 break
 
             # Mark task as in_progress
-            Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {session_dir} --id {task["id"]} --status in_progress')
+            Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {SESSION_ID} --id {task["id"]} --status in_progress')
 
             model = "opus" if task["complexity"] == "complex" else "sonnet"
             agent_result = Task(
@@ -268,7 +272,7 @@ SUCCESS CRITERIA:
             elif result.status == "error":
                 del active_workers[task_id]
                 # Mark task as failed
-                Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {session_dir} --id {task_id} --status failed')
+                Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {SESSION_ID} --id {task_id} --status failed')
                 print(f"✗ Failed: {task_id}")
 
         # Brief pause to avoid tight loop (yield control)
@@ -280,14 +284,16 @@ SUCCESS CRITERIA:
 ## Step 5: Verification Phase Implementation
 
 ```python
-def run_verification_phase(session_dir):
+def run_verification_phase(SESSION_ID):
+    session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+
     # Cancel check before verification
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
     if phase.output.strip() == "CANCELLED":
         return "CANCELLED"
 
     # Update phase
-    Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase VERIFICATION')
+    Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --phase VERIFICATION')
 
     print("## Running Verification...")
 
@@ -309,7 +315,7 @@ Return: PASS or FAIL with details
 
     # Poll verifier with cancel check
     while True:
-        phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+        phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
         if phase.output.strip() == "CANCELLED":
             return "CANCELLED"
 
@@ -329,25 +335,25 @@ Return: PASS or FAIL with details
 ## Step 6: Reset Failed Tasks for Retry
 
 ```python
-def reset_failed_tasks(session_dir):
+def reset_failed_tasks(SESSION_ID):
     """Reset failed tasks for retry iteration"""
 
-    tasks_output = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session {session_dir} --format json')
+    tasks_output = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session {SESSION_ID} --format json')
     tasks = json.loads(tasks_output.output)
 
     for task in tasks:
         if task["status"] == "failed":
             # Reset to pending
-            Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {session_dir} --id {task["id"]} --status pending')
+            Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {SESSION_ID} --id {task["id"]} --status pending')
 
             # Increment retry count
             retry_count = task.get("retry_count", 0) + 1
-            Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {session_dir} --id {task["id"]} --retry-count {retry_count}')
+            Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {SESSION_ID} --id {task["id"]} --retry-count {retry_count}')
 
             print(f"↻ Reset for retry: {task['id']} (attempt {retry_count + 1})")
 
     # Also reset verify task
-    Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {session_dir} --id verify --status pending')
+    Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {SESSION_ID} --id verify --status pending')
 ```
 
 ---
@@ -393,7 +399,7 @@ Active workers: 1
 ### Evidence
 {summary from verifier}
 
-Session: {session_dir}
+Session ID: {session_id}
 ```
 
 ### On Failure (max iterations reached)
@@ -414,11 +420,11 @@ Session: {session_dir}
 {details from last verifier run}
 
 ### Next Steps
-1. Review failed task output: {session_dir}/tasks/2.json
+1. Review failed task output: ~/.claude/ultrawork/sessions/{session_id}/tasks/2.json
 2. Fix issues manually
 3. Run `/ultrawork-exec` again (resets iteration counter)
 
-Session: {session_dir}
+Session ID: {session_id}
 ```
 
 ---

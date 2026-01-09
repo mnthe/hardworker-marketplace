@@ -1,22 +1,26 @@
 #!/bin/bash
 # session-update.sh - Update session
-# Usage: session-update.sh --session <path> [--phase PLANNING|EXECUTION|VERIFICATION|COMPLETE] [--plan-approved] [--exploration-stage STAGE]
+# Usage: session-update.sh --session <ID> [--phase PLANNING|EXECUTION|VERIFICATION|COMPLETE] [--plan-approved] [--exploration-stage STAGE]
 
 set -euo pipefail
 
-SESSION_PATH=""
+# Source utilities
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/session-utils.sh"
+
+SESSION_ID=""
 NEW_PHASE=""
 PLAN_APPROVED=false
 EXPLORATION_STAGE=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --session) SESSION_PATH="$2"; shift 2 ;;
+    --session) SESSION_ID="$2"; shift 2 ;;
     --phase) NEW_PHASE="$2"; shift 2 ;;
     --plan-approved) PLAN_APPROVED=true; shift ;;
     --exploration-stage) EXPLORATION_STAGE="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: session-update.sh --session <path> [--phase ...] [--plan-approved] [--exploration-stage STAGE]"
+      echo "Usage: session-update.sh --session <ID> [--phase ...] [--plan-approved] [--exploration-stage STAGE]"
       echo ""
       echo "Exploration stages: not_started, overview, analyzing, targeted, complete"
       exit 0
@@ -25,15 +29,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$SESSION_PATH" ]]; then
-  echo "Error: --session required" >&2
-  exit 1
-fi
-
-if [[ ! -f "$SESSION_PATH" ]]; then
-  echo "Error: Session file not found: $SESSION_PATH" >&2
-  exit 1
-fi
+# Resolve session ID to file path
+SESSION_FILE=$(resolve_session_id "$SESSION_ID") || exit 1
 
 # Build jq update expression
 JQ_EXPR=".updated_at = \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\""
@@ -53,8 +50,8 @@ fi
 
 # Update file
 TEMP_FILE=$(mktemp)
-jq "$JQ_EXPR" "$SESSION_PATH" > "$TEMP_FILE"
-mv "$TEMP_FILE" "$SESSION_PATH"
+jq "$JQ_EXPR" "$SESSION_FILE" > "$TEMP_FILE"
+mv "$TEMP_FILE" "$SESSION_FILE"
 
 echo "OK: Session updated"
-cat "$SESSION_PATH"
+cat "$SESSION_FILE"

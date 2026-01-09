@@ -1,34 +1,39 @@
 #!/bin/bash
 # task-update.sh - Update task status and evidence
-# Usage: task-update.sh --session <path> --id <task_id> [--status open|resolved] [--add-evidence "..."]
+# Usage: task-update.sh --session <ID> --id <task_id> [--status open|resolved] [--add-evidence "..."]
 
 set -euo pipefail
 
-SESSION_PATH=""
+# Source utilities
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/session-utils.sh"
+
+SESSION_ID=""
 TASK_ID=""
 NEW_STATUS=""
 ADD_EVIDENCE=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --session) SESSION_PATH="$2"; shift 2 ;;
+    --session) SESSION_ID="$2"; shift 2 ;;
     --id) TASK_ID="$2"; shift 2 ;;
     --status) NEW_STATUS="$2"; shift 2 ;;
     --add-evidence) ADD_EVIDENCE="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: task-update.sh --session <path> --id <task_id> [--status open|resolved] [--add-evidence \"...\"]"
+      echo "Usage: task-update.sh --session <ID> --id <task_id> [--status open|resolved] [--add-evidence \"...\"]"
       exit 0
       ;;
     *) shift ;;
   esac
 done
 
-if [[ -z "$SESSION_PATH" || -z "$TASK_ID" ]]; then
+if [[ -z "$SESSION_ID" || -z "$TASK_ID" ]]; then
   echo "Error: --session and --id required" >&2
   exit 1
 fi
 
-SESSION_DIR=$(dirname "$SESSION_PATH")
+# Get session directory from ID
+SESSION_DIR=$(get_session_dir "$SESSION_ID")
 TASK_FILE="$SESSION_DIR/tasks/$TASK_ID.json"
 
 if [[ ! -f "$TASK_FILE" ]]; then

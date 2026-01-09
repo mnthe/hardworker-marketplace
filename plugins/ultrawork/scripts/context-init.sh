@@ -1,18 +1,22 @@
 #!/bin/bash
 # context-init.sh - Initialize context.json with expected explorers
-# Usage: context-init.sh --session <dir> --expected "overview,exp-1,exp-2,exp-3"
+# Usage: context-init.sh --session <ID> --expected "overview,exp-1,exp-2,exp-3"
 
 set -euo pipefail
 
-SESSION_DIR=""
+# Source utilities
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/session-utils.sh"
+
+SESSION_ID=""
 EXPECTED=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --session) SESSION_DIR="$2"; shift 2 ;;
+    --session) SESSION_ID="$2"; shift 2 ;;
     --expected) EXPECTED="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: context-init.sh --session <dir> --expected \"overview,exp-1,exp-2\""
+      echo "Usage: context-init.sh --session <ID> --expected \"overview,exp-1,exp-2\""
       echo ""
       echo "Initializes context.json with expected explorer IDs."
       echo "exploration_complete will be set to true when all expected explorers are added."
@@ -22,11 +26,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$SESSION_DIR" || -z "$EXPECTED" ]]; then
+if [[ -z "$SESSION_ID" || -z "$EXPECTED" ]]; then
   echo "Error: --session and --expected required" >&2
   exit 1
 fi
 
+# Get session directory from ID
+SESSION_DIR=$(get_session_dir "$SESSION_ID")
 CONTEXT_FILE="$SESSION_DIR/context.json"
 
 # Build expected_explorers array

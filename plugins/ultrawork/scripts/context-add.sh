@@ -1,10 +1,14 @@
 #!/bin/bash
 # context-add.sh - Add explorer summary to context.json (lightweight, with link to detailed markdown)
-# Usage: context-add.sh --session <dir> --explorer-id <id> --hint "..." --file "exploration/exp-1.md" --summary "..." --key-files "f1,f2" --patterns "p1,p2"
+# Usage: context-add.sh --session <ID> --explorer-id <id> --hint "..." --file "exploration/exp-1.md" --summary "..." --key-files "f1,f2" --patterns "p1,p2"
 
 set -euo pipefail
 
-SESSION_DIR=""
+# Source utilities
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/session-utils.sh"
+
+SESSION_ID=""
 EXPLORER_ID=""
 HINT=""
 FILE=""
@@ -14,7 +18,7 @@ PATTERNS=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --session) SESSION_DIR="$2"; shift 2 ;;
+    --session) SESSION_ID="$2"; shift 2 ;;
     --explorer-id) EXPLORER_ID="$2"; shift 2 ;;
     --hint) HINT="$2"; shift 2 ;;
     --file) FILE="$2"; shift 2 ;;
@@ -22,7 +26,7 @@ while [[ $# -gt 0 ]]; do
     --key-files) KEY_FILES="$2"; shift 2 ;;
     --patterns) PATTERNS="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: context-add.sh --session <dir> --explorer-id <id> --hint \"...\" --file \"exploration/exp-1.md\" --summary \"...\" --key-files \"f1,f2\" --patterns \"p1,p2\""
+      echo "Usage: context-add.sh --session <ID> --explorer-id <id> --hint \"...\" --file \"exploration/exp-1.md\" --summary \"...\" --key-files \"f1,f2\" --patterns \"p1,p2\""
       echo ""
       echo "Adds a lightweight explorer entry to context.json with link to detailed markdown."
       exit 0
@@ -31,11 +35,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$SESSION_DIR" || -z "$EXPLORER_ID" ]]; then
+if [[ -z "$SESSION_ID" || -z "$EXPLORER_ID" ]]; then
   echo "Error: --session and --explorer-id required" >&2
   exit 1
 fi
 
+# Get session directory from ID
+SESSION_DIR=$(get_session_dir "$SESSION_ID")
 CONTEXT_FILE="$SESSION_DIR/context.json"
 
 # Initialize context.json if needed

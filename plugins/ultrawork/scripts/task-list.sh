@@ -1,32 +1,37 @@
 #!/bin/bash
 # task-list.sh - List tasks with filtering
-# Usage: task-list.sh --session <path> [--status open|resolved] [--format json|table]
+# Usage: task-list.sh --session <ID> [--status open|resolved] [--format json|table]
 
 set -euo pipefail
 
-SESSION_PATH=""
+# Source utilities
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/session-utils.sh"
+
+SESSION_ID=""
 STATUS_FILTER=""
 FORMAT="table"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --session) SESSION_PATH="$2"; shift 2 ;;
+    --session) SESSION_ID="$2"; shift 2 ;;
     --status) STATUS_FILTER="$2"; shift 2 ;;
     --format) FORMAT="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: task-list.sh --session <path> [--status open|resolved] [--format json|table]"
+      echo "Usage: task-list.sh --session <ID> [--status open|resolved] [--format json|table]"
       exit 0
       ;;
     *) shift ;;
   esac
 done
 
-if [[ -z "$SESSION_PATH" ]]; then
+if [[ -z "$SESSION_ID" ]]; then
   echo "Error: --session required" >&2
   exit 1
 fi
 
-SESSION_DIR=$(dirname "$SESSION_PATH")
+# Get session directory from ID
+SESSION_DIR=$(get_session_dir "$SESSION_ID")
 TASKS_DIR="$SESSION_DIR/tasks"
 
 if [[ ! -d "$TASKS_DIR" ]]; then

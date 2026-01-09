@@ -1,10 +1,14 @@
 #!/bin/bash
 # task-create.sh - Create new task
-# Usage: task-create.sh --session <path> --id <id> --subject "..." --description "..." [--blocked-by "1,2"] [--complexity standard|complex] [--criteria "..."]
+# Usage: task-create.sh --session <ID> --id <id> --subject "..." --description "..." [--blocked-by "1,2"] [--complexity standard|complex] [--criteria "..."]
 
 set -euo pipefail
 
-SESSION_PATH=""
+# Source utilities
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/session-utils.sh"
+
+SESSION_ID=""
 TASK_ID=""
 SUBJECT=""
 DESCRIPTION=""
@@ -14,7 +18,7 @@ CRITERIA=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --session) SESSION_PATH="$2"; shift 2 ;;
+    --session) SESSION_ID="$2"; shift 2 ;;
     --id) TASK_ID="$2"; shift 2 ;;
     --subject) SUBJECT="$2"; shift 2 ;;
     --description) DESCRIPTION="$2"; shift 2 ;;
@@ -22,23 +26,24 @@ while [[ $# -gt 0 ]]; do
     --complexity) COMPLEXITY="$2"; shift 2 ;;
     --criteria) CRITERIA="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: task-create.sh --session <path> --id <id> --subject \"...\" --description \"...\" [options]"
+      echo "Usage: task-create.sh --session <ID> --id <id> --subject \"...\" --description \"...\" [options]"
       echo "Options:"
       echo "  --blocked-by \"1,2\"     Comma-separated task IDs"
       echo "  --complexity standard|complex"
-      echo "  --criteria \"...\"       Comma-separated criteria"
+      echo "  --criteria \"...\"       Pipe-separated criteria"
       exit 0
       ;;
     *) shift ;;
   esac
 done
 
-if [[ -z "$SESSION_PATH" || -z "$TASK_ID" || -z "$SUBJECT" ]]; then
+if [[ -z "$SESSION_ID" || -z "$TASK_ID" || -z "$SUBJECT" ]]; then
   echo "Error: --session, --id, and --subject required" >&2
   exit 1
 fi
 
-SESSION_DIR=$(dirname "$SESSION_PATH")
+# Get session directory from ID
+SESSION_DIR=$(get_session_dir "$SESSION_ID")
 TASKS_DIR="$SESSION_DIR/tasks"
 TASK_FILE="$TASKS_DIR/$TASK_ID.json"
 
