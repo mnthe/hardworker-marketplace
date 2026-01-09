@@ -48,15 +48,16 @@ Team name derived from git repo root folder name.
 | `key_files` | Important files discovered during exploration |
 | `patterns` | Code patterns identified |
 
-## session.json Schema (v5.1)
+## session.json Schema (v5.2)
 
 ```json
 {
-  "version": "5.1",
+  "version": "5.2",
   "exploration_stage": "not_started",
   "session_task_id": "42",
   "goal": "Original user request",
   "phase": "PLANNING",
+  "auto_mode": false,
   "started_at": "2026-01-08T12:00:00Z",
   "updated_at": "2026-01-08T12:30:00Z",
 

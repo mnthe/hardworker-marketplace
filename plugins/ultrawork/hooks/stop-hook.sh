@@ -38,6 +38,7 @@ PHASE=$(grep -o '"phase": *"[^"]*"' "$SESSION_FILE" | cut -d'"' -f4 || echo "")
 GOAL=$(grep -o '"goal": *"[^"]*"' "$SESSION_FILE" | cut -d'"' -f4 || echo "unknown")
 SKIP_VERIFY=$(grep -o '"skip_verify": *[^,}]*' "$SESSION_FILE" | cut -d':' -f2 | tr -d ' ' || echo "false")
 PLAN_ONLY=$(grep -o '"plan_only": *[^,}]*' "$SESSION_FILE" | cut -d':' -f2 | tr -d ' ' || echo "false")
+AUTO_MODE=$(grep -o '"auto_mode": *[^,}]*' "$SESSION_FILE" | cut -d':' -f2 | tr -d ' ' || echo "false")
 
 # Terminal states - allow exit
 if [[ "$PHASE" == "COMPLETE" || "$PHASE" == "CANCELLED" || "$PHASE" == "FAILED" ]]; then
@@ -60,9 +61,15 @@ if [[ "$SKIP_VERIFY" == "true" && "$PHASE" == "EXECUTION" ]]; then
   fi
 fi
 
+# Interactive mode planning - orchestrator does planning inline, don't block
+if [[ "$PHASE" == "PLANNING" && "$AUTO_MODE" != "true" ]]; then
+  exit 0
+fi
+
 # Active session not complete - block exit
 case "$PHASE" in
   PLANNING)
+    # Only reaches here if AUTO_MODE is true (planner agent running in background)
     REASON="Planner agent is creating task graph. Wait for planning to complete or use /ultrawork-cancel."
     SYSTEM_MSG="⚠️ ULTRAWORK [$SESSION_ID]: Planning in progress for '$GOAL'"
     ;;
