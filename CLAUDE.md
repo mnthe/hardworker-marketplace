@@ -13,10 +13,10 @@ Claude Code 플러그인 마켓플레이스. "hardworker" 생산성 패턴에 �
 
 ### 플러그인 목록
 
-| Plugin | Version | Description |
-|--------|---------|-------------|
-| ultrawork | 0.0.5 | Verification-first development with strict session isolation |
-| teamwork | 0.0.2 | Multi-session collaboration with role-based workers |
+| Plugin | Description |
+|--------|-------------|
+| ultrawork | Verification-first development with strict session isolation |
+| teamwork | Multi-session collaboration with role-based workers |
 
 ### 기술 스택
 
@@ -46,12 +46,12 @@ Claude Code 플러그인 마켓플레이스. "hardworker" 생산성 패턴에 �
 
 ### Version Bump Rules
 
-| Change Type | Version Bump | Examples |
-|-------------|--------------|----------|
-| Bug fix, typo fix | Patch (0.0.x) | Script error fix, docs typo |
-| New command/agent | Minor (0.x.0) | Add new agent, new command |
-| Breaking change | Major (x.0.0) | Change state format, remove command |
-| Behavior change | Minor or Major | Depends on backward compatibility |
+| Change Type       | Version Bump   | Examples                            |
+| ----------------- | -------------- | ----------------------------------- |
+| Bug fix, typo fix | Patch (0.0.x)  | Script error fix, docs typo         |
+| New command/agent | Minor (0.x.0)  | Add new agent, new command          |
+| Breaking change   | Major (x.0.0)  | Change state format, remove command |
+| Behavior change   | Minor or Major | Depends on backward compatibility   |
 
 **When to bump version:**
 - Every PR that modifies plugin behavior MUST bump version
@@ -203,10 +203,10 @@ plugins/{plugin-name}/
 
 ### 상태 관리 패턴
 
-| Plugin | Pattern | Location |
-|--------|---------|----------|
-| ultrawork | Session-based isolation | `~/.claude/ultrawork/{team}/sessions/{id}/` |
-| teamwork | Project-based collaboration | `~/.claude/teamwork/{project}/{team}/` |
+| Plugin    | Pattern                     | Location                                    |
+| --------- | --------------------------- | ------------------------------------------- |
+| ultrawork | Session-based isolation     | `~/.claude/ultrawork/{team}/sessions/{id}/` |
+| teamwork  | Project-based collaboration | `~/.claude/teamwork/{project}/{team}/`      |
 
 ## Development Guidelines
 
@@ -249,12 +249,12 @@ Command (.md) → Agent (AGENT.md) → Script (.sh) → State (JSON)
 
 Lifecycle hooks for automation:
 
-| Hook Type | Purpose |
-|-----------|---------|
-| session-start | Initialize session context |
-| session-context | Inject session variables |
-| post-tool-use | Evidence collection |
-| agent-lifecycle | Track agent execution |
+| Hook Type       | Purpose                    |
+| --------------- | -------------------------- |
+| session-start   | Initialize session context |
+| session-context | Inject session variables   |
+| post-tool-use   | Evidence collection        |
+| agent-lifecycle | Track agent execution      |
 
 Hook safety rules:
 - Keep hooks idempotent
@@ -289,6 +289,7 @@ Hook safety rules:
 - [ ] No hardcoded paths (use environment variables)
 - [ ] JSON validation before writes
 - [ ] CLAUDE.md updated with changes
+- [ ] **Version synced**: `plugin.json` == `marketplace.json`
 
 ## Testing Approach
 
@@ -334,9 +335,20 @@ cat ~/.claude/ultrawork/{team}/sessions/{id}/session.json
 
 ### Version Update Process
 
-1. Update version in `plugins/{plugin}/.claude-plugin/plugin.json`
-2. Document changes in commit message
-3. Tag release if significant milestone
+**CRITICAL: 버전 업데이트 시 반드시 두 파일 모두 동기화해야 합니다!**
+
+1. Update `plugins/{plugin}/.claude-plugin/plugin.json` (플러그인 버전)
+2. Update `.claude-plugin/marketplace.json` (마켓플레이스 버전) - **반드시 동일한 버전으로!**
+3. Document changes in commit message
+4. Tag release if significant milestone
+
+```bash
+# 버전 동기화 확인 명령어
+diff <(jq -r '.version' plugins/ultrawork/.claude-plugin/plugin.json) \
+     <(jq -r '.plugins[] | select(.name=="ultrawork") | .version' .claude-plugin/marketplace.json)
+```
+
+**버전 불일치 발생 시**: 마켓플레이스에서 설치한 플러그인이 오래된 버전을 사용하게 되어, 버그 수정이 적용되지 않음.
 
 ### Changelog Tracking
 
@@ -353,12 +365,12 @@ Changes tracked in git commit history. Follow conventional commits:
 
 CLAUDE.md 파일은 AI 에이전트에게 컨텍스트를 제공합니다.
 
-| Level | Location | Purpose |
-|-------|----------|---------|
-| Root | `/CLAUDE.md` | Project overview, guidelines |
-| Plugin | `/plugins/*/CLAUDE.md` | Plugin-specific context |
-| Agent | `/plugins/*/agents/*/CLAUDE.md` | Agent role context |
-| Session | `~/.claude/*/sessions/*/CLAUDE.md` | Session activity |
+| Level   | Location                           | Purpose                      |
+| ------- | ---------------------------------- | ---------------------------- |
+| Root    | `/CLAUDE.md`                       | Project overview, guidelines |
+| Plugin  | `/plugins/*/CLAUDE.md`             | Plugin-specific context      |
+| Agent   | `/plugins/*/agents/*/CLAUDE.md`    | Agent role context           |
+| Session | `~/.claude/*/sessions/*/CLAUDE.md` | Session activity             |
 
 ### When to Update CLAUDE.md
 
@@ -377,8 +389,8 @@ CLAUDE.md 파일은 AI 에이전트에게 컨텍스트를 제공합니다.
 
 ### Date
 
-| ID | Time | T | Title | Read |
-|----|------|---|-------|------|
+| ID  | Time | T    | Title       | Read    |
+| --- | ---- | ---- | ----------- | ------- |
 | #ID | TIME | TYPE | Description | ~tokens |
 </claude-mem-context>
 ```
