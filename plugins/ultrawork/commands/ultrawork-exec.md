@@ -1,13 +1,25 @@
 ---
 name: ultrawork-exec
-description: "Execute ultrawork plan document"
-argument-hint: "[plan-file] | --help"
+description: "Execute ultrawork plan with automatic retry loop"
+argument-hint: "[--session <id>] [--max-iterations N] [--skip-verify] | --help"
 allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/*)", "Task", "TaskOutput", "Read", "Edit"]
 ---
 
 # Ultrawork Exec Command
 
-Execute a plan document created by `/ultrawork-plan`.
+Execute a plan created by `/ultrawork-plan`. Includes **automatic retry loop** for failed tasks and verification.
+
+---
+
+## Overview
+
+```
+/ultrawork-exec
+    ↓
+Load Session → Execute Tasks (waves) → Verify → Retry if failed
+    ↓
+Loop until: PASS or max_iterations reached
+```
 
 ---
 
@@ -32,7 +44,7 @@ To allow user interruption during execution, use **background execution with pol
 # Poll pattern for all Task waits
 while True:
     # Check if session was cancelled
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_path} --field phase')
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
     if phase.output.strip() == "CANCELLED":
         return  # Exit cleanly
 
@@ -44,230 +56,427 @@ while True:
 
 ---
 
-## Step 1: Find Plan Document
+## Session ID Handling (CRITICAL)
 
-Look for plan file:
-1. Argument provided: use that path
-2. `docs/plans/ultrawork-plan.md`
-3. `ULTRAWORK_PLAN.md`
+**All scripts require `--session <id>` flag.**
 
-```bash
-if [ -f "docs/plans/ultrawork-plan.md" ]; then
-  PLAN_FILE="docs/plans/ultrawork-plan.md"
-elif [ -f "ULTRAWORK_PLAN.md" ]; then
-  PLAN_FILE="ULTRAWORK_PLAN.md"
-else
-  echo "No plan found. Run /ultrawork-plan first"
-  exit 1
-fi
+### Where to get SESSION_ID
+
+Look for this message in system-reminder (provided by SessionStart hook):
+```
+CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642
+Use this when calling ultrawork scripts: --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642
 ```
 
-## Step 2: Parse Plan Document
+**IMPORTANT: You MUST extract the actual UUID value and use it directly. DO NOT use placeholder strings like `{SESSION_ID}` or `$SESSION_ID`.**
 
-Read the plan file and extract:
-- Goal
-- Tasks (id, title, complexity, depends_on, criteria)
-- Execution order
+### Correct usage example
+
+If the hook says `CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then:
+
+```bash
+# ✅ CORRECT - use the actual value
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --field phase
+
+# ❌ WRONG - do not use placeholders
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase
+```
+
+### Script calls with SESSION_DIR
+
+Once session is loaded, SESSION_DIR is: `~/.claude/ultrawork/sessions/{actual_session_id}/`
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session <SESSION_DIR> --field phase
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session <SESSION_DIR> ...
+"${CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session <SESSION_DIR> --format json
+```
+
+---
+
+## Step 1: Load Session
+
+Find and load the existing session:
+
+```bash
+# Session directory from hook or argument
+SESSION_DIR="$HOME/.claude/ultrawork/sessions/{SESSION_ID}"
+
+# Verify session exists and has tasks
+ls {session_dir}/tasks/
+```
+
+Read session state:
 
 ```python
-Read(file_path=PLAN_FILE)
-# Parse markdown to extract task structure
+session = Read(f"{session_dir}/session.json")
+goal = session["goal"]
+phase = session["phase"]
+iteration = session.get("iteration", 1)
+max_iterations = session.get("options", {}).get("max_iterations", 5)
+max_workers = session.get("options", {}).get("max_workers", 0)
+skip_verify = session.get("options", {}).get("skip_verify", False)
 ```
 
-## Step 3: Initialize Session
+**Validate session is ready for execution:**
 
-Create session.json from plan:
+| Phase | Action |
+|-------|--------|
+| `PLANNING_COMPLETE` | Ready to execute |
+| `EXECUTION` | Resume execution (check task states) |
+| `VERIFICATION` | Resume verification |
+| `COMPLETE` | Already done, report success |
+| `FAILED` | Max iterations reached, report failure |
+| `CANCELLED` | Exit cleanly |
 
-```bash
-# Session ID is provided via systemMessage from hook (CLAUDE_SESSION_ID)
-# Session directory: ~/.claude/ultrawork/sessions/{session_id}/
-ULTRAWORK_SESSION="$HOME/.claude/ultrawork/sessions/{SESSION_ID}/session.json"
-```
+---
 
-Write parsed tasks to session.json (v5.0):
-```json
-{
-  "version": "5.0",
-  "goal": "{from plan}",
-  "phase": "EXECUTION",
-  "iteration": 1,
-  "plan_file": "{PLAN_FILE path}",
-  "started_at": "2026-01-08T...",
-  "options": {
-    "max_iterations": 5,
-    "max_workers": 0
-  },
-  "tasks": [
-    {"id": "task-1", "title": "...", "complexity": "standard", "status": "pending", ...}
-  ]
-}
-```
+## Step 2: Show Execution Plan
 
-## Step 4: Show Execution Plan
+Display plan summary before starting:
 
 ```markdown
 ## Starting Execution
 
 **Goal:** {goal}
-**Plan:** {plan file path}
+**Session:** {session_id}
+**Iteration:** {iteration}/{max_iterations}
 **Tasks:** {count}
 
 ### Task Queue
 
-| Task   | Status  | Complexity | Model  |
-| ------ | ------- | ---------- | ------ |
-| task-1 | pending | standard   | sonnet |
-| task-2 | pending | complex    | opus   |
+| ID     | Task         | Status  | Complexity | Model  |
+| ------ | ------------ | ------- | ---------- | ------ |
+| 1      | Setup schema | pending | standard   | sonnet |
+| 2      | Build API    | pending | complex    | opus   |
+| verify | Verification | pending | complex    | opus   |
 
 ### Execution Order
-1. [READY] task-1 (no dependencies)
-2. [BLOCKED] task-2 (depends on task-1)
-3. [BLOCKED] verify (depends on all)
+1. [READY] 1 - no dependencies
+2. [BLOCKED] 2 - depends on 1
+3. [BLOCKED] verify - depends on all
 
 Starting workers...
 ```
 
-## Step 5: Execution Loop with Polling
+---
 
-Use background execution with polling to allow user interruption:
+## Step 3: Execution Loop (Main Retry Loop)
+
+**The execution loop runs until success or max_iterations reached.**
 
 ```python
-active_workers = {}  # task_id -> agent_task_id
+while iteration <= max_iterations:
+    # Update phase and iteration
+    Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase EXECUTION --iteration {iteration}')
 
-while True:
-    # Cancel check at start of each loop
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_path} --field phase')
-    if phase.output.strip() == "CANCELLED":
-        print("Session cancelled. Stopping execution.")
+    print(f"## Iteration {iteration}/{max_iterations}")
+
+    # Run execution phase
+    execution_result = run_execution_phase(session_dir, max_workers)
+
+    if execution_result == "CANCELLED":
         return
 
-    # Find unblocked pending tasks
-    tasks = json.loads(Bash(f'"task-list.sh" --session {session_path} --format json').output)
-    unblocked = [t for t in tasks if t["status"] == "pending" and all_deps_complete(t, tasks)]
-    all_done = all(t["status"] in ["resolved", "failed"] for t in tasks if t["id"] != "verify")
+    # Skip verify if requested
+    if skip_verify:
+        Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase COMPLETE')
+        print("## Execution Complete (verification skipped)")
+        return
 
-    if all_done:
-        break  # Move to verification
+    # Run verification phase
+    verification_result = run_verification_phase(session_dir)
 
-    # Spawn workers for unblocked tasks (respect max_workers)
-    for task in unblocked:
-        if len(active_workers) >= max_workers and max_workers > 0:
-            break
+    if verification_result == "CANCELLED":
+        return
+    elif verification_result == "PASS":
+        Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase COMPLETE')
+        print("## Execution Complete - All criteria verified")
+        return
+    else:
+        # FAIL - retry if iterations remain
+        if iteration < max_iterations:
+            print(f"## Verification Failed - Retrying ({iteration + 1}/{max_iterations})")
+            reset_failed_tasks(session_dir)
+            iteration += 1
+        else:
+            Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase FAILED')
+            print("## Execution Failed - Max iterations reached")
+            return
+```
 
-        model = "opus" if task["complexity"] == "complex" else "sonnet"
-        agent_result = Task(
-            subagent_type="ultrawork:worker:worker",
-            model=model,
-            run_in_background=True,
-            prompt=f"""
-ULTRAWORK_SESSION: {session_path}
+---
+
+## Step 4: Execution Phase Implementation
+
+```python
+def run_execution_phase(session_dir, max_workers):
+    active_workers = {}  # task_id -> agent_task_id
+
+    while True:
+        # Cancel check at start of each loop
+        phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+        if phase.output.strip() == "CANCELLED":
+            return "CANCELLED"
+
+        # Get current task states
+        tasks_output = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session {session_dir} --format json')
+        tasks = json.loads(tasks_output.output)
+
+        # Categorize tasks (exclude verify task for now)
+        non_verify_tasks = [t for t in tasks if t["id"] != "verify"]
+        unblocked = [t for t in non_verify_tasks if t["status"] == "pending" and all_deps_complete(t, tasks)]
+        in_progress = [t for t in non_verify_tasks if t["status"] == "in_progress"]
+        all_done = all(t["status"] == "resolved" for t in non_verify_tasks)
+
+        if all_done:
+            return "DONE"  # Move to verification
+
+        # Spawn workers for unblocked tasks (respect max_workers)
+        for task in unblocked:
+            if max_workers > 0 and len(active_workers) >= max_workers:
+                break
+
+            # Mark task as in_progress
+            Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {session_dir} --id {task["id"]} --status in_progress')
+
+            model = "opus" if task["complexity"] == "complex" else "sonnet"
+            agent_result = Task(
+                subagent_type="ultrawork:worker:worker",
+                model=model,
+                run_in_background=True,
+                prompt=f"""
+ULTRAWORK_SESSION: {session_dir}
 TASK_ID: {task["id"]}
 
-TASK: {task["title"]}
+TASK: {task["subject"]}
 {task["description"]}
 
 SUCCESS CRITERIA:
 {task["criteria"]}
 """
-        )
-        active_workers[task["id"]] = agent_result.task_id
+            )
+            active_workers[task["id"]] = agent_result.task_id
+            print(f"→ Started: {task['id']} - {task['subject']}")
 
-    # Poll active workers (non-blocking)
-    for task_id, agent_task_id in list(active_workers.items()):
-        result = TaskOutput(task_id=agent_task_id, block=False, timeout=1000)
-        if result.status in ["completed", "error"]:
-            del active_workers[task_id]
+        # Poll active workers (non-blocking)
+        for task_id, agent_task_id in list(active_workers.items()):
+            result = TaskOutput(task_id=agent_task_id, block=False, timeout=1000)
+            if result.status == "completed":
+                del active_workers[task_id]
+                print(f"✓ Completed: {task_id}")
+            elif result.status == "error":
+                del active_workers[task_id]
+                # Mark task as failed
+                Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {session_dir} --id {task_id} --status failed')
+                print(f"✗ Failed: {task_id}")
+
+        # Brief pause to avoid tight loop (yield control)
+        # This allows cancel check to run
 ```
 
-## Step 6: Progress Reporting
+---
+
+## Step 5: Verification Phase Implementation
+
+```python
+def run_verification_phase(session_dir):
+    # Cancel check before verification
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    if phase.output.strip() == "CANCELLED":
+        return "CANCELLED"
+
+    # Update phase
+    Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase VERIFICATION')
+
+    print("## Running Verification...")
+
+    # Spawn verifier
+    verifier_result = Task(
+        subagent_type="ultrawork:verifier:verifier",
+        model="opus",
+        run_in_background=True,
+        prompt=f"""
+ULTRAWORK_SESSION: {session_dir}
+
+Verify all success criteria are met with evidence.
+Check for blocked patterns.
+Run final tests.
+
+Return: PASS or FAIL with details
+"""
+    )
+
+    # Poll verifier with cancel check
+    while True:
+        phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+        if phase.output.strip() == "CANCELLED":
+            return "CANCELLED"
+
+        result = TaskOutput(task_id=verifier_result.task_id, block=False, timeout=5000)
+        if result.status == "completed":
+            # Parse verifier output
+            if "PASS" in result.output:
+                return "PASS"
+            else:
+                return "FAIL"
+        elif result.status == "error":
+            return "FAIL"
+```
+
+---
+
+## Step 6: Reset Failed Tasks for Retry
+
+```python
+def reset_failed_tasks(session_dir):
+    """Reset failed tasks for retry iteration"""
+
+    tasks_output = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session {session_dir} --format json')
+    tasks = json.loads(tasks_output.output)
+
+    for task in tasks:
+        if task["status"] == "failed":
+            # Reset to pending
+            Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {session_dir} --id {task["id"]} --status pending')
+
+            # Increment retry count
+            retry_count = task.get("retry_count", 0) + 1
+            Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {session_dir} --id {task["id"]} --retry-count {retry_count}')
+
+            print(f"↻ Reset for retry: {task['id']} (attempt {retry_count + 1})")
+
+    # Also reset verify task
+    Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-update.sh" --session {session_dir} --id verify --status pending')
+```
+
+---
+
+## Step 7: Progress Reporting
 
 Between poll iterations, report progress:
 
 ```markdown
 ## Progress Update
 
-✓ task-1: Setup schema (completed)
-→ task-2: User model (in_progress)
-⏳ task-3: Waiting for task-2
+**Iteration:** 2/5
+**Phase:** EXECUTION
+
+| Task   | Status      | Model  |
+| ------ | ----------- | ------ |
+| 1      | ✓ resolved  | sonnet |
+| 2      | → running   | opus   |
+| 3      | ⏳ blocked  | sonnet |
+| verify | ⏳ pending  | opus   |
+
+Active workers: 1
 ```
 
-## Step 7: Verification Phase
+---
 
-When all non-verify tasks complete:
+## Step 8: Completion
 
-```python
-# Cancel check before verification
-phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_path} --field phase')
-if phase.output.strip() == "CANCELLED":
-    return
+### On Success (PASS)
 
-# Update phase
-Bash(f'"session-update.sh" --session {session_path} --phase VERIFICATION')
+```markdown
+## Execution Complete
 
-# Spawn verifier with background + polling
-verifier_result = Task(
-    subagent_type="ultrawork:verifier:verifier",
-    model="opus",
-    run_in_background=True,
-    prompt=f"""
-ULTRAWORK_SESSION: {session_path}
+**Goal:** {goal}
+**Iterations:** {iteration}/{max_iterations}
+**Result:** ✓ PASS
 
-Verify all success criteria are met with evidence.
-Check for blocked patterns.
-Run final tests.
-"""
-)
+### Summary
+- All {task_count} tasks completed
+- All success criteria verified
+- No blocked patterns detected
 
-# Poll verifier with cancel check
-while True:
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_path} --field phase')
-    if phase.output.strip() == "CANCELLED":
-        return
+### Evidence
+{summary from verifier}
 
-    result = TaskOutput(task_id=verifier_result.task_id, block=False, timeout=5000)
-    if result.status in ["completed", "error"]:
-        break
+Session: {session_dir}
 ```
 
-## Step 8: Complete
+### On Failure (max iterations reached)
 
-**If verifier passes:**
-- Update phase to `COMPLETE`
-- Update plan file: mark tasks as done
-- Report summary with all evidence
+```markdown
+## Execution Failed
 
-**If verifier fails (auto-retry loop):**
+**Goal:** {goal}
+**Iterations:** {max_iterations}/{max_iterations} (max reached)
+**Result:** ✗ FAIL
 
-Check iteration count:
-```python
-iteration = session["iteration"]
-max_iterations = session["options"]["max_iterations"]
+### Failed Tasks
+| ID | Task | Reason |
+|----|------|--------|
+| 2  | Build API | Tests failing |
 
-if iteration < max_iterations:
-    # Auto-retry
-    session["iteration"] = iteration + 1
-    session["phase"] = "EXECUTION"
-    # Reset failed tasks
-    for task in failed_tasks:
-        task["status"] = "open"
-        task["retry_count"] = 0
-    # Save session.json
-    # Output marker to trigger loop
-    print("__ULTRAWORK_RETRY__")
-else:
-    # Max iterations reached
-    session["phase"] = "FAILED"
-    # Report to user, ask for manual intervention
+### Verification Issues
+{details from last verifier run}
+
+### Next Steps
+1. Review failed task output: {session_dir}/tasks/2.json
+2. Fix issues manually
+3. Run `/ultrawork-exec` again (resets iteration counter)
+
+Session: {session_dir}
 ```
+
+---
 
 ## Error Handling
 
-**Worker fails:**
+### Worker Failures
+
 - Mark task as `failed` in session.json
 - Continue other independent tasks
-- Report failure at end
+- Retry on next iteration
 
-**Retry:**
-- Run `/ultrawork-exec` again
-- Only pending/failed tasks will be re-executed
-- Completed tasks are skipped
+### Retry Strategy
+
+| Attempt | Model Escalation | Notes |
+|---------|------------------|-------|
+| 1 | sonnet/opus (default) | Normal execution |
+| 2 | Same model | Retry with same model |
+| 3+ | Consider opus | Escalate if standard task keeps failing |
+
+### Graceful Degradation
+
+- If a non-critical task fails repeatedly, consider marking as skipped
+- Critical tasks (verify) must pass
+
+---
+
+## Options Reference
+
+| Option | Description |
+|--------|-------------|
+| `--session <id>` | Session ID to execute |
+| `--max-iterations N` | Override max retry iterations (default: 5) |
+| `--skip-verify` | Skip verification phase |
+
+---
+
+## Directory Structure
+
+```
+~/.claude/ultrawork/sessions/{session_id}/
+├── session.json        # Session metadata with iteration state
+├── context.json        # Explorer summaries
+├── design.md           # Design document
+├── exploration/        # Exploration files
+└── tasks/              # Task files with status and retry_count
+    ├── 1.json          # { status: "resolved", retry_count: 0 }
+    ├── 2.json          # { status: "failed", retry_count: 2 }
+    └── verify.json     # { status: "pending" }
+```
+
+---
+
+## Zero Tolerance Rules
+
+Before ANY completion claim:
+- No blocked phrases ("should work", "basic implementation")
+- Evidence exists for all criteria
+- All tasks resolved
+- Verifier passed (unless --skip-verify)
+- Retry loop exhausted only after genuine attempts

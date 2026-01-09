@@ -64,30 +64,48 @@ while True:
 
 **All scripts require `--session <id>` flag.**
 
-The session_id is provided by the hook via systemMessage as `CLAUDE_SESSION_ID`.
+### Where to get SESSION_ID
 
-**Example from hook:**
+Look for this message in system-reminder (provided by SessionStart hook):
 ```
-CLAUDE_SESSION_ID: abc123def456
-Use this when calling ultrawork scripts: --session abc123def456
+CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642
+Use this when calling ultrawork scripts: --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642
 ```
 
-**AI must extract and pass it to ALL script calls:**
+**IMPORTANT: You MUST extract the actual UUID value and use it directly. DO NOT use placeholder strings like `{SESSION_ID}` or `$SESSION_ID`.**
+
+### Correct usage example
+
+If the hook says `CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then:
+
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session {SESSION_ID} --plan-only $ARGUMENTS
-"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_DIR} --field phase
-"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_DIR} ...
+# ✅ CORRECT - use the actual value
+"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --plan-only "goal"
+
+# ❌ WRONG - do not use placeholders
+"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session {SESSION_ID} --plan-only "goal"
 ```
+
+### Variables used in this document
+
+| Variable | Source | Example Value |
+|----------|--------|---------------|
+| `SESSION_ID` | Hook output `CLAUDE_SESSION_ID` | `37b6a60f-8e3e-4631-8f62-8eaf3d235642` |
+| `session_dir` | Setup script output | `~/.claude/ultrawork/sessions/37b6a60f-8e3e-4631-8f62-8eaf3d235642/` |
+
+**Note:** In code examples below, `{session_dir}` represents a Python f-string variable or the actual session directory path. Always substitute with real values when executing.
 
 ---
 
 ## Step 1: Initialize Session
 
-Execute the setup script with `--session` and `--plan-only`:
+**First, extract SESSION_ID from the system-reminder hook output, then execute:**
 
-```!
-"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session {SESSION_ID} --plan-only $ARGUMENTS
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session <YOUR_SESSION_ID_HERE> --plan-only $ARGUMENTS
 ```
+
+Replace `<YOUR_SESSION_ID_HERE>` with the actual UUID from `CLAUDE_SESSION_ID` in system-reminder.
 
 This creates session at: `~/.claude/ultrawork/sessions/{session_id}/`
 

@@ -119,6 +119,15 @@ If the hook says `CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then
 "${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session $SESSION_ID "goal"
 ```
 
+### Variables used in this document
+
+| Variable | Source | Example Value |
+|----------|--------|---------------|
+| `SESSION_ID` | Hook output `CLAUDE_SESSION_ID` | `37b6a60f-8e3e-4631-8f62-8eaf3d235642` |
+| `session_dir` | Setup script output | `~/.claude/ultrawork/sessions/37b6a60f-8e3e-4631-8f62-8eaf3d235642/` |
+
+**Note:** In code examples below, `{session_dir}` represents a Python f-string variable or the actual session directory path. Always substitute with real values when executing.
+
 ---
 
 ## Step 1: Initialize Session
