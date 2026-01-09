@@ -60,6 +60,15 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/agent-lifecycle-tracking.sh"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/gate-enforcement.sh"
+          }
+        ]
       }
     ],
     "SubagentStop": [

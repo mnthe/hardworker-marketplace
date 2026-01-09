@@ -1,6 +1,6 @@
 {
   "name": "ultrawork",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Strict verification-first development mode with Session ID-based isolation, mandatory planning, success criteria, evidence collection, and zero tolerance for partial completion.",
   "author": {
     "name": "mnthe"

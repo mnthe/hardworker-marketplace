@@ -173,6 +173,62 @@ release_session_lock() {
   rmdir "$lock_file" 2>/dev/null || true
 }
 
+# Check if ultrawork session is active (not in terminal state)
+# Returns: 0 if active, 1 if not active or no session
+# Terminal states: COMPLETE, CANCELLED, FAILED
+is_session_active() {
+  local team_name="${1:-$(get_team_name)}"
+  local session_id=$(get_current_session_id "$team_name")
+
+  # No session bound
+  if [[ -z "$session_id" ]]; then
+    return 1
+  fi
+
+  local session_dir=$(get_session_dir "$session_id" "$team_name")
+  local session_file="$session_dir/session.json"
+
+  # Session file doesn't exist
+  if [[ ! -f "$session_file" ]]; then
+    return 1
+  fi
+
+  # Check phase
+  local phase=$(jq -r '.phase // "unknown"' "$session_file" 2>/dev/null)
+
+  case "$phase" in
+    PLANNING|EXECUTION|VERIFICATION)
+      return 0  # Active
+      ;;
+    COMPLETE|CANCELLED|FAILED)
+      return 1  # Terminal state
+      ;;
+    *)
+      return 1  # Unknown = not active
+      ;;
+  esac
+}
+
+# Get session phase (returns empty if no active session)
+get_session_phase() {
+  local team_name="${1:-$(get_team_name)}"
+  local session_id=$(get_current_session_id "$team_name")
+
+  if [[ -z "$session_id" ]]; then
+    echo ""
+    return
+  fi
+
+  local session_dir=$(get_session_dir "$session_id" "$team_name")
+  local session_file="$session_dir/session.json"
+
+  if [[ -f "$session_file" ]]; then
+    jq -r '.phase // ""' "$session_file" 2>/dev/null
+  else
+    echo ""
+  fi
+}
+
 # Safe JSON update with locking
 update_session_json() {
   local session_file="$1"
