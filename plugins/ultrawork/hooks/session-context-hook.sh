@@ -62,28 +62,24 @@ case "$PHASE" in
       # Gate system for interactive planning
       case "$EXPLORATION_STAGE" in
         not_started)
-          NEXT_ACTION="⛔ GATE SYSTEM - Explorer 우선 정책
+          NEXT_ACTION="⛔ GATE SYSTEM - Skill 기반 탐색
 
-┌─ GATE 1: EXPLORATION [CURRENT] ─────────────────────┐
+┌─ GATE 1: OVERVIEW [CURRENT] ────────────────────────┐
 │                                                      │
 │ FIRST ACTION (필수):                                 │
-│ Task(                                                │
-│   subagent_type=\"ultrawork:explorer\",                │
-│   model=\"haiku\",                                     │
-│   prompt=\"ULTRAWORK_SESSION: $SESSION_DIR            │
-│           EXPLORER_ID: overview                      │
-│           EXPLORATION_MODE: overview\"                │
-│ )                                                    │
+│ Skill(skill=\"ultrawork:overview-exploration\")        │
 │                                                      │
-│ 정책: EXPLORER 우선, 병행 탐색 허용                  │
-│ ✓ Explorer 먼저 spawn (필수)                         │
-│ ✓ 관련 문서/파일 병행 읽기 허용                      │
-│ ✗ 소스코드 직접 탐색 금지 (explorer 사용)            │
-│ ✗ 파일 수정 금지 (Edit, Write)                       │
+│ 직접 탐색 (Agent spawn 없음):                        │
+│ ✓ Glob, Read, Grep 사용하여 프로젝트 구조 파악       │
+│ ✓ overview.md 작성                                   │
+│ ✗ 파일 수정 금지 (Edit, Write - overview.md 제외)    │
+│                                                      │
+│ Skill이 안내하는 절차를 따르세요.                    │
 └──────────────────────────────────────────────────────┘
 
 ┌─ GATE 2: TARGETED EXPLORATION [LOCKED] ─────────────┐
 │ Unlocks when: overview.md exists                     │
+│ Agent: Task(subagent_type=\"ultrawork:explorer\")      │
 └──────────────────────────────────────────────────────┘
 
 ┌─ GATE 3: PLANNING [LOCKED] ─────────────────────────┐

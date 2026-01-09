@@ -23,7 +23,8 @@ The orchestrator MUST delegate work to sub-agents. Direct execution is prohibite
 
 | Phase | Delegation | Direct Execution |
 |-------|------------|------------------|
-| Exploration | ALWAYS via `Task(subagent_type="ultrawork:explorer")` | NEVER |
+| Overview Exploration | N/A | ALWAYS via `Skill(skill="ultrawork:overview-exploration")` |
+| Targeted Exploration | ALWAYS via `Task(subagent_type="ultrawork:explorer")` | NEVER |
 | Planning (non-auto) | N/A | ALWAYS (by design) |
 | Planning (auto) | ALWAYS via `Task(subagent_type="ultrawork:planner")` | NEVER |
 | Execution | ALWAYS via `Task(subagent_type="ultrawork:worker")` | NEVER |
@@ -178,53 +179,23 @@ elif exploration_stage == "complete":
 
 Exploration happens in two stages: Overview first, then targeted exploration.
 
-### Stage 2a: Quick Overview
+### Stage 2a: Quick Overview (Direct via Skill)
 
-**Update exploration_stage to "overview":**
-
-```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir}/session.json --exploration-stage overview
-```
-
-Spawn ONE overview explorer first:
+**Invoke the overview-exploration skill directly (no agent spawn):**
 
 ```python
-Task(
-  subagent_type="ultrawork:explorer:explorer",
-  model="haiku",
-  prompt="""
-ULTRAWORK_SESSION: {session_dir}
-EXPLORER_ID: overview
-EXPLORATION_MODE: overview
-
-Perform quick project overview:
-- Project type (Next.js, Express, CLI, library, etc.)
-- Directory structure (src/, app/, lib/, etc.)
-- Tech stack (from package.json, requirements.txt, etc.)
-- Key entry points
-- Existing patterns (auth, db, api, etc.)
-"""
-)
+Skill(skill="ultrawork:overview-exploration")
 ```
 
-**Wait for overview using polling pattern (see Interruptibility section):**
+The skill will:
+1. Update exploration_stage to "overview"
+2. Directly explore project structure using Glob, Read, Grep
+3. Write `{session_dir}/exploration/overview.md`
+4. Initialize `context.json`
 
-```python
-# Poll until complete or cancelled
-while True:
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
-    if phase.output.strip() == "CANCELLED":
-        return  # Exit cleanly
+**Time budget**: ~30 seconds, max 5-7 file reads
 
-    result = TaskOutput(task_id=overview_task_id, block=False, timeout=5000)
-    if result.status in ["completed", "error"]:
-        break
-```
-
-Read the result:
-```bash
-cat {session_dir}/exploration/overview.md
-```
+This is synchronous - no polling needed. Proceed to Stage 2b after skill completes.
 
 ### Stage 2b: Analyze & Plan Targeted Exploration
 
