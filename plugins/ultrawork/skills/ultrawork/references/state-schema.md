@@ -48,68 +48,79 @@ Session ID is provided by Claude Code via hooks (CLAUDE_SESSION_ID).
 | `key_files` | Important files discovered during exploration |
 | `patterns` | Code patterns identified |
 
-## session.json Schema (v5.2)
+## session.json Schema (v5.0)
+
+**Note:** Tasks are stored as separate files in `tasks/` directory, not embedded in session.json.
 
 ```json
 {
-  "version": "5.2",
-  "exploration_stage": "not_started",
-  "session_task_id": "42",
+  "version": "5.0",
+  "session_id": "abc123-def456",
   "goal": "Original user request",
-  "phase": "PLANNING",
-  "auto_mode": false,
   "started_at": "2026-01-08T12:00:00Z",
   "updated_at": "2026-01-08T12:30:00Z",
-
-  "planner": {
-    "agent_id": "task-abc123",
-    "status": "running",
-    "started_at": "2026-01-08T12:00:05Z",
-    "completed_at": null
+  "phase": "PLANNING",
+  "exploration_stage": "not_started",
+  "iteration": 1,
+  "plan": {
+    "approved_at": null
   },
-
-  "child_tasks": [
-    {
-      "id": "1",
-      "subject": "Setup database",
-      "status": "resolved",
-      "worker_agent_id": "task-def456",
-      "success_criteria": [
-        "Migration runs without error",
-        "Schema validates"
-      ],
-      "evidence": [
-        {
-          "criteria": "Migration runs without error",
-          "command": "npx prisma migrate deploy",
-          "output": "All migrations applied successfully",
-          "verified": true,
-          "timestamp": "2026-01-08T12:15:00Z"
-        }
-      ],
-      "blocked_by": [],
-      "started_at": "2026-01-08T12:05:00Z",
-      "completed_at": "2026-01-08T12:15:00Z"
-    }
-  ],
-
+  "options": {
+    "max_workers": 0,
+    "max_iterations": 5,
+    "skip_verify": false,
+    "plan_only": false,
+    "auto_mode": false
+  },
   "evidence_log": [
     {
+      "timestamp": "2026-01-08T12:15:00Z",
+      "type": "agent_completed",
+      "agent_id": "task-def456",
       "task_id": "1",
-      "criteria": "Migration runs without error",
-      "type": "command_output",
-      "content": "All migrations applied successfully",
-      "timestamp": "2026-01-08T12:15:00Z"
+      "status": "completed",
+      "summary": "Migration completed successfully"
     }
   ],
-
-  "verify_task_id": "5",
-
-  "completed_at": null,
-  "cancelled_at": null,
-  "failure_reason": null
+  "cancelled_at": null
 }
 ```
+
+## tasks/{id}.json Schema
+
+Each task is stored as a separate JSON file in the `tasks/` directory.
+
+```json
+{
+  "id": "1",
+  "subject": "Setup database",
+  "description": "Create and run database migrations",
+  "status": "open",
+  "blockedBy": ["0"],
+  "complexity": "standard",
+  "criteria": [
+    "Migration runs without error",
+    "Schema validates"
+  ],
+  "evidence": [
+    "npx prisma migrate deploy: All migrations applied successfully",
+    "npm test: All tests passed"
+  ],
+  "retry_count": 0
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Task identifier |
+| `subject` | string | Short task title |
+| `description` | string | Detailed task description |
+| `status` | string | `open`, `in_progress`, `resolved`, `failed` |
+| `blockedBy` | string[] | IDs of tasks that must complete first |
+| `complexity` | string | `trivial`, `standard`, `complex` |
+| `criteria` | string[] | Success criteria list |
+| `evidence` | string[] | Evidence strings (command outputs, results) |
+| `retry_count` | number | Current retry attempt |
 
 ## Phase Values
 

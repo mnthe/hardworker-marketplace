@@ -199,24 +199,23 @@ Read references/ for detailed protocols.
 
 ---
 
-## Interruptibility (Background + Polling)
+## Sub-agent Execution
 
-To allow user interruption during long-running operations, always use **background execution with polling**.
+Sub-agents can be run in **foreground** (default) or **background** mode. Choose based on the situation:
+
+| Mode | When to Use |
+|------|-------------|
+| **Foreground** | Sequential tasks, need result immediately |
+| **Background** | Parallel execution, worker pool with limits |
 
 ```python
-# Pattern for all sub-agent waits
-task_result = Task(subagent_type="...", run_in_background=True, ...)
+# Foreground (default) - simple, blocking
+result = Task(subagent_type="ultrawork:explorer", prompt="...")
 
-while True:
-    # Cancel check
-    phase = Bash(f'session-get.sh --session {SESSION_ID} --field phase')
-    if phase.output.strip() == "CANCELLED":
-        return  # Exit cleanly
-
-    # Non-blocking poll
-    result = TaskOutput(task_id=task_result.task_id, block=False, timeout=5000)
-    if result.status in ["completed", "error"]:
-        break
+# Background - for parallel execution
+task_id = Task(subagent_type="ultrawork:worker", run_in_background=True, prompt="...")
+# ... do other work ...
+result = TaskOutput(task_id=task_id, block=True)
 ```
 
-This allows `/ultrawork-cancel` to take effect between poll iterations.
+**Parallel execution**: Call multiple Tasks in a single message for automatic parallelization.

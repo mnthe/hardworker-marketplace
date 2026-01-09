@@ -415,7 +415,7 @@ Verify task           → blockedBy: [all]   (after everything)
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
 
 # Create each task
-$SCRIPTS/task-create.sh --session {SESSION_DIR} \
+$SCRIPTS/task-create.sh --session {SESSION_ID} \
   --id "1" \
   --subject "Setup NextAuth.js provider" \
   --description "Configure NextAuth with Google OAuth" \
@@ -423,7 +423,7 @@ $SCRIPTS/task-create.sh --session {SESSION_DIR} \
   --criteria "Auth routes respond|OAuth flow works"
 
 # Always include verify task
-$SCRIPTS/task-create.sh --session {SESSION_DIR} \
+$SCRIPTS/task-create.sh --session {SESSION_ID} \
   --id "verify" \
   --subject "[VERIFY] Integration verification" \
   --description "Verify all auth flows work end-to-end" \

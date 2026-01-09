@@ -36,59 +36,25 @@ The orchestrator MUST delegate work to sub-agents. Direct execution is prohibite
 
 ---
 
-## Interruptibility (Background + Polling)
+## Sub-agent Execution
 
-To allow user interruption during long-running operations, use **background execution with polling**.
+Sub-agents can be run in **foreground** (default) or **background** mode. Choose based on the situation:
 
-### Pattern: Non-blocking Wait with Cancel Check
+| Mode | When to Use |
+|------|-------------|
+| **Foreground** | Sequential tasks, need result immediately |
+| **Background** | Parallel execution with worker pool limits |
 
 ```python
-# 1. Spawn agent in background
-task_result = Task(
-  subagent_type="ultrawork:explorer:explorer",
-  run_in_background=True,
-  prompt="..."
-)
-task_id = task_result.task_id
+# Foreground (default) - simple, blocking
+result = Task(subagent_type="ultrawork:explorer", prompt="...")
 
-# 2. Poll with cancel check loop
-while True:
-    # Check if session was cancelled
-    session_check = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
-    if session_check.output.strip() == "CANCELLED":
-        print("Session cancelled by user. Stopping.")
-        break
-
-    # Non-blocking check for task completion
-    output = TaskOutput(task_id=task_id, block=False, timeout=5000)
-
-    if output.status == "completed":
-        # Process result
-        break
-    elif output.status == "error":
-        # Handle error
-        break
-
-    # Still running - continue polling
-    # (This yields control, allowing user to send /ultrawork-cancel)
+# Background - for parallel execution with limits
+task_id = Task(subagent_type="ultrawork:worker", run_in_background=True, prompt="...")
+result = TaskOutput(task_id=task_id, block=True)
 ```
 
-### When to Apply This Pattern
-
-| Phase | Apply Pattern | Notes |
-|-------|---------------|-------|
-| Overview exploration | ✓ Yes | Single agent, wait with polling |
-| Targeted exploration | ✓ Yes | Multiple agents, poll each |
-| Auto planning | ✓ Yes | Planner agent, poll until done |
-| Worker execution | ✓ Yes | Multiple workers, poll each |
-| Verification | ✓ Yes | Verifier agent, poll until done |
-
-### Cancel Check Script
-
-The session-get.sh script returns the current phase. When user runs `/ultrawork-cancel`:
-1. Session phase changes to `CANCELLED`
-2. Next poll iteration detects this
-3. Orchestrator stops spawning new work and exits cleanly
+**Parallel execution**: Call multiple Tasks in a single message for automatic parallelization.
 
 ---
 
@@ -301,9 +267,8 @@ for i, hint in enumerate(hints):
 ```
 
 This ensures:
-1. `expected_explorers` is set before any background tasks start
-2. If interrupted, resume check knows what's missing
-3. `exploration_complete` auto-updates when all explorers finish
+1. `expected_explorers` is set before spawning
+2. `exploration_complete` auto-updates when all explorers finish
 
 ### Stage 2c: Targeted Exploration
 
@@ -313,16 +278,16 @@ This ensures:
 "${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_ID} --exploration-stage targeted
 ```
 
-Spawn explorers for each identified area (parallel):
+Spawn explorers for each identified area (parallel, in single message):
 
 ```python
 # Get session_dir via: Bash('"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir')
 
+# Call multiple Tasks in single message = automatic parallel execution
 for i, hint in enumerate(hints):
     Task(
       subagent_type="ultrawork:explorer:explorer",
       model="haiku",  # or sonnet for complex areas
-      run_in_background=True,
       prompt=f"""
 SESSION_ID: {SESSION_ID}
 EXPLORER_ID: exp-{i+1}
@@ -332,24 +297,7 @@ SEARCH_HINT: {hint}
 CONTEXT: {overview_summary}
 """
     )
-```
-
-**Wait for all explorers using polling pattern:**
-
-```python
-pending_tasks = [task_id_1, task_id_2, ...]  # From Task() calls above
-
-while pending_tasks:
-    # Cancel check
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
-    if phase.output.strip() == "CANCELLED":
-        return  # Exit cleanly
-
-    # Check each pending task
-    for task_id in pending_tasks[:]:  # Copy to allow modification
-        result = TaskOutput(task_id=task_id, block=False, timeout=1000)
-        if result.status in ["completed", "error"]:
-            pending_tasks.remove(task_id)
+# All explorers run in parallel and results are collected
 ```
 
 **After all explorers complete, update exploration_stage to "complete":**
@@ -376,6 +324,7 @@ Spawn Planner sub-agent:
 ```python
 # Get session_dir via: Bash('"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir')
 
+# Foreground execution - waits for completion
 Task(
   subagent_type="ultrawork:planner:planner",
   model="opus",
@@ -390,19 +339,6 @@ Options:
 - max_workers: {max_workers}
 """
 )
-```
-
-**Wait for planner using polling pattern:**
-
-```python
-while True:
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
-    if phase.output.strip() == "CANCELLED":
-        return  # Exit cleanly
-
-    result = TaskOutput(task_id=planner_task_id, block=False, timeout=5000)
-    if result.status in ["completed", "error"]:
-        break
 ```
 
 Skip to Step 4.

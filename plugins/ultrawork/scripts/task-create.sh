@@ -83,8 +83,7 @@ cat > "$TASK_FILE" << EOF
   "complexity": "$COMPLEXITY",
   "criteria": $CRITERIA_JSON,
   "evidence": [],
-  "retry_count": 0,
-  "max_retry": 2
+  "retry_count": 0
 }
 EOF
 
