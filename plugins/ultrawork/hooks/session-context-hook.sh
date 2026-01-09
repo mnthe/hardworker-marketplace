@@ -111,7 +111,7 @@ case "$PHASE" in
 │     subagent_type=\"ultrawork:explorer\",              │
 │     model=\"haiku\",                                   │
 │     run_in_background=True,                          │
-│     prompt=\"ULTRAWORK_SESSION: $SESSION_DIR          │
+│     prompt=\"SESSION_ID: $SESSION_ID                  │
 │             EXPLORER_ID: exp-{i}                     │
 │             SEARCH_HINT: {hint}\"                     │
 │   )                                                  │

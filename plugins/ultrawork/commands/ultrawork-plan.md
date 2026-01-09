@@ -88,11 +88,18 @@ If the hook says `CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then
 
 ### Session Directory
 
-The session directory is always: `~/.claude/ultrawork/sessions/{SESSION_ID}/`
+Get session directory via script:
 
-For example, if `SESSION_ID` is `37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then:
-- Session directory: `~/.claude/ultrawork/sessions/37b6a60f-8e3e-4631-8f62-8eaf3d235642/`
-- Session file: `~/.claude/ultrawork/sessions/37b6a60f-8e3e-4631-8f62-8eaf3d235642/session.json`
+```bash
+SESSION_DIR=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir)
+```
+
+For example, if `SESSION_ID` is `37b6a60f-8e3e-4631-8f62-8eaf3d235642`:
+
+```bash
+SESSION_DIR=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --dir)
+# Returns: ~/.claude/ultrawork/sessions/37b6a60f-8e3e-4631-8f62-8eaf3d235642
+```
 
 ---
 
@@ -106,11 +113,11 @@ For example, if `SESSION_ID` is `37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then:
 
 Replace `<YOUR_SESSION_ID_HERE>` with the actual UUID from `CLAUDE_SESSION_ID` in system-reminder.
 
-**After initialization, set session_dir variable for subsequent operations:**
+**After initialization, get session_dir via script:**
 
-```python
-SESSION_ID = "37b6a60f-8e3e-4631-8f62-8eaf3d235642"  # From hook output
-session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+```bash
+# SESSION_ID from hook output
+SESSION_DIR=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --dir)
 ```
 
 Parse the setup output to get:
@@ -123,19 +130,16 @@ Parse the setup output to get:
 
 **Before starting exploration, check session state to determine where to resume:**
 
-```python
-# SESSION_ID from hook output, session_dir derived from it
-session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+```bash
+# Get session directory via script
+SESSION_DIR=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir)
 
-# Read session.json
-session = Bash(f'cat {session_dir}/session.json')
-exploration_stage = session.get("exploration_stage", "not_started")
+# Get session data via script
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID}                      # Full JSON
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field exploration_stage
 
-# Read context.json
-context = Read(f"{session_dir}/context.json")
-exploration_complete = context.get("exploration_complete", False) if context else False
-expected_explorers = context.get("expected_explorers", []) if context else []
-actual_explorers = [e["id"] for e in context.get("explorers", [])] if context else []
+# Read context.json (using Read tool with session_dir)
+context = Read(f"{SESSION_DIR}/context.json")
 ```
 
 **Resume logic by exploration_stage:**
@@ -276,7 +280,7 @@ This ensures:
 Spawn explorers for each identified area (parallel):
 
 ```python
-session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+# Get session_dir via: Bash('"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir')
 
 for i, hint in enumerate(hints):
     Task(
@@ -284,7 +288,7 @@ for i, hint in enumerate(hints):
       model="haiku",  # or sonnet for complex areas
       run_in_background=True,
       prompt=f"""
-ULTRAWORK_SESSION: {session_dir}
+SESSION_ID: {SESSION_ID}
 EXPLORER_ID: exp-{i+1}
 
 SEARCH_HINT: {hint}
@@ -332,13 +336,13 @@ Explorers will create:
 Spawn Planner sub-agent:
 
 ```python
-session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+# Get session_dir via: Bash('"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir')
 
 Task(
   subagent_type="ultrawork:planner:planner",
   model="opus",
   prompt=f"""
-ULTRAWORK_SESSION: {session_dir}
+SESSION_ID: {SESSION_ID}
 
 Goal: {goal}
 
@@ -374,16 +378,17 @@ Reference: `skills/planning/SKILL.md`
 
 #### 3a. Read Context
 
-```python
-session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+```bash
+# Get session directory
+SESSION_DIR=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir)
 
 # Read lightweight summary
-Read(f"{session_dir}/context.json")
+Read("$SESSION_DIR/context.json")
 
 # Read detailed exploration as needed
-Read(f"{session_dir}/exploration/exp-1.md")
-Read(f"{session_dir}/exploration/exp-2.md")
-Read(f"{session_dir}/exploration/exp-3.md")
+Read("$SESSION_DIR/exploration/exp-1.md")
+Read("$SESSION_DIR/exploration/exp-2.md")
+Read("$SESSION_DIR/exploration/exp-3.md")
 ```
 
 #### 3b. Present Findings to User
@@ -446,11 +451,13 @@ AskUserQuestion(questions=[{
 
 Write comprehensive design to `design.md`:
 
-```python
-session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+```bash
+# Get session directory
+SESSION_DIR=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir)
 
+# Write design document
 Write(
-  file_path=f"{session_dir}/design.md",
+  file_path="$SESSION_DIR/design.md",
   content=design_content
 )
 ```
@@ -484,11 +491,15 @@ Always include verify task at end.
 
 **Read the plan:**
 
-```python
-session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+```bash
+# Get session directory
+SESSION_DIR=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir)
 
-Bash(f"ls {session_dir}/tasks/")
-Read(f"{session_dir}/design.md")
+# List tasks
+"${CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session {SESSION_ID}
+
+# Read design
+Read("$SESSION_DIR/design.md")
 ```
 
 Display plan summary:
@@ -533,7 +544,7 @@ AskUserQuestion(questions=[{
 
 ## Output
 
-Planning creates (in `~/.claude/ultrawork/sessions/{session_id}/`):
+Planning creates (in session directory):
 - `design.md` - comprehensive design document
 - `tasks/*.json` - task files
 - `context.json` - exploration summaries
@@ -545,8 +556,10 @@ Run `/ultrawork-exec` to execute the plan.
 
 ## Directory Structure
 
+Get session directory: `"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir`
+
 ```
-~/.claude/ultrawork/sessions/{session_id}/
+$SESSION_DIR/
 ├── session.json        # Session metadata (JSON)
 ├── context.json        # Explorer summaries (JSON)
 ├── design.md           # Design document (Markdown)

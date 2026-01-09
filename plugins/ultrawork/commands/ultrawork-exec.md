@@ -100,25 +100,25 @@ Find and load the existing session:
 
 ```bash
 # Get SESSION_ID from hook output (see "Session ID Handling" section)
-# Session directory is automatically: ~/.claude/ultrawork/sessions/{SESSION_ID}/
+# Get session directory via script
+SESSION_DIR=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir)
 
 # Verify session exists and has tasks
-ls ~/.claude/ultrawork/sessions/{SESSION_ID}/tasks/
+"${CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session {SESSION_ID}
 ```
 
 Read session state:
 
-```python
-SESSION_ID = "37b6a60f-8e3e-4631-8f62-8eaf3d235642"  # From hook output
-session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+```bash
+# SESSION_ID from hook output
+# Get session data via script
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID}                    # Full JSON
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase      # Specific field
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field goal
 
-session = Read(f"{session_dir}/session.json")
-goal = session["goal"]
-phase = session["phase"]
-iteration = session.get("iteration", 1)
-max_iterations = session.get("options", {}).get("max_iterations", 5)
-max_workers = session.get("options", {}).get("max_workers", 0)
-skip_verify = session.get("options", {}).get("skip_verify", False)
+# Get specific options
+goal=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field goal)
+phase=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase)
 ```
 
 **Validate session is ready for execution:**
@@ -215,7 +215,7 @@ while iteration <= max_iterations:
 ```python
 def run_execution_phase(SESSION_ID, max_workers):
     active_workers = {}  # task_id -> agent_task_id
-    session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+    # Get session_dir via: Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir')
 
     while True:
         # Cancel check at start of each loop
@@ -250,7 +250,7 @@ def run_execution_phase(SESSION_ID, max_workers):
                 model=model,
                 run_in_background=True,
                 prompt=f"""
-ULTRAWORK_SESSION: {session_dir}
+SESSION_ID: {SESSION_ID}
 TASK_ID: {task["id"]}
 
 TASK: {task["subject"]}
@@ -285,7 +285,7 @@ SUCCESS CRITERIA:
 
 ```python
 def run_verification_phase(SESSION_ID):
-    session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+    # Get session_dir via: Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir')
 
     # Cancel check before verification
     phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field phase')
@@ -303,7 +303,7 @@ def run_verification_phase(SESSION_ID):
         model="opus",
         run_in_background=True,
         prompt=f"""
-ULTRAWORK_SESSION: {session_dir}
+SESSION_ID: {SESSION_ID}
 
 Verify all success criteria are met with evidence.
 Check for blocked patterns.
@@ -464,8 +464,10 @@ Session ID: {session_id}
 
 ## Directory Structure
 
+Get session directory: `"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir`
+
 ```
-~/.claude/ultrawork/sessions/{session_id}/
+$SESSION_DIR/
 ├── session.json        # Session metadata with iteration state
 ├── context.json        # Explorer summaries
 ├── design.md           # Design document

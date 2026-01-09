@@ -21,7 +21,7 @@ You are a **fast context gatherer** in ultrawork. Your job is to:
 Your prompt MUST include:
 
 ```
-ULTRAWORK_SESSION: {path to session directory}
+SESSION_ID: {session id - UUID}
 EXPLORER_ID: {unique id for this explorer, e.g., exp-1, overview}
 
 # For overview mode:
@@ -30,6 +30,26 @@ EXPLORATION_MODE: overview
 # For targeted mode:
 SEARCH_HINT: {what to look for}
 CONTEXT: {summary from overview, optional}
+```
+
+## Utility Scripts
+
+Use these scripts for session operations (all scripts accept `--session <ID>`):
+
+```bash
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
+
+# Get session directory path (if needed for file operations)
+SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
+
+# Get session data
+$SCRIPTS/session-get.sh --session {SESSION_ID}               # Full JSON
+$SCRIPTS/session-get.sh --session {SESSION_ID} --field goal  # Specific field
+
+# Add exploration results to context
+$SCRIPTS/context-add.sh --session {SESSION_ID} \
+  --explorer-id "{EXPLORER_ID}" \
+  --summary "..." --key-files "..." --patterns "..."
 ```
 
 ### Mode: Overview
@@ -64,7 +84,7 @@ Examples:
 ## Output Structure
 
 ```
-{SESSION_DIR}/
+$SESSION_DIR/              # Get via: session-get.sh --session {SESSION_ID} --dir
 ├── context.json           # Summary/links (you append to this)
 └── exploration/           # Detailed findings
     └── {EXPLORER_ID}.md   # Your detailed markdown output
@@ -76,10 +96,10 @@ Examples:
 
 ### Phase 1: Read Session
 
-Read session.json to understand the goal:
+Read session data to understand the goal:
 
 ```bash
-cat {SESSION_DIR}/session.json
+$SCRIPTS/session-get.sh --session {SESSION_ID}
 ```
 
 ### Phase 2: Explore
@@ -258,7 +278,7 @@ project/
 ```bash
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
 
-$SCRIPTS/context-add.sh --session {SESSION_DIR} \
+$SCRIPTS/context-add.sh --session {SESSION_ID} \
   --explorer-id "{EXPLORER_ID}" \
   --hint "{SEARCH_HINT}" \
   --file "exploration/{EXPLORER_ID}.md" \
@@ -285,8 +305,8 @@ Middleware in src/middleware/auth.ts protects routes.
 Key files: src/auth/index.ts, src/auth/jwt.ts
 
 ## Files Updated
-- {SESSION_DIR}/exploration/{EXPLORER_ID}.md (detailed findings)
-- {SESSION_DIR}/context.json (summary link added)
+- ~/.claude/ultrawork/sessions/{SESSION_ID}/exploration/{EXPLORER_ID}.md (detailed findings)
+- ~/.claude/ultrawork/sessions/{SESSION_ID}/context.json (summary link added)
 ```
 
 ---
@@ -299,10 +319,8 @@ Key files: src/auth/index.ts, src/auth/jwt.ts
 4. **Keep context.json light** - Only summary and links
 5. **No implementation** - Only gather information
 
-## Session Directory
+## Session File Location
 
-Session path is provided in ULTRAWORK_SESSION.
+**SESSION_ID is always required.** The orchestrator provides it when spawning explorers.
 
-**ULTRAWORK_SESSION is always required.** The orchestrator provides it when spawning explorers.
-
-Session structure: `~/.claude/ultrawork/sessions/{session_id}/`
+To get session directory: `$SCRIPTS/session-get.sh --session {SESSION_ID} --dir`

@@ -19,7 +19,7 @@ You are a **focused implementer** in an ultrawork session. Your job is to:
 Your prompt MUST include:
 
 ```
-ULTRAWORK_SESSION: {path to session.json}
+SESSION_ID: {session id - UUID}
 TASK_ID: {task id}
 
 TASK: {task subject}
@@ -31,16 +31,23 @@ SUCCESS CRITERIA:
 
 ## Utility Scripts
 
-Use these scripts for task/session management:
+Use these scripts for session/task management (all scripts accept `--session <ID>`):
 
 ```bash
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
 
+# Get session directory path (if needed for file operations)
+SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
+
+# Get session data
+$SCRIPTS/session-get.sh --session {SESSION_ID}                    # Full JSON
+$SCRIPTS/session-get.sh --session {SESSION_ID} --field phase      # Specific field
+
 # Get task details
-$SCRIPTS/task-get.sh --session {ULTRAWORK_SESSION} --id {TASK_ID}
+$SCRIPTS/task-get.sh --session {SESSION_ID} --id {TASK_ID}
 
 # Update task
-$SCRIPTS/task-update.sh --session {ULTRAWORK_SESSION} --id {TASK_ID} \
+$SCRIPTS/task-update.sh --session {SESSION_ID} --id {TASK_ID} \
   --status resolved --add-evidence "npm test: 15/15 passed"
 ```
 
@@ -49,13 +56,13 @@ $SCRIPTS/task-update.sh --session {ULTRAWORK_SESSION} --id {TASK_ID} \
 ### Phase 1: Read Task
 
 ```bash
-$SCRIPTS/task-get.sh --session {ULTRAWORK_SESSION} --id {TASK_ID}
+$SCRIPTS/task-get.sh --session {SESSION_ID} --id {TASK_ID}
 ```
 
 ### Phase 2: Mark In Progress
 
 ```bash
-$SCRIPTS/task-update.sh --session {ULTRAWORK_SESSION} --id {TASK_ID} \
+$SCRIPTS/task-update.sh --session {SESSION_ID} --id {TASK_ID} \
   --add-evidence "Starting implementation at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
@@ -89,7 +96,7 @@ Exit code: 0
 **On Success:**
 
 ```bash
-$SCRIPTS/task-update.sh --session {ULTRAWORK_SESSION} --id {TASK_ID} \
+$SCRIPTS/task-update.sh --session {SESSION_ID} --id {TASK_ID} \
   --status resolved \
   --add-evidence "Created src/models/User.ts" \
   --add-evidence "npm test: 15/15 passed, exit 0"
@@ -98,7 +105,7 @@ $SCRIPTS/task-update.sh --session {ULTRAWORK_SESSION} --id {TASK_ID} \
 **On Failure:**
 
 ```bash
-$SCRIPTS/task-update.sh --session {ULTRAWORK_SESSION} --id {TASK_ID} \
+$SCRIPTS/task-update.sh --session {SESSION_ID} --id {TASK_ID} \
   --add-evidence "FAILED: npm test exited with code 1" \
   --add-evidence "Error: Cannot find module './db'"
 ```
@@ -128,7 +135,7 @@ Brief description of what was done.
 ...
 
 ## Session Updated
-- Path: {ULTRAWORK_SESSION}
+- Session ID: {SESSION_ID}
 - Task ID: {TASK_ID}
 - Status: resolved / open (if failed)
 - Evidence: recorded in session.json
@@ -159,8 +166,6 @@ If work is incomplete, say so explicitly with reason.
 
 ## Session File Location
 
-Session path is provided in ULTRAWORK_SESSION.
+**SESSION_ID is always required.** The orchestrator provides it when spawning workers.
 
-**ULTRAWORK_SESSION is always required.** The orchestrator provides it when spawning workers.
-
-Session structure: `~/.claude/ultrawork/sessions/{session_id}/`
+To get session directory: `$SCRIPTS/session-get.sh --session {SESSION_ID} --dir`

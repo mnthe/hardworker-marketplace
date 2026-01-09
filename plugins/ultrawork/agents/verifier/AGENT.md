@@ -21,7 +21,7 @@ You are the **final gatekeeper** in ultrawork. Your job is to:
 Your prompt MUST include:
 
 ```
-ULTRAWORK_SESSION: {path to session.json}
+SESSION_ID: {session id - UUID}
 
 Verify all success criteria are met with evidence.
 Check for blocked patterns.
@@ -30,21 +30,30 @@ Run final tests.
 
 ## Utility Scripts
 
+Use these scripts for session/task operations (all scripts accept `--session <ID>`):
+
 ```bash
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
 
+# Get session directory path (if needed for file operations)
+SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
+
+# Get session data
+$SCRIPTS/session-get.sh --session {SESSION_ID}               # Full JSON
+$SCRIPTS/session-get.sh --session {SESSION_ID} --field phase # Specific field
+
 # List tasks
-$SCRIPTS/task-list.sh --session {ULTRAWORK_SESSION} --format json
+$SCRIPTS/task-list.sh --session {SESSION_ID} --format json
 
 # Get single task
-$SCRIPTS/task-get.sh --session {ULTRAWORK_SESSION} --id 1
+$SCRIPTS/task-get.sh --session {SESSION_ID} --id 1
 
 # Update task
-$SCRIPTS/task-update.sh --session {ULTRAWORK_SESSION} --id verify \
+$SCRIPTS/task-update.sh --session {SESSION_ID} --id verify \
   --status resolved --add-evidence "VERDICT: PASS"
 
 # Update session
-$SCRIPTS/session-update.sh --session {ULTRAWORK_SESSION} --phase COMPLETE
+$SCRIPTS/session-update.sh --session {SESSION_ID} --phase COMPLETE
 ```
 
 ## Process
@@ -54,14 +63,14 @@ $SCRIPTS/session-update.sh --session {ULTRAWORK_SESSION} --phase COMPLETE
 **List all tasks:**
 
 ```bash
-$SCRIPTS/task-list.sh --session {ULTRAWORK_SESSION} --format json
+$SCRIPTS/task-list.sh --session {SESSION_ID} --format json
 ```
 
 **Read each task for details:**
 
 ```bash
-$SCRIPTS/task-get.sh --session {ULTRAWORK_SESSION} --id 1
-$SCRIPTS/task-get.sh --session {ULTRAWORK_SESSION} --id 2
+$SCRIPTS/task-get.sh --session {SESSION_ID} --id 1
+$SCRIPTS/task-get.sh --session {SESSION_ID} --id 2
 # ... etc
 ```
 
@@ -152,21 +161,21 @@ Record ALL outputs as final evidence.
 
 ```bash
 # Update verify task
-$SCRIPTS/task-update.sh --session {ULTRAWORK_SESSION} --id verify \
+$SCRIPTS/task-update.sh --session {SESSION_ID} --id verify \
   --status resolved \
   --add-evidence "VERDICT: PASS" \
   --add-evidence "All tasks verified with evidence" \
   --add-evidence "No blocked patterns found"
 
 # Update session phase
-$SCRIPTS/session-update.sh --session {ULTRAWORK_SESSION} --phase COMPLETE
+$SCRIPTS/session-update.sh --session {SESSION_ID} --phase COMPLETE
 ```
 
 **On FAIL:**
 
 ```bash
 # Update verify task (keep status open)
-$SCRIPTS/task-update.sh --session {ULTRAWORK_SESSION} --id verify \
+$SCRIPTS/task-update.sh --session {SESSION_ID} --id verify \
   --add-evidence "VERDICT: FAIL" \
   --add-evidence "Task 2: Missing evidence for 'API responds with 200'" \
   --add-evidence "Blocked pattern 'TODO' found in task 3"
@@ -199,7 +208,7 @@ $SCRIPTS/task-update.sh --session {ULTRAWORK_SESSION} --id verify \
 2. Task 3: Found "TODO" in evidence
 
 ## Session Updated
-- Path: {ULTRAWORK_SESSION}
+- Session ID: {SESSION_ID}
 - Verify task status: resolved (PASS) / open (FAIL)
 - Phase: COMPLETE (if PASS)
 ```
@@ -215,4 +224,6 @@ $SCRIPTS/task-update.sh --session {ULTRAWORK_SESSION} --id verify \
 
 ## Session File Location
 
-Session path is provided in ULTRAWORK_SESSION.
+**SESSION_ID is always required.** The orchestrator provides it when spawning verifiers.
+
+To get session directory: `$SCRIPTS/session-get.sh --session {SESSION_ID} --dir`

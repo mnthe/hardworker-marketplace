@@ -25,7 +25,7 @@ You create **Task Graphs** for complex goals in AUTO mode. You:
 Your prompt MUST include:
 
 ```
-ULTRAWORK_SESSION: {path to session directory}
+SESSION_ID: {session id - UUID}
 
 Goal: {what to accomplish}
 
@@ -35,18 +35,39 @@ Options:
 - max_workers: {number} (default: 0 = unlimited)
 ```
 
+## Utility Scripts
+
+Use these scripts for session operations (all scripts accept `--session <ID>`):
+
+```bash
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
+
+# Get session directory path (if needed for file operations)
+SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
+
+# Get session data
+$SCRIPTS/session-get.sh --session {SESSION_ID}               # Full JSON
+$SCRIPTS/session-get.sh --session {SESSION_ID} --field goal  # Specific field
+
+# Update session
+$SCRIPTS/session-update.sh --session {SESSION_ID} --phase EXECUTION
+
+# Create tasks
+$SCRIPTS/task-create.sh --session {SESSION_ID} --id "1" --subject "..." ...
+```
+
 ## Session Structure
 
 Orchestrator has already created:
 
 ```
-{SESSION_DIR}/
-├── session.json        # Goal and metadata
-├── context.json        # Explorer summaries
-└── exploration/        # Detailed explorer findings
-    ├── exp-1.json
-    ├── exp-2.json
-    └── exp-3.json
+$SESSION_DIR/              # Get via: session-get.sh --session {SESSION_ID} --dir
+├── session.json           # Goal and metadata
+├── context.json           # Explorer summaries
+└── exploration/           # Detailed explorer findings
+    ├── exp-1.md
+    ├── exp-2.md
+    └── exp-3.md
 ```
 
 ---
@@ -58,15 +79,17 @@ Orchestrator has already created:
 Read all available context:
 
 ```bash
+# Get session directory
+SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
+
 # Session metadata
-cat {SESSION_DIR}/session.json
+$SCRIPTS/session-get.sh --session {SESSION_ID}
 
-# Explorer summary
-cat {SESSION_DIR}/context.json
+# Explorer summary (read with Read tool)
+Read("$SESSION_DIR/context.json")
 
-# Detailed explorations
-ls {SESSION_DIR}/exploration/
-cat {SESSION_DIR}/exploration/exp-1.md
+# Detailed explorations (read with Read tool)
+Read("$SESSION_DIR/exploration/exp-1.md")
 # ... read others as needed
 ```
 
@@ -170,20 +193,20 @@ User → Login Form → NextAuth API → Verify Credentials → JWT → Cookie
 **Update session phase:**
 
 ```bash
-$SCRIPTS/session-update.sh --session {SESSION_DIR} --phase EXECUTION
+$SCRIPTS/session-update.sh --session {SESSION_ID} --phase EXECUTION
 ```
 
 **Create task files:**
 
 ```bash
-$SCRIPTS/task-create.sh --session {SESSION_DIR} \
+$SCRIPTS/task-create.sh --session {SESSION_ID} \
   --id "1" \
   --subject "Setup NextAuth.js provider" \
   --description "Configure NextAuth with credentials provider" \
   --complexity standard \
   --criteria "Auth routes respond|Login flow works"
 
-$SCRIPTS/task-create.sh --session {SESSION_DIR} \
+$SCRIPTS/task-create.sh --session {SESSION_ID} \
   --id "2" \
   --subject "Create User model" \
   --description "Add User model to Prisma schema" \
@@ -195,7 +218,7 @@ $SCRIPTS/task-create.sh --session {SESSION_DIR} \
 **Always include verify task:**
 
 ```bash
-$SCRIPTS/task-create.sh --session {SESSION_DIR} \
+$SCRIPTS/task-create.sh --session {SESSION_ID} \
   --id "verify" \
   --subject "[VERIFY] Final verification" \
   --description "Verify all success criteria met" \
@@ -214,7 +237,7 @@ Return summary to orchestrator:
 # Planning Complete (Auto Mode)
 
 ## Session Updated
-Path: {SESSION_DIR}
+Session ID: {SESSION_ID}
 Phase: EXECUTION
 
 ## Design Decisions (Auto)
@@ -240,10 +263,10 @@ Phase: EXECUTION
 1 → 2 → verify
 
 ## Files Created
-- {SESSION_DIR}/design.md
-- {SESSION_DIR}/tasks/1.json
-- {SESSION_DIR}/tasks/2.json
-- {SESSION_DIR}/tasks/verify.json
+- ~/.claude/ultrawork/sessions/{SESSION_ID}/design.md
+- ~/.claude/ultrawork/sessions/{SESSION_ID}/tasks/1.json
+- ~/.claude/ultrawork/sessions/{SESSION_ID}/tasks/2.json
+- ~/.claude/ultrawork/sessions/{SESSION_ID}/tasks/verify.json
 ```
 
 ---
@@ -259,8 +282,8 @@ Phase: EXECUTION
 7. **Maximize parallelism** - Minimize unnecessary dependencies
 8. **Be specific** - Vague tasks get vague results
 
-## Session Directory
+## Session File Location
 
-**ULTRAWORK_SESSION is always required.** The orchestrator provides it when spawning planner.
+**SESSION_ID is always required.** The orchestrator provides it when spawning planner.
 
-Session structure: `~/.claude/ultrawork/sessions/{session_id}/`
+To get session directory: `$SCRIPTS/session-get.sh --session {SESSION_ID} --dir`
