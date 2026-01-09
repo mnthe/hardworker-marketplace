@@ -15,8 +15,8 @@ Claude Code 플러그인 마켓플레이스. "hardworker" 생산성 패턴에 �
 
 | Plugin | Version | Description |
 |--------|---------|-------------|
-| ultrawork | 0.0.4 | Verification-first development with strict session isolation |
-| teamwork | 0.0.1 | Multi-session collaboration with role-based workers |
+| ultrawork | 0.0.5 | Verification-first development with strict session isolation |
+| teamwork | 0.0.2 | Multi-session collaboration with role-based workers |
 
 ### 기술 스택
 
@@ -39,8 +39,8 @@ Claude Code 플러그인 마켓플레이스. "hardworker" 생산성 패턴에 �
   "license": "MIT",                // Required: MIT license
   "commands": "./commands/",       // Required: Command directory
   "agents": ["./agents/*/AGENT.md"], // Required: Agent file paths
-  "hooks": "./hooks/hooks.json",   // Optional: Hook configuration
   "skills": "./skills/"            // Optional: Skill directory
+  // Note: hooks/hooks.json is auto-loaded, don't add "hooks" field
 }
 ```
 

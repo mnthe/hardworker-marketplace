@@ -32,7 +32,7 @@
         ]
       }
     ],
-    "UserMessageCreated": [
+    "UserPromptSubmit": [
       {
         "hooks": [
           {
