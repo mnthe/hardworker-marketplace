@@ -42,7 +42,9 @@ CONTEXT_FILE="$SESSION_DIR/context.json"
 if [[ ! -f "$CONTEXT_FILE" ]]; then
   cat > "$CONTEXT_FILE" << 'EOF'
 {
-  "version": "2.0",
+  "version": "2.1",
+  "expected_explorers": [],
+  "exploration_complete": false,
   "explorers": [],
   "key_files": [],
   "patterns": [],
@@ -92,6 +94,24 @@ jq --argjson new_patterns "$PATTERNS_JSON" '.patterns = (.patterns + $new_patter
 mv "${TEMP_FILE}.2" "$TEMP_FILE"
 
 mv "$TEMP_FILE" "$CONTEXT_FILE"
+
+# Check if all expected explorers are complete
+EXPECTED=$(jq -r '.expected_explorers | length' "$CONTEXT_FILE")
+ACTUAL=$(jq -r '.explorers | length' "$CONTEXT_FILE")
+
+if [[ "$EXPECTED" -gt 0 ]]; then
+  # Get sorted lists and compare
+  EXPECTED_IDS=$(jq -r '.expected_explorers | sort | @json' "$CONTEXT_FILE")
+  ACTUAL_IDS=$(jq -r '[.explorers[].id] | sort | @json' "$CONTEXT_FILE")
+
+  if [[ "$EXPECTED_IDS" == "$ACTUAL_IDS" ]]; then
+    # All expected explorers completed - set exploration_complete to true
+    TEMP_FILE=$(mktemp)
+    jq '.exploration_complete = true' "$CONTEXT_FILE" > "$TEMP_FILE"
+    mv "$TEMP_FILE" "$CONTEXT_FILE"
+    echo "OK: All expected explorers complete. exploration_complete=true"
+  fi
+fi
 
 echo "OK: Explorer $EXPLORER_ID added to context.json"
 echo "    File: $FILE"

@@ -84,6 +84,16 @@ get_current_session_id() {
   get_claude_session_id "$@"
 }
 
+# Unbind terminal from ultrawork session
+# Removes the .claude-session file that links Claude session to ultrawork session
+unbind_terminal() {
+  local team_name="${1:-$(get_team_name)}"
+  local team_dir=$(get_team_dir "$team_name")
+  local claude_session_file="$team_dir/.claude-session"
+
+  rm -f "$claude_session_file"
+}
+
 # List all active sessions for a team
 list_active_sessions() {
   local team_name="${1:-$(get_team_name)}"

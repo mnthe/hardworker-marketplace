@@ -1,20 +1,24 @@
 #!/bin/bash
 # session-update.sh - Update session
-# Usage: session-update.sh --session <path> [--phase PLANNING|EXECUTION|VERIFICATION|COMPLETE] [--plan-approved]
+# Usage: session-update.sh --session <path> [--phase PLANNING|EXECUTION|VERIFICATION|COMPLETE] [--plan-approved] [--exploration-stage STAGE]
 
 set -euo pipefail
 
 SESSION_PATH=""
 NEW_PHASE=""
 PLAN_APPROVED=false
+EXPLORATION_STAGE=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --session) SESSION_PATH="$2"; shift 2 ;;
     --phase) NEW_PHASE="$2"; shift 2 ;;
     --plan-approved) PLAN_APPROVED=true; shift ;;
+    --exploration-stage) EXPLORATION_STAGE="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: session-update.sh --session <path> [--phase PLANNING|EXECUTION|VERIFICATION|COMPLETE] [--plan-approved]"
+      echo "Usage: session-update.sh --session <path> [--phase ...] [--plan-approved] [--exploration-stage STAGE]"
+      echo ""
+      echo "Exploration stages: not_started, overview, analyzing, targeted, complete"
       exit 0
       ;;
     *) shift ;;
@@ -41,6 +45,10 @@ fi
 if [[ "$PLAN_APPROVED" == "true" ]]; then
   TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   JQ_EXPR="$JQ_EXPR | .plan.approved_at = \"$TIMESTAMP\""
+fi
+
+if [[ -n "$EXPLORATION_STAGE" ]]; then
+  JQ_EXPR="$JQ_EXPR | .exploration_stage = \"$EXPLORATION_STAGE\""
 fi
 
 # Update file

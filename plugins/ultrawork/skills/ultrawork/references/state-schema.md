@@ -19,11 +19,41 @@
 
 Team name derived from git repo root folder name.
 
-## Schema
+## context.json Schema (v2.1)
 
 ```json
 {
-  "version": "1.0",
+  "version": "2.1",
+  "expected_explorers": ["overview", "exp-1", "exp-2"],
+  "exploration_complete": false,
+  "explorers": [
+    {
+      "id": "overview",
+      "hint": "Project overview",
+      "file": "exploration/overview.md",
+      "summary": "..."
+    }
+  ],
+  "key_files": ["src/index.ts", "package.json"],
+  "patterns": ["auth", "api-routes"],
+  "constraints": []
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `expected_explorers` | IDs of explorers that should complete |
+| `exploration_complete` | Auto-set to true when all expected explorers finish |
+| `explorers` | Completed explorer summaries with links to markdown |
+| `key_files` | Important files discovered during exploration |
+| `patterns` | Code patterns identified |
+
+## session.json Schema (v5.1)
+
+```json
+{
+  "version": "5.1",
+  "exploration_stage": "not_started",
   "session_task_id": "42",
   "goal": "Original user request",
   "phase": "PLANNING",
@@ -91,6 +121,16 @@ Team name derived from git repo root folder name.
 | `COMPLETE` | All criteria met |
 | `FAILED` | Unrecoverable failure |
 | `CANCELLED` | User cancelled |
+
+## Exploration Stage Values
+
+| Stage | Description |
+|-------|-------------|
+| `not_started` | Exploration not begun |
+| `overview` | Overview explorer running |
+| `analyzing` | Analyzing overview, generating hints |
+| `targeted` | Targeted explorers running |
+| `complete` | All exploration finished |
 
 ## Task Status Values
 

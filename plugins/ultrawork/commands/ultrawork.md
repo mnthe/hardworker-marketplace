@@ -109,11 +109,82 @@ Parse the output to get:
 
 ---
 
+## Step 1.5: Resume Check (CRITICAL for interrupted sessions)
+
+**Before starting exploration, check session state to determine where to resume:**
+
+```python
+# Read session.json
+session = Bash(f'cat {session_dir}/session.json')
+exploration_stage = session.get("exploration_stage", "not_started")
+
+# Read context.json
+context = Read(f"{session_dir}/context.json")
+exploration_complete = context.get("exploration_complete", False) if context else False
+expected_explorers = context.get("expected_explorers", []) if context else []
+actual_explorers = [e["id"] for e in context.get("explorers", [])] if context else []
+```
+
+**Resume logic by exploration_stage:**
+
+| Stage | Status | Action |
+|-------|--------|--------|
+| `not_started` | Fresh start | Begin from Stage 2a (Overview) |
+| `overview` | Overview running/done | Check overview.md exists → proceed to 2b |
+| `analyzing` | Hints generated, no targeted yet | Re-run hint analysis, set expected_explorers |
+| `targeted` | Targeted explorers running | Check expected vs actual, wait or re-spawn missing |
+| `complete` | Exploration done | Skip to Step 3 (Planning) |
+
+```python
+if exploration_stage == "not_started":
+    # Fresh start - go to Stage 2a
+    pass
+
+elif exploration_stage == "overview":
+    # Check if overview actually completed
+    if Path(f"{session_dir}/exploration/overview.md").exists():
+        # Proceed to Stage 2b (analyze & plan targeted)
+        pass
+    else:
+        # Re-spawn overview explorer
+        pass
+
+elif exploration_stage == "analyzing":
+    # Overview done, need to generate hints and set expected_explorers
+    # Go to Stage 2b
+    pass
+
+elif exploration_stage == "targeted":
+    if expected_explorers and not exploration_complete:
+        missing = set(expected_explorers) - set(actual_explorers)
+        if missing:
+            print(f"Exploration incomplete. Missing: {missing}")
+            # Re-spawn missing explorers
+            pass
+
+elif exploration_stage == "complete":
+    # Skip to planning
+    pass
+```
+
+**Key checks:**
+1. `exploration_stage` in session.json determines resume point
+2. `expected_explorers` vs `explorers[].id` identifies missing work
+3. `exploration_complete` confirms all expected explorers finished
+
+---
+
 ## Step 2: Exploration Phase (Dynamic)
 
 Exploration happens in two stages: Overview first, then targeted exploration.
 
 ### Stage 2a: Quick Overview
+
+**Update exploration_stage to "overview":**
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir}/session.json --exploration-stage overview
+```
 
 Spawn ONE overview explorer first:
 
@@ -157,6 +228,12 @@ cat {session_dir}/exploration/overview.md
 
 ### Stage 2b: Analyze & Plan Targeted Exploration
 
+**Update exploration_stage to "analyzing":**
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir}/session.json --exploration-stage analyzing
+```
+
 Based on **Overview + Goal**, decide what areas need detailed exploration.
 
 **Decision Matrix:**
@@ -188,7 +265,30 @@ hints = analyze_exploration_needs(overview, goal)
 # ]
 ```
 
+**Set expected explorers BEFORE spawning (CRITICAL):**
+
+```bash
+# Generate expected explorer IDs
+expected_ids="overview"
+for i, hint in enumerate(hints):
+    expected_ids += f",exp-{i+1}"
+
+# Initialize context.json with expected explorers
+"${CLAUDE_PLUGIN_ROOT}/scripts/context-init.sh" --session {session_dir} --expected "{expected_ids}"
+```
+
+This ensures:
+1. `expected_explorers` is set before any background tasks start
+2. If interrupted, resume check knows what's missing
+3. `exploration_complete` auto-updates when all explorers finish
+
 ### Stage 2c: Targeted Exploration
+
+**Update exploration_stage to "targeted":**
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir}/session.json --exploration-stage targeted
+```
 
 Spawn explorers for each identified area (parallel):
 
@@ -227,12 +327,18 @@ while pending_tasks:
             pending_tasks.remove(task_id)
 ```
 
+**After all explorers complete, update exploration_stage to "complete":**
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir}/session.json --exploration-stage complete
+```
+
 ### Exploration Output
 
 Explorers will create:
 - `exploration/overview.md` - Project overview
 - `exploration/exp-1.md`, `exp-2.md`, ... - Targeted findings
-- `context.json` - Aggregated summary with links
+- `context.json` - Aggregated summary with links (exploration_complete=true when all done)
 
 ---
 
