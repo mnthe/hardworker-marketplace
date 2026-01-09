@@ -43,6 +43,7 @@ fi
 SKIP_VERIFY=$(grep -o '"skip_verify": *[^,}]*' "$SESSION_FILE" | cut -d':' -f2 | tr -d ' ' || echo "false")
 PLAN_ONLY=$(grep -o '"plan_only": *[^,}]*' "$SESSION_FILE" | cut -d':' -f2 | tr -d ' ' || echo "false")
 MAX_WORKERS=$(grep -o '"max_workers": *[0-9]*' "$SESSION_FILE" | cut -d':' -f2 | tr -d ' ' || echo "0")
+AUTO_MODE=$(grep -o '"auto_mode": *[^,}]*' "$SESSION_FILE" | cut -d':' -f2 | tr -d ' ' || echo "false")
 
 # Count tasks and evidence
 CHILD_TASKS=$(grep -o '"child_tasks": *\[[^]]*\]' "$SESSION_FILE" | grep -o '"[^"]*"' | wc -l | tr -d ' ' || echo "0")
@@ -52,9 +53,17 @@ PLANNER_STATUS=$(grep -o '"status": *"[^"]*"' "$SESSION_FILE" | head -1 | cut -d
 # Build context message based on phase
 case "$PHASE" in
   PLANNING)
-    NEXT_ACTION="1. Wait for planner agent to complete task graph
+    if [[ "$AUTO_MODE" == "true" ]]; then
+      NEXT_ACTION="1. Wait for planner agent to complete task graph
 2. Once planner returns, update session.json with child_tasks
 3. Transition to EXECUTION phase"
+    else
+      NEXT_ACTION="1. Run exploration (spawn ultrawork:explorer agents)
+2. Read context.json and exploration/*.md
+3. Present findings, clarify requirements with AskUserQuestion
+4. Write design.md and create tasks with task-create.sh
+5. Get user approval, then transition to EXECUTION phase"
+    fi
     ;;
   EXECUTION)
     NEXT_ACTION="1. Check which child tasks are unblocked (no pending dependencies)
@@ -89,6 +98,7 @@ Tasks: $CHILD_TASKS
 Evidence: $EVIDENCE_COUNT items
 
 Options:
+  auto_mode: $AUTO_MODE
   skip_verify: $SKIP_VERIFY
   plan_only: $PLAN_ONLY
   max_workers: ${MAX_WORKERS:-0}

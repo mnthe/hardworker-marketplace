@@ -35,8 +35,8 @@ fi
 # Parse session state
 PHASE=$(grep -o '"phase": *"[^"]*"' "$SESSION_FILE" | cut -d'"' -f4 || echo "")
 
-# Only capture evidence during EXECUTION phase
-if [[ "$PHASE" != "EXECUTION" ]]; then
+# Only capture evidence during EXECUTION and VERIFICATION phases
+if [[ "$PHASE" != "EXECUTION" && "$PHASE" != "VERIFICATION" ]]; then
   exit 0
 fi
 

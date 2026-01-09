@@ -41,9 +41,9 @@ if [[ ! -f "$SESSION_FILE" ]]; then
   exit 0
 fi
 
-# Only track during EXECUTION phase
+# Track during active phases (EXPLORATION, EXECUTION, VERIFICATION)
 PHASE=$(jq -r '.phase // "unknown"' "$SESSION_FILE" 2>/dev/null)
-if [[ "$PHASE" != "EXECUTION" ]]; then
+if [[ "$PHASE" != "EXPLORATION" && "$PHASE" != "EXECUTION" && "$PHASE" != "VERIFICATION" ]]; then
   jq -n '{"decision": "allow"}'
   exit 0
 fi
