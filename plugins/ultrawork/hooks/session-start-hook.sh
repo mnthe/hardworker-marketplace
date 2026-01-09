@@ -1,13 +1,15 @@
 #!/bin/bash
 
-# SessionStart Hook - Cleanup old ultrawork sessions
-# v5.0: Simplified - no more .claude-session file needed
-# Session ID is now passed via stdin to all hooks
+# SessionStart Hook - Cleanup old ultrawork sessions and provide session ID
+# v5.1: Output session_id to AI via stdout message
 
 set -euo pipefail
 
-# Read stdin JSON (not used, but consume it)
+# Read stdin JSON
 INPUT=$(cat)
+
+# Extract session_id from hook input
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
 
 # Cleanup old sessions (completed/cancelled/failed older than 7 days)
 SESSIONS_DIR="$HOME/.claude/ultrawork/sessions"
@@ -27,6 +29,12 @@ if [[ -d "$SESSIONS_DIR" ]]; then
       fi
     done
   fi
+fi
+
+# Output session ID for AI to use
+if [[ -n "$SESSION_ID" ]]; then
+  echo "CLAUDE_SESSION_ID: $SESSION_ID"
+  echo "Use this when calling ultrawork scripts: --session $SESSION_ID"
 fi
 
 exit 0
