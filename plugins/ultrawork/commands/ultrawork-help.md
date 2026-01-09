@@ -128,7 +128,7 @@ These phrases **BLOCK** completion:
 
 Session data stored in:
 ```
-~/.claude/ultrawork/<team>/session.json
+~/.claude/ultrawork/sessions/{session-id}/session.json
 ```
 
-Team is auto-detected from git repository name.
+Session ID is provided by Claude Code via hooks.

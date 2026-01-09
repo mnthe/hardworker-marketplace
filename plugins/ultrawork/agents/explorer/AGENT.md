@@ -303,8 +303,6 @@ Key files: src/auth/index.ts, src/auth/jwt.ts
 
 Session path is provided in ULTRAWORK_SESSION.
 
-If not provided, detect from git:
-```bash
-TEAM=$(basename "$(git rev-parse --show-toplevel)")
-SESSION=$(ls -td $HOME/.claude/ultrawork/$TEAM/sessions/*/ 2>/dev/null | head -1)
-```
+**ULTRAWORK_SESSION is always required.** The orchestrator provides it when spawning explorers.
+
+Session structure: `~/.claude/ultrawork/sessions/{session_id}/`

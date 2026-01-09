@@ -161,8 +161,6 @@ If work is incomplete, say so explicitly with reason.
 
 Session path is provided in ULTRAWORK_SESSION.
 
-If not provided, detect from git:
-```bash
-TEAM=$(basename "$(git rev-parse --show-toplevel)")
-SESSION="$HOME/.claude/ultrawork/$TEAM/sessions/*/session.json"
-```
+**ULTRAWORK_SESSION is always required.** The orchestrator provides it when spawning workers.
+
+Session structure: `~/.claude/ultrawork/sessions/{session_id}/`

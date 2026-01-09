@@ -79,8 +79,9 @@ Read(file_path=PLAN_FILE)
 Create session.json from plan:
 
 ```bash
-TEAM=$(basename "$(git rev-parse --show-toplevel)")
-ULTRAWORK_SESSION="$HOME/.claude/ultrawork/$TEAM/session.json"
+# Session ID is provided via systemMessage from hook (CLAUDE_SESSION_ID)
+# Session directory: ~/.claude/ultrawork/sessions/{session_id}/
+ULTRAWORK_SESSION="$HOME/.claude/ultrawork/sessions/{SESSION_ID}/session.json"
 ```
 
 Write parsed tasks to session.json (v5.0):

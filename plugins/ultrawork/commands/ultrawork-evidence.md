@@ -7,10 +7,17 @@ allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/ultrawork-evidence.sh:*)"]
 
 # Ultrawork Evidence Command
 
-Execute the evidence script:
+## Session ID Handling
+
+The session_id is provided by the hook via systemMessage as `CLAUDE_SESSION_ID`.
+You MUST pass it to the script via `--session` flag.
+
+## Execution
+
+Execute the evidence script with `--session`:
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}/scripts/ultrawork-evidence.sh"
+"${CLAUDE_PLUGIN_ROOT}/scripts/ultrawork-evidence.sh" --session {SESSION_ID}
 ```
 
 After displaying raw evidence, interpret and summarize:

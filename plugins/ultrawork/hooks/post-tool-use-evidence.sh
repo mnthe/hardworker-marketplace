@@ -2,21 +2,21 @@
 
 # Ultrawork PostToolUse Evidence Hook
 # Automatically captures evidence from tool executions
-# Captures: bash outputs, test results, file operations
+# v5.0: Uses session_id from stdin (multi-session safe)
 
 set -euo pipefail
 
-# Read hook input from stdin
+# Read stdin and extract session_id FIRST
 HOOK_INPUT=$(cat)
+export ULTRAWORK_STDIN_SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // empty')
 
 # Get script directory and source utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$PLUGIN_ROOT/scripts/session-utils.sh"
 
-# Get team and session info
-TEAM_NAME=$(get_team_name)
-SESSION_ID=$(get_current_session_id "$TEAM_NAME")
+# Get session info
+SESSION_ID="$ULTRAWORK_STDIN_SESSION_ID"
 
 # No active session - exit early
 if [[ -z "$SESSION_ID" ]]; then
@@ -24,7 +24,7 @@ if [[ -z "$SESSION_ID" ]]; then
 fi
 
 # Get session file
-SESSION_DIR=$(get_session_dir "$SESSION_ID" "$TEAM_NAME")
+SESSION_DIR=$(get_session_dir "$SESSION_ID")
 SESSION_FILE="$SESSION_DIR/session.json"
 
 # Session file doesn't exist - exit
@@ -41,7 +41,7 @@ if [[ "$PHASE" != "EXECUTION" && "$PHASE" != "VERIFICATION" ]]; then
 fi
 
 # Parse hook input
-TOOL_NAME=$(echo "$HOOK_INPUT" | jq -r '.tool // empty' 2>/dev/null || echo "")
+TOOL_NAME=$(echo "$HOOK_INPUT" | jq -r '.tool_name // empty' 2>/dev/null || echo "")
 if [[ -z "$TOOL_NAME" ]]; then
   exit 0
 fi
@@ -112,9 +112,9 @@ parse_test_output() {
 case "$TOOL_NAME" in
   bash|Bash)
     # Extract command and output
-    COMMAND=$(echo "$HOOK_INPUT" | jq -r '.input // empty' 2>/dev/null || echo "")
-    OUTPUT=$(echo "$HOOK_INPUT" | jq -r '.output // empty' 2>/dev/null || echo "")
-    EXIT_CODE=$(echo "$HOOK_INPUT" | jq -r '.exit_code // 0' 2>/dev/null || echo "0")
+    COMMAND=$(echo "$HOOK_INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || echo "")
+    OUTPUT=$(echo "$HOOK_INPUT" | jq -r '.tool_response // empty' 2>/dev/null || echo "")
+    EXIT_CODE=$(echo "$HOOK_INPUT" | jq -r '.tool_response.exit_code // 0' 2>/dev/null || echo "0")
 
     # Skip if no command
     if [[ -z "$COMMAND" ]]; then
@@ -169,7 +169,7 @@ case "$TOOL_NAME" in
 
   read|Read)
     # Extract file path
-    FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.file_path // empty' 2>/dev/null || echo "")
+    FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || echo "")
 
     # Skip if no file path
     if [[ -z "$FILE_PATH" ]]; then
@@ -208,7 +208,7 @@ case "$TOOL_NAME" in
 
   write|Write)
     # Extract file path
-    FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.file_path // empty' 2>/dev/null || echo "")
+    FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || echo "")
 
     # Skip if no file path
     if [[ -z "$FILE_PATH" ]]; then
@@ -247,7 +247,7 @@ case "$TOOL_NAME" in
 
   edit|Edit)
     # Extract file path
-    FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.file_path // empty' 2>/dev/null || echo "")
+    FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || echo "")
 
     # Skip if no file path
     if [[ -z "$FILE_PATH" ]]; then

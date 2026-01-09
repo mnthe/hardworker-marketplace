@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Ultrawork Evidence Script
-# Displays collected evidence for current session with Session ID support
+# v5.0: Requires --session from AI
 
 set -euo pipefail
 
@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/session-utils.sh"
 
 # Parse arguments
-SESSION_ID_ARG=""
+SESSION_ID=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -21,42 +21,11 @@ while [[ $# -gt 0 ]]; do
 ═══════════════════════════════════════════════════════════
 
 USAGE:
-  /ultrawork-evidence [OPTIONS]
+  /ultrawork-evidence --session <id>
 
 OPTIONS:
-  --session <id>   Show evidence from specific session
+  --session <id>   Session ID (required, provided by AI)
   -h, --help       Show this help message
-
-DESCRIPTION:
-  Displays all evidence collected during the ultrawork session.
-  Evidence is organized by task and criterion.
-
-EVIDENCE TYPES:
-  • command_output  - Shell command results (npm test, etc.)
-  • test_result     - Test suite output
-  • api_response    - HTTP response verification
-  • file_content    - File diff or content
-  • manual          - User-provided evidence
-
-OUTPUT FORMAT:
-  Task: Setup database
-  ───────────────────────────────────────
-  ✓ Criteria: Migration runs without error
-    Command: npx prisma migrate deploy
-    Output: "All migrations applied"
-
-  ⏳ Criteria: Tests pass
-    Status: pending
-
-EVIDENCE REQUIREMENTS:
-  Every success criterion MUST have:
-  • Concrete proof (not "it works")
-  • Command output with exit code
-  • Timestamp of collection
-
-RELATED:
-  /ultrawork-status   Check session progress
-  /ultrawork-cancel   Cancel session
 
 ═══════════════════════════════════════════════════════════
 HELP_EOF
@@ -67,7 +36,7 @@ HELP_EOF
         echo "❌ Error: --session requires a session ID argument" >&2
         exit 1
       fi
-      SESSION_ID_ARG="$2"
+      SESSION_ID="$2"
       shift 2
       ;;
     *)
@@ -76,32 +45,18 @@ HELP_EOF
   esac
 done
 
-# Get team info
-TEAM_NAME=$(get_team_name)
-
-# Determine which session to show
-if [[ -n "$SESSION_ID_ARG" ]]; then
-  SESSION_ID="$SESSION_ID_ARG"
-else
-  SESSION_ID=$(get_current_session_id "$TEAM_NAME")
-fi
-
-# Check if we have a session
+# Validate --session
 if [[ -z "$SESSION_ID" ]]; then
-  echo "No ultrawork session bound to this terminal."
-  echo ""
-  echo "Options:"
-  echo "  List all sessions: /ultrawork-status --all"
-  echo "  View specific:     /ultrawork-evidence --session <id>"
-  exit 0
+  echo "❌ Error: --session is required" >&2
+  exit 1
 fi
 
 # Get session file
-SESSION_DIR=$(get_session_dir "$SESSION_ID" "$TEAM_NAME")
+SESSION_DIR=$(get_session_dir "$SESSION_ID")
 SESSION_FILE="$SESSION_DIR/session.json"
 
 if [[ ! -f "$SESSION_FILE" ]]; then
-  echo "Session $SESSION_ID not found."
+  echo "❌ Session $SESSION_ID not found." >&2
   exit 1
 fi
 
@@ -126,8 +81,6 @@ cat <<EOF
 EOF
 
 # Display evidence_log section from JSON
-# This is a simplified display - Claude will interpret the full JSON
-
 echo "Raw evidence data from session.json:"
 echo ""
 
@@ -147,10 +100,14 @@ fi
 cat <<EOF
 
 ───────────────────────────────────────────────────────────
- SESSION FILE
+ SESSION DIRECTORY
 ───────────────────────────────────────────────────────────
 
- $SESSION_FILE
+ $SESSION_DIR/
+   ├── session.json
+   ├── context.json
+   ├── exploration/
+   └── tasks/
 
  To view full session data:
    jq '.' "$SESSION_FILE"

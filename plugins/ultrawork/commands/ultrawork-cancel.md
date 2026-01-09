@@ -7,6 +7,13 @@ allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/ultrawork-cancel.sh:*)"]
 
 # Ultrawork Cancel Command
 
+## Session ID Handling
+
+The session_id is provided by the hook via systemMessage as `CLAUDE_SESSION_ID`.
+You MUST pass it to the script via `--session` flag.
+
+## Execution
+
 First, confirm with the user:
 
 ```python
@@ -21,10 +28,10 @@ AskUserQuestion(questions=[{
 }])
 ```
 
-If confirmed, execute the cancel script:
+If confirmed, execute the cancel script with `--session`:
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}/scripts/ultrawork-cancel.sh"
+"${CLAUDE_PLUGIN_ROOT}/scripts/ultrawork-cancel.sh" --session {SESSION_ID}
 ```
 
 The script will:

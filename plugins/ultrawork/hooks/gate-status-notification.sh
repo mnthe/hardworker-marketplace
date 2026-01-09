@@ -2,12 +2,13 @@
 
 # Gate Status Notification Hook
 # Notifies AI when exploration_stage changes (gates unlock)
-# Triggered on PostToolUse for Task tool
+# v5.0: Uses session_id from stdin (multi-session safe)
 
 set -euo pipefail
 
-# Read hook input from stdin
+# Read stdin and extract session_id FIRST
 HOOK_INPUT=$(cat)
+export ULTRAWORK_STDIN_SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // empty')
 
 # Get script directory and source utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,16 +16,15 @@ PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$PLUGIN_ROOT/scripts/session-utils.sh"
 
 # Parse tool name
-TOOL_NAME=$(echo "$HOOK_INPUT" | jq -r '.tool // empty' 2>/dev/null || echo "")
+TOOL_NAME=$(echo "$HOOK_INPUT" | jq -r '.tool_name // empty' 2>/dev/null || echo "")
 
 # Only process Task tool completions
 if [[ "$TOOL_NAME" != "Task" && "$TOOL_NAME" != "task" ]]; then
   exit 0
 fi
 
-# Get team and session info
-TEAM_NAME=$(get_team_name)
-SESSION_ID=$(get_current_session_id "$TEAM_NAME")
+# Get session info
+SESSION_ID="$ULTRAWORK_STDIN_SESSION_ID"
 
 # No active session - exit
 if [[ -z "$SESSION_ID" ]]; then
@@ -32,7 +32,7 @@ if [[ -z "$SESSION_ID" ]]; then
 fi
 
 # Get session file
-SESSION_DIR=$(get_session_dir "$SESSION_ID" "$TEAM_NAME")
+SESSION_DIR=$(get_session_dir "$SESSION_ID")
 SESSION_FILE="$SESSION_DIR/session.json"
 
 # Session file doesn't exist - exit
@@ -50,8 +50,8 @@ if [[ "$PHASE" != "PLANNING" ]]; then
 fi
 
 # Check if this was an explorer task
-TASK_OUTPUT=$(echo "$HOOK_INPUT" | jq -r '.output // ""' 2>/dev/null || echo "")
-SUBAGENT_TYPE=$(echo "$HOOK_INPUT" | jq -r '.input.subagent_type // ""' 2>/dev/null || echo "")
+TASK_OUTPUT=$(echo "$HOOK_INPUT" | jq -r '.tool_response // ""' 2>/dev/null || echo "")
+SUBAGENT_TYPE=$(echo "$HOOK_INPUT" | jq -r '.tool_input.subagent_type // ""' 2>/dev/null || echo "")
 
 # Detect explorer completion
 if [[ "$SUBAGENT_TYPE" == *"explorer"* ]] || [[ "$TASK_OUTPUT" == *"EXPLORER_ID"* ]] || [[ "$TASK_OUTPUT" == *"exploration"* ]]; then

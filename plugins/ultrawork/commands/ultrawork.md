@@ -92,15 +92,37 @@ The session-get.sh script returns the current phase. When user runs `/ultrawork-
 
 ---
 
-## Step 1: Initialize Session
+## Session ID Handling (CRITICAL)
 
-Execute the setup script:
+**All scripts require `--session <id>` flag.**
 
-```!
-"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" $ARGUMENTS
+The session_id is provided by the hook via systemMessage as `CLAUDE_SESSION_ID`.
+
+**Example from hook:**
+```
+CLAUDE_SESSION_ID: abc123def456
+Use this when calling ultrawork scripts: --session abc123def456
 ```
 
-This creates session at: `~/.claude/ultrawork/{team}/sessions/{session_id}/`
+**AI must extract and pass it to ALL script calls:**
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session {SESSION_ID} $ARGUMENTS
+"${CLAUDE_PLUGIN_ROOT}/scripts/ultrawork-cancel.sh" --session {SESSION_ID}
+"${CLAUDE_PLUGIN_ROOT}/scripts/ultrawork-status.sh" --session {SESSION_ID}
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_DIR} ...
+```
+
+---
+
+## Step 1: Initialize Session
+
+Execute the setup script with `--session`:
+
+```!
+"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session {SESSION_ID} $ARGUMENTS
+```
+
+This creates session at: `~/.claude/ultrawork/sessions/{session_id}/`
 
 Parse the output to get:
 - Session ID
@@ -629,11 +651,12 @@ Check verifier result and update session:
 ## Directory Structure
 
 ```
-~/.claude/ultrawork/{team}/sessions/{session_id}/
+~/.claude/ultrawork/sessions/{session_id}/
 ├── session.json        # Session metadata (JSON)
 ├── context.json        # Explorer summaries (JSON)
 ├── design.md           # Design document (Markdown)
 ├── exploration/        # Detailed exploration (Markdown)
+│   ├── overview.md
 │   ├── exp-1.md
 │   ├── exp-2.md
 │   └── exp-3.md

@@ -2,24 +2,26 @@
 
 # Subagent Stop Tracking Hook
 # Captures worker agent results when they complete and updates session state
-# Implements agent lifecycle tracking for ultrawork sessions
+# v5.0: Uses session_id from stdin (multi-session safe)
 
 set -euo pipefail
+
+# Read stdin and extract session_id FIRST
+HOOK_INPUT=$(cat)
+export ULTRAWORK_STDIN_SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // empty')
 
 # Get script directory and source utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$PLUGIN_ROOT/scripts/session-utils.sh"
 
-# Parse hook input
-HOOK_INPUT=$(cat)
+# Parse hook input fields
 AGENT_ID=$(echo "$HOOK_INPUT" | jq -r '.agent_id // ""')
 AGENT_OUTPUT=$(echo "$HOOK_INPUT" | jq -r '.output // ""')
 TASK_ID=$(echo "$HOOK_INPUT" | jq -r '.task_id // ""')
 
-# Get team and session info
-TEAM_NAME=$(get_team_name)
-SESSION_ID=$(get_current_session_id "$TEAM_NAME")
+# Get session info
+SESSION_ID="$ULTRAWORK_STDIN_SESSION_ID"
 
 # No active ultrawork session - not an ultrawork worker
 if [[ -z "$SESSION_ID" ]]; then
@@ -27,7 +29,7 @@ if [[ -z "$SESSION_ID" ]]; then
 fi
 
 # Get session file
-SESSION_DIR=$(get_session_dir "$SESSION_ID" "$TEAM_NAME")
+SESSION_DIR=$(get_session_dir "$SESSION_ID")
 SESSION_FILE="$SESSION_DIR/session.json"
 
 # Session file doesn't exist - exit silently

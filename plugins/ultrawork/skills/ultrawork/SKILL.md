@@ -121,7 +121,7 @@ Ultrawork enforces **verification-first development**:
 ## Session Directory Structure
 
 ```
-~/.claude/ultrawork/{team-name}/sessions/{session-id}/
+~/.claude/ultrawork/sessions/{session-id}/
 ├── session.json        # Session metadata (JSON)
 ├── context.json        # Explorer summaries (JSON)
 ├── design.md           # Design document (Markdown)

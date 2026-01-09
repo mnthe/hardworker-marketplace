@@ -3,7 +3,7 @@
 ## Directory Structure
 
 ```
-~/.claude/ultrawork/{team-name}/sessions/{session-id}/
+~/.claude/ultrawork/sessions/{session-id}/
 ├── session.json        # Session metadata (JSON)
 ├── context.json        # Explorer summaries (JSON)
 ├── design.md           # Design document (Markdown)
@@ -17,7 +17,7 @@
     └── verify.json
 ```
 
-Team name derived from git repo root folder name.
+Session ID is provided by Claude Code via hooks (CLAUDE_SESSION_ID).
 
 ## context.json Schema (v2.1)
 

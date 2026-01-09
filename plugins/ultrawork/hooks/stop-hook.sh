@@ -2,34 +2,33 @@
 
 # Ultrawork Stop Hook
 # Prevents session exit when ultrawork session is active without verification
-# Now supports Session ID-based isolation for multi-session environments
+# v5.0: Uses session_id from stdin (multi-session safe)
 
 set -euo pipefail
 
-# Read hook input from stdin
+# Read stdin and extract session_id FIRST
 HOOK_INPUT=$(cat)
+export ULTRAWORK_STDIN_SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // empty')
 
 # Get script directory and source utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$PLUGIN_ROOT/scripts/session-utils.sh"
 
-# Get team and session info
-TEAM_NAME=$(get_team_name)
-SESSION_ID=$(get_current_session_id "$TEAM_NAME")
+# Get session info
+SESSION_ID="$ULTRAWORK_STDIN_SESSION_ID"
 
-# No active session bound to this terminal - allow exit
+# No session_id - allow exit
 if [[ -z "$SESSION_ID" ]]; then
   exit 0
 fi
 
 # Get session file
-SESSION_DIR=$(get_session_dir "$SESSION_ID" "$TEAM_NAME")
+SESSION_DIR=$(get_session_dir "$SESSION_ID")
 SESSION_FILE="$SESSION_DIR/session.json"
 
-# Session file doesn't exist - clean up binding and allow exit
+# Session file doesn't exist - not an ultrawork session, allow exit
 if [[ ! -f "$SESSION_FILE" ]]; then
-  unbind_terminal "$TEAM_NAME"
   exit 0
 fi
 

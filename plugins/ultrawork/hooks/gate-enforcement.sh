@@ -2,37 +2,44 @@
 
 # Gate Enforcement Hook (PreToolUse)
 # Blocks Edit/Write during PLANNING phase (except design.md, session files)
-# Ensures ultrawork protocol compliance
+# v5.0: Uses session_id from stdin (multi-session safe)
 
 set -euo pipefail
+
+# Read stdin and extract session_id FIRST
+HOOK_INPUT=$(cat)
+export ULTRAWORK_STDIN_SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // empty')
 
 # Get script directory and source utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$PLUGIN_ROOT/scripts/session-utils.sh"
 
-# Parse hook input
-HOOK_INPUT=$(cat)
-TOOL=$(echo "$HOOK_INPUT" | jq -r '.tool // ""')
+# Parse tool from hook input
+TOOL=$(echo "$HOOK_INPUT" | jq -r '.tool_name // ""')
 
 # Only process Edit and Write tools
 if [[ "$TOOL" != "Edit" && "$TOOL" != "Write" ]]; then
   exit 0
 fi
 
-# Get team info
-TEAM_NAME=$(get_team_name)
+# Get session info
+SESSION_ID="$ULTRAWORK_STDIN_SESSION_ID"
+
+# No session - allow
+if [[ -z "$SESSION_ID" ]]; then
+  exit 0
+fi
 
 # Check if ultrawork session is active
-if ! is_session_active "$TEAM_NAME"; then
+if ! is_session_active_by_id "$SESSION_ID"; then
   exit 0  # No active session - allow
 fi
 
-# Get session info
-SESSION_ID=$(get_current_session_id "$TEAM_NAME")
-SESSION_DIR=$(get_session_dir "$SESSION_ID" "$TEAM_NAME")
+# Get session file
+SESSION_DIR=$(get_session_dir "$SESSION_ID")
 SESSION_FILE="$SESSION_DIR/session.json"
-PHASE=$(get_session_phase "$TEAM_NAME")
+PHASE=$(jq -r '.phase // ""' "$SESSION_FILE" 2>/dev/null || echo "")
 
 # Only enforce during PLANNING phase
 if [[ "$PHASE" != "PLANNING" ]]; then
@@ -40,7 +47,7 @@ if [[ "$PHASE" != "PLANNING" ]]; then
 fi
 
 # Get file path from tool input
-FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.input.file_path // ""')
+FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // ""')
 
 # Allowed files during PLANNING:
 # - design.md (planning document)

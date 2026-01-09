@@ -2,31 +2,35 @@
 
 # Ultrawork Session Context Hook
 # Injects session state into every user message when ultrawork is active
-# Now supports Session ID-based isolation for multi-session environments
+# v5.0: Uses session_id from stdin (multi-session safe)
 
 set -euo pipefail
+
+# Read stdin and extract session_id FIRST (before sourcing utils)
+HOOK_INPUT=$(cat)
+export ULTRAWORK_STDIN_SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // empty')
 
 # Get script directory and source utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$PLUGIN_ROOT/scripts/session-utils.sh"
 
-# Get team and session info
-TEAM_NAME=$(get_team_name)
-SESSION_ID=$(get_current_session_id "$TEAM_NAME")
+# Get session info from stdin
+SESSION_ID="$ULTRAWORK_STDIN_SESSION_ID"
 
-# No active session bound to this terminal - no injection needed
+# No session_id in stdin - no injection needed
 if [[ -z "$SESSION_ID" ]]; then
   exit 0
 fi
 
 # Get session file
-SESSION_DIR=$(get_session_dir "$SESSION_ID" "$TEAM_NAME")
+SESSION_DIR=$(get_session_dir "$SESSION_ID")
 SESSION_FILE="$SESSION_DIR/session.json"
 
-# Session file doesn't exist - clean up binding and exit
+# Session file doesn't exist - still provide session_id for new sessions
 if [[ ! -f "$SESSION_FILE" ]]; then
-  unbind_terminal "$TEAM_NAME"
+  # Provide session_id so AI can pass it to setup-ultrawork.sh
+  jq -n --arg sid "$SESSION_ID" '{"systemMessage": ("CLAUDE_SESSION_ID: " + $sid + "\nUse this when calling ultrawork scripts: --session " + $sid)}'
   exit 0
 fi
 
@@ -197,7 +201,6 @@ Session ID: $SESSION_ID
 Goal: $GOAL
 Phase: $PHASE
 Exploration: $EXPLORATION_STAGE
-Team: $TEAM_NAME
 Tasks: $CHILD_TASKS
 Evidence: $EVIDENCE_COUNT items
 

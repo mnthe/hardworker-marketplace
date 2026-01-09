@@ -2,73 +2,44 @@
 
 # Ultrawork Session Utilities
 # Common functions for session ID management across all scripts
-# v3.1: Uses Claude Code session_id for session binding
-
-# Get team name from git repo or default
-get_team_name() {
-  if git rev-parse --is-inside-work-tree &>/dev/null; then
-    basename "$(git rev-parse --show-toplevel)"
-  else
-    echo "default"
-  fi
-}
+# v5.0: Simplified - no team directories, session_id from stdin only
+#
+# Session structure: ~/.claude/ultrawork/sessions/{session_id}/
+# Claude Code provides session_id in stdin JSON for ALL hooks.
 
 # Get the base ultrawork directory
 get_ultrawork_base() {
   echo "$HOME/.claude/ultrawork"
 }
 
-# Get team directory
-get_team_dir() {
-  local team_name="${1:-$(get_team_name)}"
-  echo "$(get_ultrawork_base)/$team_name"
-}
-
-# Get sessions directory (stores actual session data)
+# Get sessions directory
 get_sessions_dir() {
-  local team_dir="${1:-$(get_team_dir)}"
-  echo "$team_dir/sessions"
-}
-
-# Generate fallback session ID (7-char lowercase UUID prefix)
-# Used only when Claude session_id is not available
-generate_session_id() {
-  if command -v uuidgen &>/dev/null; then
-    uuidgen | tr '[:upper:]' '[:lower:]' | cut -c1-7
-  else
-    # Fallback: use /dev/urandom
-    head -c 100 /dev/urandom | md5sum | cut -c1-7
-  fi
-}
-
-# Get Claude session_id from SessionStart hook capture file
-get_claude_session_id() {
-  local team_name="${1:-$(get_team_name)}"
-  local team_dir=$(get_team_dir "$team_name")
-  local claude_session_file="$team_dir/.claude-session"
-
-  if [[ -f "$claude_session_file" ]]; then
-    jq -r '.claude_session_id // empty' "$claude_session_file"
-  else
-    echo ""
-  fi
+  echo "$(get_ultrawork_base)/sessions"
 }
 
 # Get session directory for a session ID
 get_session_dir() {
   local session_id="$1"
-  local team_name="${2:-$(get_team_name)}"
-  local team_dir=$(get_team_dir "$team_name")
-  echo "$(get_sessions_dir "$team_dir")/$session_id"
+  echo "$(get_sessions_dir)/$session_id"
 }
 
-# Get session.json path for current Claude session
+# Get Claude session_id from environment variable
+# Hooks must set ULTRAWORK_STDIN_SESSION_ID before calling this
+get_claude_session_id() {
+  echo "${ULTRAWORK_STDIN_SESSION_ID:-}"
+}
+
+# Alias for backward compatibility
+get_current_session_id() {
+  get_claude_session_id
+}
+
+# Get session.json path for current session
 get_current_session_file() {
-  local team_name="${1:-$(get_team_name)}"
-  local session_id=$(get_claude_session_id "$team_name")
+  local session_id=$(get_claude_session_id)
 
   if [[ -n "$session_id" ]]; then
-    local session_dir=$(get_session_dir "$session_id" "$team_name")
+    local session_dir=$(get_session_dir "$session_id")
     if [[ -f "$session_dir/session.json" ]]; then
       echo "$session_dir/session.json"
     else
@@ -79,26 +50,31 @@ get_current_session_file() {
   fi
 }
 
-# Alias for backward compatibility
-get_current_session_id() {
-  get_claude_session_id "$@"
+# Check if session exists and is active (not in terminal state)
+is_session_active_by_id() {
+  local session_id="$1"
+  local session_dir=$(get_session_dir "$session_id")
+  local session_file="$session_dir/session.json"
+
+  if [[ ! -f "$session_file" ]]; then
+    return 1
+  fi
+
+  local phase=$(jq -r '.phase // "unknown"' "$session_file" 2>/dev/null)
+
+  case "$phase" in
+    PLANNING|EXECUTION|VERIFICATION)
+      return 0  # Active
+      ;;
+    *)
+      return 1  # Terminal or unknown
+      ;;
+  esac
 }
 
-# Unbind terminal from ultrawork session
-# Removes the .claude-session file that links Claude session to ultrawork session
-unbind_terminal() {
-  local team_name="${1:-$(get_team_name)}"
-  local team_dir=$(get_team_dir "$team_name")
-  local claude_session_file="$team_dir/.claude-session"
-
-  rm -f "$claude_session_file"
-}
-
-# List all active sessions for a team
+# List all active sessions (scans all session directories)
 list_active_sessions() {
-  local team_name="${1:-$(get_team_name)}"
-  local team_dir=$(get_team_dir "$team_name")
-  local sessions_dir=$(get_sessions_dir "$team_dir")
+  local sessions_dir=$(get_sessions_dir)
 
   if [[ ! -d "$sessions_dir" ]]; then
     return
@@ -107,39 +83,27 @@ list_active_sessions() {
   for session_dir in "$sessions_dir"/*; do
     if [[ -d "$session_dir" ]]; then
       local session_id=$(basename "$session_dir")
-      local session_file="$session_dir/session.json"
-
-      if [[ -f "$session_file" ]]; then
-        # Check cancelled_at - if not cancelled, session is active
-        local cancelled_at=$(grep -o '"cancelled_at": *"[^"]*"' "$session_file" | cut -d'"' -f4 || echo "")
-
-        if [[ -z "$cancelled_at" || "$cancelled_at" == "null" ]]; then
-          echo "$session_id"
-        fi
+      if is_session_active_by_id "$session_id"; then
+        echo "$session_id"
       fi
     fi
   done
 }
 
-# Clean up cancelled sessions older than N days
+# Clean up old sessions (completed/cancelled/failed older than N days)
 cleanup_old_sessions() {
   local days="${1:-7}"
-  local team_name="${2:-$(get_team_name)}"
-  local team_dir=$(get_team_dir "$team_name")
-  local sessions_dir=$(get_sessions_dir "$team_dir")
+  local sessions_dir=$(get_sessions_dir)
 
   if [[ ! -d "$sessions_dir" ]]; then
     return
   fi
 
   find "$sessions_dir" -maxdepth 1 -type d -mtime +"$days" | while read -r session_dir; do
-    if [[ -f "$session_dir/session.json" ]]; then
-      # Check cancelled_at - only delete cancelled sessions
-      local cancelled_at=$(grep -o '"cancelled_at": *"[^"]*"' "$session_dir/session.json" | cut -d'"' -f4 || echo "")
-
-      if [[ -n "$cancelled_at" && "$cancelled_at" != "null" ]]; then
-        rm -rf "$session_dir"
-      fi
+    local session_id=$(basename "$session_dir")
+    # Only delete non-active sessions
+    if ! is_session_active_by_id "$session_id"; then
+      rm -rf "$session_dir"
     fi
   done
 }
@@ -173,61 +137,6 @@ release_session_lock() {
   rmdir "$lock_file" 2>/dev/null || true
 }
 
-# Check if ultrawork session is active (not in terminal state)
-# Returns: 0 if active, 1 if not active or no session
-# Terminal states: COMPLETE, CANCELLED, FAILED
-is_session_active() {
-  local team_name="${1:-$(get_team_name)}"
-  local session_id=$(get_current_session_id "$team_name")
-
-  # No session bound
-  if [[ -z "$session_id" ]]; then
-    return 1
-  fi
-
-  local session_dir=$(get_session_dir "$session_id" "$team_name")
-  local session_file="$session_dir/session.json"
-
-  # Session file doesn't exist
-  if [[ ! -f "$session_file" ]]; then
-    return 1
-  fi
-
-  # Check phase
-  local phase=$(jq -r '.phase // "unknown"' "$session_file" 2>/dev/null)
-
-  case "$phase" in
-    PLANNING|EXECUTION|VERIFICATION)
-      return 0  # Active
-      ;;
-    COMPLETE|CANCELLED|FAILED)
-      return 1  # Terminal state
-      ;;
-    *)
-      return 1  # Unknown = not active
-      ;;
-  esac
-}
-
-# Get session phase (returns empty if no active session)
-get_session_phase() {
-  local team_name="${1:-$(get_team_name)}"
-  local session_id=$(get_current_session_id "$team_name")
-
-  if [[ -z "$session_id" ]]; then
-    echo ""
-    return
-  fi
-
-  local session_dir=$(get_session_dir "$session_id" "$team_name")
-  local session_file="$session_dir/session.json"
-
-  if [[ -f "$session_file" ]]; then
-    jq -r '.phase // ""' "$session_file" 2>/dev/null
-  else
-    echo ""
-  fi
-}
 
 # Safe JSON update with locking
 update_session_json() {

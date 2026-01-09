@@ -2,36 +2,37 @@
 
 # Agent Lifecycle Tracking Hook (PreToolUse)
 # Tracks when agents are spawned via Task tool during ultrawork sessions
-# Acts as "BeforeAgentSpawn" functionality
+# v5.0: Uses session_id from stdin (multi-session safe)
 
 set -euo pipefail
+
+# Read stdin and extract session_id FIRST
+HOOK_INPUT=$(cat)
+export ULTRAWORK_STDIN_SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // empty')
 
 # Get script directory and source utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$PLUGIN_ROOT/scripts/session-utils.sh"
 
-# Parse hook input
-HOOK_INPUT=$(cat)
-TOOL=$(echo "$HOOK_INPUT" | jq -r '.tool // ""')
+# Parse tool from hook input
+TOOL=$(echo "$HOOK_INPUT" | jq -r '.tool_name // ""')
 
 # Only process Task tool usage - exit silently for other tools
 if [[ "$TOOL" != "Task" ]]; then
   exit 0
 fi
 
-# Get team and session info
-TEAM_NAME=$(get_team_name)
-SESSION_ID=$(get_current_session_id "$TEAM_NAME")
+# Get session info
+SESSION_ID="$ULTRAWORK_STDIN_SESSION_ID"
 
 # No active ultrawork session - allow without tracking
 if [[ -z "$SESSION_ID" ]]; then
-  jq -n '{"decision": "allow"}'
   exit 0
 fi
 
 # Get session file
-SESSION_DIR=$(get_session_dir "$SESSION_ID" "$TEAM_NAME")
+SESSION_DIR=$(get_session_dir "$SESSION_ID")
 SESSION_FILE="$SESSION_DIR/session.json"
 
 # Session file doesn't exist - allow without tracking
@@ -48,8 +49,8 @@ if [[ "$PHASE" != "EXPLORATION" && "$PHASE" != "EXECUTION" && "$PHASE" != "VERIF
 fi
 
 # Parse Task tool parameters
-TASK_ID=$(echo "$HOOK_INPUT" | jq -r '.input.task_id // ""')
-DESCRIPTION=$(echo "$HOOK_INPUT" | jq -r '.input.description // ""')
+TASK_ID=$(echo "$HOOK_INPUT" | jq -r '.tool_input.task_id // ""')
+DESCRIPTION=$(echo "$HOOK_INPUT" | jq -r '.tool_input.description // ""')
 
 # If no task_id, this isn't a worker spawn (might be TaskCreate, TaskUpdate, etc.)
 if [[ -z "$TASK_ID" ]]; then
