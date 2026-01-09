@@ -129,20 +129,35 @@ When using within an ultrawork session:
 
 ### 2. Save overview.md
 
-```python
-session_dir = f"~/.claude/ultrawork/sessions/{SESSION_ID}"
+```bash
+# Get session directory
+SESSION_DIR=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir)
+
+# Write overview.md
 Write(
-  file_path=f"{session_dir}/exploration/overview.md",
+  file_path="$SESSION_DIR/exploration/overview.md",
   content="{exploration results in above format}"
 )
 ```
 
-### 3. Initialize context.json
+### 3. Add overview to context.json
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/context-init.sh" \
+"${CLAUDE_PLUGIN_ROOT}/scripts/context-add.sh" \
   --session {SESSION_ID} \
-  --overview-complete
+  --explorer-id "overview" \
+  --file "exploration/overview.md" \
+  --summary "{brief summary of overview findings}" \
+  --key-files "{comma-separated key files}" \
+  --patterns "{comma-separated patterns found}"
+```
+
+### 4. Update exploration stage
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" \
+  --session {SESSION_ID} \
+  --exploration-stage analyzing
 ```
 
 ---
