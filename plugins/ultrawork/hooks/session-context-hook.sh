@@ -62,11 +62,11 @@ case "$PHASE" in
       # Gate system for interactive planning
       case "$EXPLORATION_STAGE" in
         not_started)
-          NEXT_ACTION="⛔ GATE SYSTEM - You CANNOT skip gates
+          NEXT_ACTION="⛔ GATE SYSTEM - Explorer 우선 정책
 
-┌─ GATE 1: EXPLORATION [CURRENT - BLOCKING] ──────────┐
+┌─ GATE 1: EXPLORATION [CURRENT] ─────────────────────┐
 │                                                      │
-│ YOU MUST DO THIS FIRST:                              │
+│ FIRST ACTION (필수):                                 │
 │ Task(                                                │
 │   subagent_type=\"ultrawork:explorer\",                │
 │   model=\"haiku\",                                     │
@@ -75,13 +75,11 @@ case "$PHASE" in
 │           EXPLORATION_MODE: overview\"                │
 │ )                                                    │
 │                                                      │
-│ UNTIL THIS COMPLETES:                                │
-│ ✗ No direct codebase exploration (Glob, Grep, Read)  │
-│ ✗ No external commands (glab, curl, git diff, etc.)  │
-│ ✗ No file edits (Edit, Write)                        │
-│ ✗ No task creation (TodoWrite for planning)          │
-│                                                      │
-│ ✓ ONLY: Task(ultrawork:explorer), session scripts    │
+│ 정책: EXPLORER 우선, 병행 탐색 허용                  │
+│ ✓ Explorer 먼저 spawn (필수)                         │
+│ ✓ 관련 문서/파일 병행 읽기 허용                      │
+│ ✗ 소스코드 직접 탐색 금지 (explorer 사용)            │
+│ ✗ 파일 수정 금지 (Edit, Write)                       │
 └──────────────────────────────────────────────────────┘
 
 ┌─ GATE 2: TARGETED EXPLORATION [LOCKED] ─────────────┐
@@ -94,11 +92,7 @@ case "$PHASE" in
 
 ┌─ GATE 4: EXECUTION [LOCKED] ────────────────────────┐
 │ Unlocks when: design.md + tasks/*.json exist         │
-└──────────────────────────────────────────────────────┘
-
-═══════════════════════════════════════════════════════
-⚠️ ANY ACTION OTHER THAN SPAWNING EXPLORER = VIOLATION
-═══════════════════════════════════════════════════════"
+└──────────────────────────────────────────────────────┘"
           ;;
         overview)
           NEXT_ACTION="⛔ GATE SYSTEM - You CANNOT skip gates
@@ -195,8 +189,13 @@ esac
 # Build system message with session ID prominently displayed
 read -r -d '' CONTEXT_MSG << EOF || true
 <ultrawork-session>
-ACTIVE ULTRAWORK SESSION
-═══════════════════════════════════════════════════════════
+╔═══════════════════════════════════════════════════════════╗
+║ ⚠️  ULTRAWORK SESSION ACTIVE - DO NOT IGNORE THIS         ║
+║                                                           ║
+║ This message persists across conversation compaction.     ║
+║ You MUST follow the ultrawork protocol below.             ║
+║ If unsure about previous context, read session.json.      ║
+╚═══════════════════════════════════════════════════════════╝
 
 Session ID: $SESSION_ID
 Goal: $GOAL
