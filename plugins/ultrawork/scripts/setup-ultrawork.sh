@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Ultrawork Setup Script
-# v5.0: Simplified - requires --session from AI (no file-based session binding)
+# v5.1: Added working_dir to session.json for project deliverables
 
 set -euo pipefail
 
@@ -195,11 +195,15 @@ mkdir -p "$SESSION_DIR/exploration"
 # Generate timestamp
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
+# Get working directory (project root)
+WORKING_DIR="$(pwd)"
+
 # Create session.json
 cat > "$SESSION_FILE" <<EOF
 {
-  "version": "5.0",
+  "version": "5.1",
   "session_id": "$SESSION_ID",
+  "working_dir": "$WORKING_DIR",
   "goal": "$GOAL",
   "started_at": "$TIMESTAMP",
   "updated_at": "$TIMESTAMP",
@@ -236,6 +240,7 @@ cat <<EOF
 ═══════════════════════════════════════════════════════════
 
  Session ID: $SESSION_ID
+ Working Dir: $WORKING_DIR
  Goal: $GOAL
  Phase: PLANNING
  Started: $TIMESTAMP
@@ -251,7 +256,7 @@ cat <<EOF
  Auto mode:      $AUTO_MODE
 
 ───────────────────────────────────────────────────────────
- SESSION DIRECTORY
+ SESSION DIRECTORY (Internal Metadata)
 ───────────────────────────────────────────────────────────
 
  $SESSION_DIR/
@@ -259,6 +264,13 @@ cat <<EOF
    ├── context.json
    ├── exploration/
    └── tasks/
+
+───────────────────────────────────────────────────────────
+ PROJECT DELIVERABLES
+───────────────────────────────────────────────────────────
+
+ Design documents → $WORKING_DIR/docs/plans/
+ Code changes     → $WORKING_DIR/
 
 ───────────────────────────────────────────────────────────
  WORKFLOW

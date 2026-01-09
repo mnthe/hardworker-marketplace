@@ -2,11 +2,12 @@
 
 ## Directory Structure
 
+### Session Directory (Internal Metadata)
+
 ```
 ~/.claude/ultrawork/sessions/{session-id}/
 ├── session.json        # Session metadata (JSON)
 ├── context.json        # Explorer summaries (JSON)
-├── design.md           # Design document (Markdown)
 ├── exploration/        # Detailed exploration (Markdown)
 │   ├── overview.md     # Project overview (always first)
 │   ├── exp-1.md        # Targeted exploration
@@ -16,6 +17,21 @@
     ├── 2.json
     └── verify.json
 ```
+
+**Stored in session directory**: exploration, tasks, context - temporary/internal metadata only
+
+### Project Directory (User Deliverables)
+
+Design documents, specs, and other **user-requested deliverables** are saved to project directory:
+
+```
+{working_dir}/docs/plans/
+├── YYYY-MM-DD-{goal-slug}-design.md     # Design document
+├── YYYY-MM-DD-{goal-slug}-spec.md       # Spec document
+└── ...
+```
+
+**Stored in project directory**: design.md, spec, and other user-requested document deliverables
 
 Session ID is provided by Claude Code via hooks (CLAUDE_SESSION_ID).
 
@@ -48,14 +64,15 @@ Session ID is provided by Claude Code via hooks (CLAUDE_SESSION_ID).
 | `key_files` | Important files discovered during exploration |
 | `patterns` | Code patterns identified |
 
-## session.json Schema (v5.0)
+## session.json Schema (v5.1)
 
 **Note:** Tasks are stored as separate files in `tasks/` directory, not embedded in session.json.
 
 ```json
 {
-  "version": "5.0",
+  "version": "5.1",
   "session_id": "abc123-def456",
+  "working_dir": "/path/to/project",
   "goal": "Original user request",
   "started_at": "2026-01-08T12:00:00Z",
   "updated_at": "2026-01-08T12:30:00Z",
@@ -85,6 +102,10 @@ Session ID is provided by Claude Code via hooks (CLAUDE_SESSION_ID).
   "cancelled_at": null
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `working_dir` | string | Project root path. User deliverables (design docs, etc.) are saved relative to this path |
 
 ## tasks/{id}.json Schema
 

@@ -421,15 +421,22 @@ AskUserQuestion(questions=[{
 
 #### 3e. Write Design Document
 
-Write comprehensive design to `design.md`:
+**IMPORTANT: Design documents go to PROJECT directory, not session directory.**
 
 ```bash
-# Get session directory
-SESSION_DIR=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir)
+# Get working directory from session
+WORKING_DIR=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field working_dir)
 
-# Write design document
+# Create docs/plans directory if needed
+mkdir -p "$WORKING_DIR/docs/plans"
+
+# Generate filename with date and goal slug
+# Format: YYYY-MM-DD-{goal-slug}-design.md
+DESIGN_PATH="$WORKING_DIR/docs/plans/$(date +%Y-%m-%d)-{goal-slug}-design.md"
+
+# Write design document to PROJECT directory
 Write(
-  file_path="$SESSION_DIR/design.md",
+  file_path=DESIGN_PATH,
   content=design_content
 )
 ```
@@ -464,14 +471,15 @@ Always include verify task at end.
 **Read the plan:**
 
 ```bash
-# Get session directory
+# Get working directory and session directory
+WORKING_DIR=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field working_dir)
 SESSION_DIR=$("${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir)
 
 # List tasks
 "${CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session {SESSION_ID}
 
-# Read design
-Read("$SESSION_DIR/design.md")
+# Read design (from PROJECT directory)
+Read("$WORKING_DIR/docs/plans/YYYY-MM-DD-{goal-slug}-design.md")
 ```
 
 Display plan summary:
@@ -516,9 +524,13 @@ AskUserQuestion(questions=[{
 
 ## Output
 
-Planning creates (in session directory):
-- `design.md` - comprehensive design document
-- `tasks/*.json` - task files
+Planning creates:
+
+**Project Directory** (`$WORKING_DIR`):
+- `docs/plans/YYYY-MM-DD-{goal-slug}-design.md` - comprehensive design document
+
+**Session Directory** (`$SESSION_DIR`):
+- `tasks/*.json` - task files (internal metadata)
 - `context.json` - exploration summaries
 - `exploration/*.md` - detailed exploration
 
@@ -528,13 +540,13 @@ Run `/ultrawork-exec` to execute the plan.
 
 ## Directory Structure
 
-Get session directory: `"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir`
+**Session Directory** (internal metadata):
+`"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --dir`
 
 ```
 $SESSION_DIR/
 ├── session.json        # Session metadata (JSON)
 ├── context.json        # Explorer summaries (JSON)
-├── design.md           # Design document (Markdown)
 ├── exploration/        # Detailed exploration (Markdown)
 │   ├── overview.md
 │   ├── exp-1.md
@@ -544,6 +556,16 @@ $SESSION_DIR/
     ├── 1.json
     ├── 2.json
     └── verify.json
+```
+
+**Project Directory** (user deliverables):
+`"${CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {SESSION_ID} --field working_dir`
+
+```
+$WORKING_DIR/
+└── docs/
+    └── plans/
+        └── YYYY-MM-DD-{goal-slug}-design.md  # Design document
 ```
 
 ---

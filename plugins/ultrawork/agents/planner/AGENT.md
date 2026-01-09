@@ -108,9 +108,20 @@ For each decision point:
 
 ### Phase 3: Write Design
 
-**Write detailed design document to design.md:**
+**IMPORTANT: Design documents go to PROJECT directory (NOT session directory).**
 
-Use Write tool to create comprehensive markdown document. Be thorough - this guides all implementation work.
+```bash
+# Get working directory from session
+WORKING_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --field working_dir)
+
+# Create design document in project directory
+# Format: {working_dir}/docs/plans/YYYY-MM-DD-{goal-slug}-design.md
+mkdir -p "$WORKING_DIR/docs/plans"
+```
+
+**Write detailed design document to project directory:**
+
+Use Write tool to create comprehensive markdown document at `{WORKING_DIR}/docs/plans/YYYY-MM-DD-{goal-slug}-design.md`. Be thorough - this guides all implementation work.
 
 ```markdown
 # Design: {Goal}
@@ -263,8 +274,8 @@ Phase: EXECUTION
 1 → 2 → verify
 
 ## Files Created
-- ~/.claude/ultrawork/sessions/{SESSION_ID}/design.md
-- ~/.claude/ultrawork/sessions/{SESSION_ID}/tasks/1.json
+- {WORKING_DIR}/docs/plans/YYYY-MM-DD-{goal-slug}-design.md  # Project directory
+- ~/.claude/ultrawork/sessions/{SESSION_ID}/tasks/1.json      # Session directory
 - ~/.claude/ultrawork/sessions/{SESSION_ID}/tasks/2.json
 - ~/.claude/ultrawork/sessions/{SESSION_ID}/tasks/verify.json
 ```

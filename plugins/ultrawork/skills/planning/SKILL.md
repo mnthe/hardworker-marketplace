@@ -243,7 +243,21 @@ For each decision:
 
 ## Phase 4: Document Design
 
-Write design.md to session directory using Write tool.
+**IMPORTANT: Design documents go to PROJECT directory (NOT session directory).**
+
+```bash
+# Get working directory from session
+WORKING_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --field working_dir)
+
+# Design document path
+# Format: {working_dir}/docs/plans/YYYY-MM-DD-{goal-slug}-design.md
+DESIGN_PATH="$WORKING_DIR/docs/plans/$(date +%Y-%m-%d)-{goal-slug}-design.md"
+
+# Create directory if needed
+mkdir -p "$WORKING_DIR/docs/plans"
+```
+
+Write design.md to **project directory** using Write tool.
 
 Be thorough and detailed - this document guides all implementation work.
 
@@ -461,8 +475,8 @@ Return planning summary:
 3. **Wave 3**: [verify] - after all
 
 ## Files Created
-- {SESSION_DIR}/design.md
-- {SESSION_DIR}/tasks/1.json
+- {WORKING_DIR}/docs/plans/YYYY-MM-DD-{goal-slug}-design.md  # Project directory
+- {SESSION_DIR}/tasks/1.json                                  # Session directory
 - {SESSION_DIR}/tasks/2.json
 - {SESSION_DIR}/tasks/3.json
 - {SESSION_DIR}/tasks/verify.json
