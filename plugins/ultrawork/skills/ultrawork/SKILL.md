@@ -182,3 +182,41 @@ Ultrawork uses:
 - **verifier agent** for final verification
 
 Read references/ for detailed protocols.
+
+---
+
+## Delegation Rules (MANDATORY)
+
+| Phase | Must Delegate | Never Direct |
+|-------|---------------|--------------|
+| Exploration | ✓ | ✓ |
+| Planning (non-auto) | - | - (direct by design) |
+| Planning (auto) | ✓ | ✓ |
+| Execution | ✓ | ✓ |
+| Verification | ✓ | ✓ |
+
+**Exception**: User explicitly requests direct execution (e.g., "run this directly").
+
+---
+
+## Interruptibility (Background + Polling)
+
+To allow user interruption during long-running operations, always use **background execution with polling**.
+
+```python
+# Pattern for all sub-agent waits
+task_result = Task(subagent_type="...", run_in_background=True, ...)
+
+while True:
+    # Cancel check
+    phase = Bash(f'session-get.sh --session {session_dir} --field phase')
+    if phase.output.strip() == "CANCELLED":
+        return  # Exit cleanly
+
+    # Non-blocking poll
+    result = TaskOutput(task_id=task_result.task_id, block=False, timeout=5000)
+    if result.status in ["completed", "error"]:
+        break
+```
+
+This allows `/ultrawork-cancel` to take effect between poll iterations.

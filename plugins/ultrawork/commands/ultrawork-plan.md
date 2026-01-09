@@ -13,6 +13,39 @@ This command follows the **planning skill protocol** (`skills/planning/SKILL.md`
 
 ---
 
+## Delegation Rules (MANDATORY)
+
+The orchestrator MUST delegate exploration to sub-agents. Direct execution is prohibited.
+
+| Phase | Delegation | Direct Execution |
+|-------|------------|------------------|
+| Exploration | ALWAYS via `Task(subagent_type="ultrawork:explorer")` | NEVER |
+| Planning | N/A | ALWAYS (interactive by design) |
+
+**Exception**: User explicitly requests direct execution (e.g., "run this directly", "execute without agent").
+
+---
+
+## Interruptibility (Background + Polling)
+
+To allow user interruption during exploration, use **background execution with polling**.
+
+```python
+# Poll pattern for all Task waits
+while True:
+    # Check if session was cancelled
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    if phase.output.strip() == "CANCELLED":
+        return  # Exit cleanly
+
+    # Non-blocking check
+    result = TaskOutput(task_id=task_id, block=False, timeout=5000)
+    if result.status in ["completed", "error"]:
+        break
+```
+
+---
+
 ## Overview
 
 ```
@@ -62,7 +95,20 @@ Perform quick project overview:
 )
 ```
 
-Wait for overview to complete. Read the result:
+**Wait using polling pattern (see Interruptibility section):**
+
+```python
+while True:
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    if phase.output.strip() == "CANCELLED":
+        return
+
+    result = TaskOutput(task_id=overview_task_id, block=False, timeout=5000)
+    if result.status in ["completed", "error"]:
+        break
+```
+
+Read the result:
 ```bash
 cat {session_dir}/exploration/overview.md
 ```
@@ -121,7 +167,21 @@ CONTEXT: {overview_summary}
     )
 ```
 
-Wait for all targeted explorers using TaskOutput.
+**Wait for all explorers using polling pattern:**
+
+```python
+pending_tasks = [task_id_1, task_id_2, ...]
+
+while pending_tasks:
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    if phase.output.strip() == "CANCELLED":
+        return
+
+    for task_id in pending_tasks[:]:
+        result = TaskOutput(task_id=task_id, block=False, timeout=1000)
+        if result.status in ["completed", "error"]:
+            pending_tasks.remove(task_id)
+```
 
 ### Exploration Output
 

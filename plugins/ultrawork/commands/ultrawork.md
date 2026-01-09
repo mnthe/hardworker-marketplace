@@ -17,6 +17,80 @@ Ultrawork uses **session directory** for all task management.
 
 ---
 
+## Delegation Rules (MANDATORY)
+
+The orchestrator MUST delegate work to sub-agents. Direct execution is prohibited except where explicitly noted.
+
+| Phase | Delegation | Direct Execution |
+|-------|------------|------------------|
+| Exploration | ALWAYS via `Task(subagent_type="ultrawork:explorer")` | NEVER |
+| Planning (non-auto) | N/A | ALWAYS (by design) |
+| Planning (auto) | ALWAYS via `Task(subagent_type="ultrawork:planner")` | NEVER |
+| Execution | ALWAYS via `Task(subagent_type="ultrawork:worker")` | NEVER |
+| Verification | ALWAYS via `Task(subagent_type="ultrawork:verifier")` | NEVER |
+
+**Why**: Sub-agents are optimized for their specific tasks with proper tool access and context. Direct execution bypasses these optimizations and may produce incomplete results.
+
+**Exception**: User explicitly requests direct execution (e.g., "run this directly", "execute without agent").
+
+---
+
+## Interruptibility (Background + Polling)
+
+To allow user interruption during long-running operations, use **background execution with polling**.
+
+### Pattern: Non-blocking Wait with Cancel Check
+
+```python
+# 1. Spawn agent in background
+task_result = Task(
+  subagent_type="ultrawork:explorer:explorer",
+  run_in_background=True,
+  prompt="..."
+)
+task_id = task_result.task_id
+
+# 2. Poll with cancel check loop
+while True:
+    # Check if session was cancelled
+    session_check = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    if session_check.output.strip() == "CANCELLED":
+        print("Session cancelled by user. Stopping.")
+        break
+
+    # Non-blocking check for task completion
+    output = TaskOutput(task_id=task_id, block=False, timeout=5000)
+
+    if output.status == "completed":
+        # Process result
+        break
+    elif output.status == "error":
+        # Handle error
+        break
+
+    # Still running - continue polling
+    # (This yields control, allowing user to send /ultrawork-cancel)
+```
+
+### When to Apply This Pattern
+
+| Phase | Apply Pattern | Notes |
+|-------|---------------|-------|
+| Overview exploration | ✓ Yes | Single agent, wait with polling |
+| Targeted exploration | ✓ Yes | Multiple agents, poll each |
+| Auto planning | ✓ Yes | Planner agent, poll until done |
+| Worker execution | ✓ Yes | Multiple workers, poll each |
+| Verification | ✓ Yes | Verifier agent, poll until done |
+
+### Cancel Check Script
+
+The session-get.sh script returns the current phase. When user runs `/ultrawork-cancel`:
+1. Session phase changes to `CANCELLED`
+2. Next poll iteration detects this
+3. Orchestrator stops spawning new work and exits cleanly
+
+---
+
 ## Step 1: Initialize Session
 
 Execute the setup script:
@@ -62,7 +136,21 @@ Perform quick project overview:
 )
 ```
 
-Wait for overview to complete. Read the result:
+**Wait for overview using polling pattern (see Interruptibility section):**
+
+```python
+# Poll until complete or cancelled
+while True:
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    if phase.output.strip() == "CANCELLED":
+        return  # Exit cleanly
+
+    result = TaskOutput(task_id=overview_task_id, block=False, timeout=5000)
+    if result.status in ["completed", "error"]:
+        break
+```
+
+Read the result:
 ```bash
 cat {session_dir}/exploration/overview.md
 ```
@@ -121,7 +209,23 @@ CONTEXT: {overview_summary}
     )
 ```
 
-Wait for all targeted explorers using TaskOutput.
+**Wait for all explorers using polling pattern:**
+
+```python
+pending_tasks = [task_id_1, task_id_2, ...]  # From Task() calls above
+
+while pending_tasks:
+    # Cancel check
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    if phase.output.strip() == "CANCELLED":
+        return  # Exit cleanly
+
+    # Check each pending task
+    for task_id in pending_tasks[:]:  # Copy to allow modification
+        result = TaskOutput(task_id=task_id, block=False, timeout=1000)
+        if result.status in ["completed", "error"]:
+            pending_tasks.remove(task_id)
+```
 
 ### Exploration Output
 
@@ -155,7 +259,20 @@ Options:
 )
 ```
 
-Wait for planner to complete. Skip to Step 4.
+**Wait for planner using polling pattern:**
+
+```python
+while True:
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    if phase.output.strip() == "CANCELLED":
+        return  # Exit cleanly
+
+    result = TaskOutput(task_id=planner_task_id, block=False, timeout=5000)
+    if result.status in ["completed", "error"]:
+        break
+```
+
+Skip to Step 4.
 
 ---
 
@@ -319,17 +436,116 @@ AskUserQuestion(questions=[{
 
 ## Step 5: Execution Phase
 
-[Rest of execution, verification, and completion logic remains the same...]
-
-Read session directory to get tasks:
+### 5a. Update Session Phase
 
 ```bash
-ls {session_dir}/tasks/
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase EXECUTION
 ```
 
-Find unblocked tasks and spawn workers...
+### 5b. Execution Loop with Polling
 
-(Refer to existing Step 4-7 from previous version)
+```python
+active_workers = {}  # task_id -> agent_task_id
+
+while True:
+    # Cancel check at start of each loop
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    if phase.output.strip() == "CANCELLED":
+        print("Session cancelled. Stopping execution.")
+        return
+
+    # Find unblocked pending tasks
+    tasks_output = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/task-list.sh" --session {session_dir} --format json')
+    tasks = json.loads(tasks_output.output)
+
+    unblocked = [t for t in tasks if t["status"] == "pending" and all_deps_complete(t, tasks)]
+    in_progress = [t for t in tasks if t["status"] == "in_progress"]
+    all_done = all(t["status"] == "resolved" for t in tasks)
+
+    if all_done:
+        break  # Move to verification
+
+    # Spawn workers for unblocked tasks (respect max_workers)
+    for task in unblocked:
+        if len(active_workers) >= max_workers and max_workers > 0:
+            break
+
+        model = "opus" if task["complexity"] == "complex" else "sonnet"
+        agent_result = Task(
+            subagent_type="ultrawork:worker:worker",
+            model=model,
+            run_in_background=True,
+            prompt=f"""
+ULTRAWORK_SESSION: {session_dir}
+TASK_ID: {task["id"]}
+
+TASK: {task["subject"]}
+{task["description"]}
+
+SUCCESS CRITERIA:
+{task["criteria"]}
+"""
+        )
+        active_workers[task["id"]] = agent_result.task_id
+
+    # Poll active workers (non-blocking)
+    for task_id, agent_task_id in list(active_workers.items()):
+        result = TaskOutput(task_id=agent_task_id, block=False, timeout=1000)
+        if result.status in ["completed", "error"]:
+            del active_workers[task_id]
+            # Task file is updated by worker agent
+```
+
+### 5c. Verification Phase
+
+When all tasks complete, spawn verifier:
+
+```python
+# Cancel check before verification
+phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+if phase.output.strip() == "CANCELLED":
+    return
+
+# Update phase
+Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase VERIFICATION')
+
+# Spawn verifier
+verifier_result = Task(
+    subagent_type="ultrawork:verifier:verifier",
+    model="opus",
+    run_in_background=True,
+    prompt=f"""
+ULTRAWORK_SESSION: {session_dir}
+
+Verify all success criteria are met with evidence.
+Check for blocked patterns.
+Run final tests.
+"""
+)
+
+# Poll verifier with cancel check
+while True:
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_dir} --field phase')
+    if phase.output.strip() == "CANCELLED":
+        return
+
+    result = TaskOutput(task_id=verifier_result.task_id, block=False, timeout=5000)
+    if result.status in ["completed", "error"]:
+        break
+```
+
+### 5d. Completion
+
+Check verifier result and update session:
+
+```bash
+# If PASS
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase COMPLETE
+
+# If FAIL and iterations remaining
+"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {session_dir} --phase EXECUTION --increment-iteration
+# Loop back to 5b
+```
 
 ---
 

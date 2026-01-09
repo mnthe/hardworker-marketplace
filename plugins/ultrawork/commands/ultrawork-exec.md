@@ -9,6 +9,41 @@ allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/*)", "Task", "TaskOutput", "
 
 Execute a plan document created by `/ultrawork-plan`.
 
+---
+
+## Delegation Rules (MANDATORY)
+
+The orchestrator MUST delegate work to sub-agents. Direct execution is prohibited.
+
+| Phase | Delegation | Direct Execution |
+|-------|------------|------------------|
+| Execution | ALWAYS via `Task(subagent_type="ultrawork:worker")` | NEVER |
+| Verification | ALWAYS via `Task(subagent_type="ultrawork:verifier")` | NEVER |
+
+**Exception**: User explicitly requests direct execution (e.g., "run this directly", "execute without agent").
+
+---
+
+## Interruptibility (Background + Polling)
+
+To allow user interruption during execution, use **background execution with polling**.
+
+```python
+# Poll pattern for all Task waits
+while True:
+    # Check if session was cancelled
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_path} --field phase')
+    if phase.output.strip() == "CANCELLED":
+        return  # Exit cleanly
+
+    # Non-blocking check
+    result = TaskOutput(task_id=task_id, block=False, timeout=5000)
+    if result.status in ["completed", "error"]:
+        break
+```
+
+---
+
 ## Step 1: Find Plan Document
 
 Look for plan file:
@@ -91,40 +126,61 @@ Write parsed tasks to session.json (v5.0):
 Starting workers...
 ```
 
-## Step 5: Spawn Workers
+## Step 5: Execution Loop with Polling
 
-For each unblocked task (status=pending, all depends_on completed):
+Use background execution with polling to allow user interruption:
 
 ```python
-# Use complexity field to select model
-model = "opus" if task["complexity"] == "complex" else "sonnet"
+active_workers = {}  # task_id -> agent_task_id
 
-Task(
-  subagent_type="ultrawork:worker:worker",
-  model=model,
-  prompt="""
-    ULTRAWORK_SESSION: {session path}
-    TASK_ID: {task.id}
+while True:
+    # Cancel check at start of each loop
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_path} --field phase')
+    if phase.output.strip() == "CANCELLED":
+        print("Session cancelled. Stopping execution.")
+        return
 
-    TASK: {task.title}
-    {task.description}
+    # Find unblocked pending tasks
+    tasks = json.loads(Bash(f'"task-list.sh" --session {session_path} --format json').output)
+    unblocked = [t for t in tasks if t["status"] == "pending" and all_deps_complete(t, tasks)]
+    all_done = all(t["status"] in ["resolved", "failed"] for t in tasks if t["id"] != "verify")
 
-    SUCCESS CRITERIA:
-    {task.criteria}
-  """,
-  run_in_background=True
-)
+    if all_done:
+        break  # Move to verification
+
+    # Spawn workers for unblocked tasks (respect max_workers)
+    for task in unblocked:
+        if len(active_workers) >= max_workers and max_workers > 0:
+            break
+
+        model = "opus" if task["complexity"] == "complex" else "sonnet"
+        agent_result = Task(
+            subagent_type="ultrawork:worker:worker",
+            model=model,
+            run_in_background=True,
+            prompt=f"""
+ULTRAWORK_SESSION: {session_path}
+TASK_ID: {task["id"]}
+
+TASK: {task["title"]}
+{task["description"]}
+
+SUCCESS CRITERIA:
+{task["criteria"]}
+"""
+        )
+        active_workers[task["id"]] = agent_result.task_id
+
+    # Poll active workers (non-blocking)
+    for task_id, agent_task_id in list(active_workers.items()):
+        result = TaskOutput(task_id=agent_task_id, block=False, timeout=1000)
+        if result.status in ["completed", "error"]:
+            del active_workers[task_id]
 ```
 
-Respect `max_workers` limit from session options.
+## Step 6: Progress Reporting
 
-## Step 6: Monitor & Progress
-
-Periodically check session.json:
-- Workers update task status to `completed` or `failed`
-- When task completes, check if it unblocks others
-- Spawn new workers for unblocked tasks
-- Report progress to user
+Between poll iterations, report progress:
 
 ```markdown
 ## Progress Update
@@ -138,21 +194,38 @@ Periodically check session.json:
 
 When all non-verify tasks complete:
 
-1. Update phase to `VERIFICATION`
-2. Spawn verifier:
-
 ```python
-Task(
-  subagent_type="ultrawork:verifier:verifier",
-  model="opus",
-  prompt="""
-    ULTRAWORK_SESSION: {session path}
+# Cancel check before verification
+phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_path} --field phase')
+if phase.output.strip() == "CANCELLED":
+    return
 
-    Verify all success criteria are met with evidence.
-    Check for blocked patterns.
-    Run final tests.
-  """
+# Update phase
+Bash(f'"session-update.sh" --session {session_path} --phase VERIFICATION')
+
+# Spawn verifier with background + polling
+verifier_result = Task(
+    subagent_type="ultrawork:verifier:verifier",
+    model="opus",
+    run_in_background=True,
+    prompt=f"""
+ULTRAWORK_SESSION: {session_path}
+
+Verify all success criteria are met with evidence.
+Check for blocked patterns.
+Run final tests.
+"""
 )
+
+# Poll verifier with cancel check
+while True:
+    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/scripts/session-get.sh" --session {session_path} --field phase')
+    if phase.output.strip() == "CANCELLED":
+        return
+
+    result = TaskOutput(task_id=verifier_result.task_id, block=False, timeout=5000)
+    if result.status in ["completed", "error"]:
+        break
 ```
 
 ## Step 8: Complete
