@@ -96,31 +96,40 @@ The session-get.sh script returns the current phase. When user runs `/ultrawork-
 
 **All scripts require `--session <id>` flag.**
 
-The session_id is provided by the hook via systemMessage as `CLAUDE_SESSION_ID`.
+### Where to get SESSION_ID
 
-**Example from hook:**
+Look for this message in system-reminder (provided by SessionStart hook):
 ```
-CLAUDE_SESSION_ID: abc123def456
-Use this when calling ultrawork scripts: --session abc123def456
+CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642
+Use this when calling ultrawork scripts: --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642
 ```
 
-**AI must extract and pass it to ALL script calls:**
+**IMPORTANT: You MUST extract the actual UUID value and use it directly. DO NOT use placeholder strings like `{SESSION_ID}` or `$SESSION_ID`.**
+
+### Correct usage example
+
+If the hook says `CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then:
+
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session {SESSION_ID} $ARGUMENTS
-"${CLAUDE_PLUGIN_ROOT}/scripts/ultrawork-cancel.sh" --session {SESSION_ID}
-"${CLAUDE_PLUGIN_ROOT}/scripts/ultrawork-status.sh" --session {SESSION_ID}
-"${CLAUDE_PLUGIN_ROOT}/scripts/session-update.sh" --session {SESSION_DIR} ...
+# ✅ CORRECT - use the actual value
+"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 "goal"
+
+# ❌ WRONG - do not use placeholders
+"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session {SESSION_ID} "goal"
+"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session $SESSION_ID "goal"
 ```
 
 ---
 
 ## Step 1: Initialize Session
 
-Execute the setup script with `--session`:
+**First, extract SESSION_ID from the system-reminder hook output, then execute:**
 
-```!
-"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session {SESSION_ID} $ARGUMENTS
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ultrawork.sh" --session <YOUR_SESSION_ID_HERE> $ARGUMENTS
 ```
+
+Replace `<YOUR_SESSION_ID_HERE>` with the actual UUID from `CLAUDE_SESSION_ID` in system-reminder.
 
 This creates session at: `~/.claude/ultrawork/sessions/{session_id}/`
 

@@ -33,8 +33,18 @@ fi
 
 # Output session ID for AI to use
 if [[ -n "$SESSION_ID" ]]; then
-  echo "CLAUDE_SESSION_ID: $SESSION_ID"
-  echo "Use this when calling ultrawork scripts: --session $SESSION_ID"
+  cat << EOF
+═══════════════════════════════════════════════════════════
+ ULTRAWORK SESSION ID (USE THIS VALUE DIRECTLY)
+═══════════════════════════════════════════════════════════
+ CLAUDE_SESSION_ID: $SESSION_ID
+
+ When calling ultrawork scripts, use the EXACT value above:
+ --session $SESSION_ID
+
+ DO NOT use placeholders like {SESSION_ID} or \$SESSION_ID
+═══════════════════════════════════════════════════════════
+EOF
 fi
 
 exit 0
