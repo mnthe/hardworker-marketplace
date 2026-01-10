@@ -7,18 +7,41 @@
 
 # hardworker-marketplace
 
-Claude Code 플러그인 마켓플레이스. "hardworker" 생산성 패턴에 집중한 플러그인 모음.
+Claude Code plugin marketplace. A collection of plugins focused on "hardworker" productivity patterns.
 
 ## Project Overview
 
-### 플러그인 목록
+### Plugin List
 
 | Plugin | Description |
 |--------|-------------|
-| ultrawork | Verification-first development with strict session isolation |
+| ultrawork | Verification-first development (Bash version, requires jq) |
+| ultrawork-js | Verification-first development (Node.js version, cross-platform) |
 | teamwork | Multi-session collaboration with role-based workers |
 
-### 기술 스택
+### ⚠️ Dual-Version Maintenance: ultrawork / ultrawork-js
+
+**ultrawork** and **ultrawork-js** are implementations of the same functionality in different runtimes.
+
+| Version | Runtime | Dependencies | Target Environment |
+|---------|---------|--------------|-------------------|
+| ultrawork | Bash | jq | Linux, macOS, Git Bash |
+| ultrawork-js | Node.js | None | All platforms (including Windows) |
+
+**When making changes, you MUST update both versions:**
+
+1. **Feature changes**: Implement the same feature in both
+2. **Bug fixes**: Apply the same fix to both
+3. **Schema changes**: Sync session.json, task.json structure changes
+4. **Version sync**: Keep version numbers identical
+
+```bash
+# Check for differences
+diff -r plugins/ultrawork/scripts/ plugins/ultrawork-js/src/scripts/ --brief
+diff -r plugins/ultrawork/hooks/ plugins/ultrawork-js/src/hooks/ --brief
+```
+
+### Tech Stack
 
 - **Language**: Pure Bash (POSIX-compliant, bash 3.2+)
 - **Dependencies**: jq (JSON parsing), git (version control)
@@ -60,7 +83,7 @@ Claude Code 플러그인 마켓플레이스. "hardworker" 생산성 패턴에 �
 
 ### Script Specification
 
-모든 Bash 스크립트는 다음을 준수해야 합니다:
+All Bash scripts must follow these conventions:
 
 ```bash
 #!/usr/bin/env bash
@@ -185,7 +208,7 @@ JSON state files must be valid JSON and follow schema:
 
 ## Plugin Structure Standards
 
-### 디렉토리 레이아웃
+### Directory Layout
 
 ```
 plugins/{plugin-name}/
@@ -201,7 +224,7 @@ plugins/{plugin-name}/
 └── README.md            # User documentation (REQUIRED)
 ```
 
-### 상태 관리 패턴
+### State Management Patterns
 
 | Plugin    | Pattern                     | Location                                    |
 | --------- | --------------------------- | ------------------------------------------- |
@@ -314,7 +337,7 @@ Hook safety rules:
 
 ## Testing Approach
 
-이 프로젝트는 자동화된 테스트 프레임워크가 없습니다. 수동 테스트 절차를 따르세요.
+This project does not have an automated test framework. Follow manual testing procedures.
 
 ### Script Validation
 
@@ -356,20 +379,20 @@ cat ~/.claude/ultrawork/{team}/sessions/{id}/session.json
 
 ### Version Update Process
 
-**CRITICAL: 버전 업데이트 시 반드시 두 파일 모두 동기화해야 합니다!**
+**CRITICAL: When updating versions, you MUST sync both files!**
 
-1. Update `plugins/{plugin}/.claude-plugin/plugin.json` (플러그인 버전)
-2. Update `.claude-plugin/marketplace.json` (마켓플레이스 버전) - **반드시 동일한 버전으로!**
+1. Update `plugins/{plugin}/.claude-plugin/plugin.json` (plugin version)
+2. Update `.claude-plugin/marketplace.json` (marketplace version) - **MUST match!**
 3. Document changes in commit message
 4. Tag release if significant milestone
 
 ```bash
-# 버전 동기화 확인 명령어
+# Verify version sync
 diff <(jq -r '.version' plugins/ultrawork/.claude-plugin/plugin.json) \
      <(jq -r '.plugins[] | select(.name=="ultrawork") | .version' .claude-plugin/marketplace.json)
 ```
 
-**버전 불일치 발생 시**: 마켓플레이스에서 설치한 플러그인이 오래된 버전을 사용하게 되어, 버그 수정이 적용되지 않음.
+**Version mismatch impact**: Plugins installed from marketplace will use outdated versions, causing bug fixes to not apply.
 
 ### Changelog Tracking
 
@@ -384,7 +407,7 @@ Changes tracked in git commit history. Follow conventional commits:
 
 ### CLAUDE.md Usage
 
-CLAUDE.md 파일은 AI 에이전트에게 컨텍스트를 제공합니다.
+CLAUDE.md files provide context to AI agents.
 
 | Level   | Location                           | Purpose                      |
 | ------- | ---------------------------------- | ---------------------------- |

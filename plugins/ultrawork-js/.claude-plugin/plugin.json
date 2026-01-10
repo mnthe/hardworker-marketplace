@@ -1,7 +1,7 @@
 {
-  "name": "ultrawork",
+  "name": "ultrawork-js",
   "version": "0.4.0",
-  "description": "Strict verification-first development mode with Session ID-based isolation, mandatory planning, success criteria, evidence collection, and zero tolerance for partial completion.",
+  "description": "Strict verification-first development mode with Session ID-based isolation (TypeScript/Node.js cross-platform version).",
   "author": {
     "name": "mnthe"
   },
@@ -11,7 +11,9 @@
     "planning",
     "task-management",
     "tdd",
-    "evidence-based"
+    "evidence-based",
+    "typescript",
+    "cross-platform"
   ],
   "license": "MIT",
   "commands": "./commands/",
