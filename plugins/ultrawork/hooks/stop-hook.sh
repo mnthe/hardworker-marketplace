@@ -41,13 +41,13 @@ AUTO_MODE=$(grep -o '"auto_mode": *[^,}]*' "$SESSION_FILE" | cut -d':' -f2 | tr 
 
 # Terminal states - allow exit
 if [[ "$PHASE" == "COMPLETE" || "$PHASE" == "CANCELLED" || "$PHASE" == "FAILED" ]]; then
-  echo '{"hookSpecificOutput": {"hookEventName": "Stop"}}'
+  echo '{}'
   exit 0
 fi
 
 # Plan-only mode - allow exit after planning
 if [[ "$PLAN_ONLY" == "true" && "$PHASE" != "PLANNING" ]]; then
-  echo '{"hookSpecificOutput": {"hookEventName": "Stop"}}'
+  echo '{}'
   exit 0
 fi
 
@@ -58,14 +58,14 @@ if [[ "$SKIP_VERIFY" == "true" && "$PHASE" == "EXECUTION" ]]; then
   IN_PROGRESS=$(grep -c '"status": *"in_progress"' "$SESSION_FILE" 2>/dev/null || echo "0")
 
   if [[ "$PENDING_TASKS" == "0" && "$IN_PROGRESS" == "0" ]]; then
-    echo '{"hookSpecificOutput": {"hookEventName": "Stop"}}'
+    echo '{}'
     exit 0
   fi
 fi
 
 # Interactive mode planning - orchestrator does planning inline, don't block
 if [[ "$PHASE" == "PLANNING" && "$AUTO_MODE" != "true" ]]; then
-  echo '{"hookSpecificOutput": {"hookEventName": "Stop"}}'
+  echo '{}'
   exit 0
 fi
 
@@ -128,10 +128,7 @@ if [[ -n "$BLOCKED_PHRASE_FOUND" ]]; then
     '{
       "decision": "block",
       "reason": ("INCOMPLETE WORK DETECTED\n\nSession ID: " + $session_id + "\nGoal: " + $goal + "\n\nBlocked phrase found: \"" + $phrase + "\"\n\n" + $reason + "\n\nZERO TOLERANCE RULES:\n✗ No \"should work\" - require command output evidence\n✗ No \"basic implementation\" - complete work only\n✗ No TODO/FIXME in code - finish everything\n\nCommands:\n  /ultrawork-status   - Check progress\n  /ultrawork-evidence - View evidence\n  /ultrawork-cancel   - Cancel session"),
-      "systemMessage": $msg,
-      "hookSpecificOutput": {
-        "hookEventName": "Stop"
-      }
+      "systemMessage": $msg
     }'
   exit 0
 fi
@@ -153,10 +150,7 @@ if [[ "$PHASE" == "EXECUTION" ]]; then
       '{
         "decision": "block",
         "reason": ("INSUFFICIENT EVIDENCE\n\nSession ID: " + $session_id + "\nGoal: " + $goal + "\nCompleted tasks: " + $tasks + "\nEvidence collected: " + $evidence + "\n\n" + $reason + "\n\nEvery completed task requires evidence:\n• Test results (command output)\n• File operations (read/write/edit)\n• Verification commands\n\nCommands:\n  /ultrawork-status   - Check progress\n  /ultrawork-evidence - View evidence\n  /ultrawork-cancel   - Cancel session"),
-        "systemMessage": $msg,
-        "hookSpecificOutput": {
-          "hookEventName": "Stop"
-        }
+        "systemMessage": $msg
       }'
     exit 0
   fi
@@ -202,10 +196,7 @@ if [[ "$AUTO_LOOP" == "true" ]] && [[ "$PHASE" == "EXECUTION" || "$PHASE" == "VE
       '{
         "decision": "block",
         "reason": ("RALPH LOOP: Continuing execution\n\nIteration: " + $iteration + "/" + $max + "\nPending tasks: " + $pending + "\nIn progress: " + $in_progress + "\n\nContinue working on remaining tasks."),
-        "systemMessage": ("🔄 ULTRAWORK [" + $session_id + "]: Loop " + $iteration + "/" + $max + " - " + $pending + " tasks remaining"),
-        "hookSpecificOutput": {
-          "hookEventName": "Stop"
-        }
+        "systemMessage": ("🔄 ULTRAWORK [" + $session_id + "]: Loop " + $iteration + "/" + $max + " - " + $pending + " tasks remaining")
       }'
     exit 0
   fi
@@ -222,10 +213,7 @@ jq -n \
   '{
     "decision": "block",
     "reason": ("ULTRAWORK SESSION ACTIVE\n\nSession ID: " + $session_id + "\nGoal: " + $goal + "\nPhase: " + $phase + "\nEvidence collected: " + $evidence + "\n\n" + $reason + "\n\nCommands:\n  /ultrawork-status   - Check progress\n  /ultrawork-evidence - View evidence\n  /ultrawork-cancel   - Cancel session"),
-    "systemMessage": $msg,
-    "hookSpecificOutput": {
-      "hookEventName": "Stop"
-    }
+    "systemMessage": $msg
   }'
 
 exit 0

@@ -1,0 +1,20 @@
+{
+  "name": "ultrawork-ts",
+  "version": "0.1.0",
+  "description": "TypeScript implementation of ultrawork plugin",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc && node scripts/add-shebangs.js",
+    "watch": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run clean"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/node": "^20.11.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
