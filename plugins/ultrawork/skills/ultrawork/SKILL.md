@@ -14,126 +14,63 @@ Ultrawork enforces **verification-first development**:
 
 ## Activation
 
+See `/ultrawork` command for detailed usage and workflow.
+
+Quick reference:
 ```
-/ultrawork "your goal here"           # Interactive mode (default)
-/ultrawork --auto "your goal here"    # Auto mode (no user interaction)
-```
-
----
-
-## Mode Comparison
-
-| Aspect | Interactive (default) | Auto (--auto) |
-|--------|----------------------|---------------|
-| Exploration | Orchestrator spawns explorers | Same |
-| Planning | Orchestrator runs planning skill | Planner sub-agent |
-| User Questions | AskUserQuestion for decisions | Auto-decide from context |
-| Confirmation | User approves plan | No confirmation |
-| Best For | Important features, unclear requirements | Well-defined tasks, CI/CD |
-
----
-
-## How It Works
-
-### Interactive Mode (Default)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ PHASE 1: EXPLORATION (Orchestrator) - Dynamic               │
-│                                                             │
-│ Stage 1: Quick overview (1 haiku explorer)                  │
-│   → exploration/overview.md                                 │
-│                                                             │
-│ Stage 2: Analyze overview + goal → generate hints           │
-│                                                             │
-│ Stage 3: Targeted exploration (N explorers, parallel)       │
-│   → exploration/exp-1.md, exp-2.md, ...                     │
-│                                                             │
-│ → Update context.json with summaries                        │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│ PHASE 2: PLANNING (Orchestrator - Main Agent)               │
-│                                                             │
-│ → Read context.json and exploration/*.md                    │
-│ → Use planning skill for design                             │
-│ → AskUserQuestion for decisions (one at a time)             │
-│ → Write design.md                                           │
-│ → Decompose into tasks                                      │
-│ → User confirms plan                                        │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│ PHASE 3: EXECUTION                                          │
-│                                                             │
-│ → Spawn workers for unblocked tasks                         │
-│ → Workers report evidence on completion                     │
-│ → Next tasks unblock automatically                          │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│ PHASE 4: VERIFICATION                                       │
-│                                                             │
-│ → Verification task runs                                    │
-│ → All evidence collected and validated                      │
-│ → Quality checks pass                                       │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│ PHASE 5: COMPLETE                                           │
-│                                                             │
-│ → All criteria met with evidence                            │
-│ → Session marked complete                                   │
-│ → Summary reported to user                                  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Auto Mode (--auto)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ PHASE 1: EXPLORATION (Orchestrator) - Dynamic               │
-│                                                             │
-│ → Same as interactive (overview → analyze → targeted)       │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│ PHASE 2: PLANNING (Planner Sub-Agent)                       │
-│                                                             │
-│ → Read context.json and exploration/*.md                    │
-│ → Auto-decide based on context (no user questions)          │
-│ → Write design.md                                           │
-│ → Decompose into tasks                                      │
-│ → No confirmation needed                                    │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-          [Same execution and verification phases]
+/ultrawork "your goal"         # Interactive: asks questions, user approves plan
+/ultrawork --auto "your goal"  # Auto: decides autonomously, no confirmations
 ```
 
 ---
 
-## Session Directory Structure
+## Examples
 
-```
-~/.claude/ultrawork/sessions/{session-id}/
-├── session.json        # Session metadata (JSON)
-├── context.json        # Explorer summaries (JSON)
-├── design.md           # Design document (Markdown)
-├── exploration/        # Detailed exploration (Markdown)
-│   ├── overview.md     # Project overview (always first)
-│   ├── exp-1.md        # Targeted exploration
-│   └── exp-N.md        # (dynamic count based on goal)
-└── tasks/              # Task files (JSON)
-    ├── 1.json
-    ├── 2.json
-    └── verify.json
-```
+### Example 1: Adding Authentication (Interactive)
+
+**Goal**: "Add OAuth authentication with Google"
+
+**Process**:
+1. **Exploration**: Discovers Next.js project, no existing auth
+2. **Planning Questions**:
+   - "Which auth method?" → User chooses "OAuth + Email"
+   - "Which library?" → User chooses "NextAuth.js"
+3. **Design Created**: Design document saved to project docs/
+4. **Tasks Generated**: 5 tasks with dependencies
+5. **Execution**: Workers implement in parallel
+6. **Verification**: Tests pass, OAuth flow works
+
+**Result**: Complete auth system with evidence.
+
+### Example 2: Refactoring Database Layer (Auto)
+
+**Goal**: "Migrate from direct SQL to Prisma ORM"
+
+**Process**:
+1. **Exploration**: Finds all SQL query locations
+2. **Planning**: Auto-decides on migration strategy (no user input)
+3. **Design**: Migration plan with rollback strategy
+4. **Tasks**: Schema definition → Migration scripts → Update queries → Tests
+5. **Execution**: Sequential migration with verification
+6. **Verification**: All queries work, tests pass
+
+**Result**: Complete migration with backward compatibility.
+
+---
+
+## When to Use Ultrawork
+
+**USE ultrawork for:**
+- Multi-file implementations
+- Architecture changes
+- New features with unknowns
+- Refactoring with risk
+
+**DON'T use ultrawork for:**
+- Single-file edits
+- Simple bug fixes
+- Documentation updates
+- Quick questions
 
 ---
 
@@ -160,62 +97,30 @@ Ultrawork enforces **verification-first development**:
 
 ---
 
-## Commands
+## Key Concepts
 
-| Command | Purpose |
-|---------|---------|
-| `/ultrawork "goal"` | Start session (interactive) |
-| `/ultrawork --auto "goal"` | Start session (auto) |
-| `/ultrawork-status` | Check current state |
-| `/ultrawork-evidence` | List collected evidence |
-| `/ultrawork-cancel` | Cancel session |
+### Session Isolation
+- Each ultrawork session has its own directory
+- State tracked in session.json
+- Context preserved across exploration/planning/execution
 
----
+### Evidence Collection
+- Every completion claim requires proof
+- Tests must pass (with output)
+- Builds must succeed (with output)
+- Features must be demonstrated
 
-## Integration
-
-Ultrawork uses:
-- **explorer agents** for context gathering
-- **planning skill** for design decisions
-- **planner agent** for auto-mode planning
-- **worker agents** for task execution
-- **verifier agent** for final verification
-
-Read references/ for detailed protocols.
+### Task Dependencies
+- Tasks unblock automatically when dependencies complete
+- Workers execute in parallel waves
+- Verification always runs last
 
 ---
 
-## Delegation Rules (MANDATORY)
+## Related Commands
 
-| Phase | Must Delegate | Never Direct |
-|-------|---------------|--------------|
-| Exploration | ✓ | ✓ |
-| Planning (non-auto) | - | - (direct by design) |
-| Planning (auto) | ✓ | ✓ |
-| Execution | ✓ | ✓ |
-| Verification | ✓ | ✓ |
+- `/ultrawork-status` - Check current phase/progress
+- `/ultrawork-evidence` - View collected evidence
+- `/ultrawork-cancel` - Cancel active session
 
-**Exception**: User explicitly requests direct execution (e.g., "run this directly").
-
----
-
-## Sub-agent Execution
-
-Sub-agents can be run in **foreground** (default) or **background** mode. Choose based on the situation:
-
-| Mode | When to Use |
-|------|-------------|
-| **Foreground** | Sequential tasks, need result immediately |
-| **Background** | Parallel execution, worker pool with limits |
-
-```python
-# Foreground (default) - simple, blocking
-result = Task(subagent_type="ultrawork:explorer", prompt="...")
-
-# Background - for parallel execution
-task_id = Task(subagent_type="ultrawork:worker", run_in_background=True, prompt="...")
-# ... do other work ...
-result = TaskOutput(task_id=task_id, block=True)
-```
-
-**Parallel execution**: Call multiple Tasks in a single message for automatic parallelization.
+For detailed workflow, see `/ultrawork` command documentation.

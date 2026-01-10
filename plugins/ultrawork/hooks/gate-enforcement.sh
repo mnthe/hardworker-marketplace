@@ -20,6 +20,7 @@ TOOL=$(echo "$HOOK_INPUT" | jq -r '.tool_name // ""')
 
 # Only process Edit and Write tools
 if [[ "$TOOL" != "Edit" && "$TOOL" != "Write" ]]; then
+  echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}'
   exit 0
 fi
 
@@ -28,11 +29,13 @@ SESSION_ID="$ULTRAWORK_STDIN_SESSION_ID"
 
 # No session - allow
 if [[ -z "$SESSION_ID" ]]; then
+  echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}'
   exit 0
 fi
 
 # Check if ultrawork session is active
 if ! is_session_active_by_id "$SESSION_ID"; then
+  echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}'
   exit 0  # No active session - allow
 fi
 
@@ -43,6 +46,7 @@ PHASE=$(jq -r '.phase // ""' "$SESSION_FILE" 2>/dev/null || echo "")
 
 # Only enforce during PLANNING phase
 if [[ "$PHASE" != "PLANNING" ]]; then
+  echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}'
   exit 0
 fi
 
@@ -72,12 +76,12 @@ elif [[ "$FILE_PATH" == *"/.claude/ultrawork/"* ]]; then
 fi
 
 if [[ "$ALLOWED" == "true" ]]; then
+  echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}'
   exit 0
 fi
 
 # Block with clear message
-cat << EOF
-{"decision": "block", "reason": "⛔ GATE VIOLATION: $TOOL blocked in PLANNING phase.
+REASON="⛔ GATE VIOLATION: $TOOL blocked in PLANNING phase.
 
 Current Phase: PLANNING
 Blocked Tool: $TOOL
@@ -95,7 +99,16 @@ Correct procedure:
 Allowed files:
 - design.md (planning document)
 - session.json, context.json (session state)
-- exploration/*.md (exploration results)"}
-EOF
+- exploration/*.md (exploration results)"
+
+jq -n \
+  --arg reason "$REASON" \
+  '{
+    "hookSpecificOutput": {
+      "hookEventName": "PreToolUse",
+      "permissionDecision": "deny",
+      "permissionDecisionReason": $reason
+    }
+  }'
 
 exit 0

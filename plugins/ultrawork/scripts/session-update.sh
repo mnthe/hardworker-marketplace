@@ -34,29 +34,35 @@ done
 # Resolve session ID to file path
 SESSION_FILE=$(resolve_session_id "$SESSION_ID") || exit 1
 
-# Build jq update expression
-JQ_EXPR=".updated_at = \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\""
+# Build jq arguments and filter expression
+TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+JQ_ARGS=("--arg" "updated_at" "$TIMESTAMP")
+JQ_FILTER=".updated_at = \$updated_at"
 
 if [[ -n "$NEW_PHASE" ]]; then
-  JQ_EXPR="$JQ_EXPR | .phase = \"$NEW_PHASE\""
+  JQ_ARGS+=("--arg" "phase" "$NEW_PHASE")
+  JQ_FILTER="$JQ_FILTER | .phase = \$phase"
 fi
 
 if [[ "$PLAN_APPROVED" == "true" ]]; then
-  TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  JQ_EXPR="$JQ_EXPR | .plan.approved_at = \"$TIMESTAMP\""
+  APPROVAL_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  JQ_ARGS+=("--arg" "approved_at" "$APPROVAL_TIMESTAMP")
+  JQ_FILTER="$JQ_FILTER | .plan.approved_at = \$approved_at"
 fi
 
 if [[ -n "$EXPLORATION_STAGE" ]]; then
-  JQ_EXPR="$JQ_EXPR | .exploration_stage = \"$EXPLORATION_STAGE\""
+  JQ_ARGS+=("--arg" "exploration_stage" "$EXPLORATION_STAGE")
+  JQ_FILTER="$JQ_FILTER | .exploration_stage = \$exploration_stage"
 fi
 
 if [[ -n "$ITERATION" ]]; then
-  JQ_EXPR="$JQ_EXPR | .iteration = $ITERATION"
+  JQ_ARGS+=("--argjson" "iteration" "$ITERATION")
+  JQ_FILTER="$JQ_FILTER | .iteration = \$iteration"
 fi
 
 # Update file
 TEMP_FILE=$(mktemp)
-jq "$JQ_EXPR" "$SESSION_FILE" > "$TEMP_FILE"
+jq "${JQ_ARGS[@]}" "$JQ_FILTER" "$SESSION_FILE" > "$TEMP_FILE"
 mv "$TEMP_FILE" "$SESSION_FILE"
 
 echo "OK: Session updated"

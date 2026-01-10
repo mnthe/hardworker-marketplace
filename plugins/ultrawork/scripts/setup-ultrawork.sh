@@ -198,32 +198,40 @@ TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 # Get working directory (project root)
 WORKING_DIR="$(pwd)"
 
-# Create session.json
-cat > "$SESSION_FILE" <<EOF
-{
-  "version": "5.1",
-  "session_id": "$SESSION_ID",
-  "working_dir": "$WORKING_DIR",
-  "goal": "$GOAL",
-  "started_at": "$TIMESTAMP",
-  "updated_at": "$TIMESTAMP",
-  "phase": "PLANNING",
-  "exploration_stage": "not_started",
-  "iteration": 1,
-  "plan": {
-    "approved_at": null
-  },
-  "options": {
-    "max_workers": $MAX_WORKERS,
-    "max_iterations": $MAX_ITERATIONS,
-    "skip_verify": $SKIP_VERIFY,
-    "plan_only": $PLAN_ONLY,
-    "auto_mode": $AUTO_MODE
-  },
-  "evidence_log": [],
-  "cancelled_at": null
-}
-EOF
+# Create session.json using jq for safe JSON escaping
+jq -n \
+  --arg session_id "$SESSION_ID" \
+  --arg working_dir "$WORKING_DIR" \
+  --arg goal "$GOAL" \
+  --arg timestamp "$TIMESTAMP" \
+  --argjson max_workers "$MAX_WORKERS" \
+  --argjson max_iterations "$MAX_ITERATIONS" \
+  --argjson skip_verify "$SKIP_VERIFY" \
+  --argjson plan_only "$PLAN_ONLY" \
+  --argjson auto_mode "$AUTO_MODE" \
+  '{
+    version: "5.1",
+    session_id: $session_id,
+    working_dir: $working_dir,
+    goal: $goal,
+    started_at: $timestamp,
+    updated_at: $timestamp,
+    phase: "PLANNING",
+    exploration_stage: "not_started",
+    iteration: 1,
+    plan: {
+      approved_at: null
+    },
+    options: {
+      max_workers: $max_workers,
+      max_iterations: $max_iterations,
+      skip_verify: $skip_verify,
+      plan_only: $plan_only,
+      auto_mode: $auto_mode
+    },
+    evidence_log: [],
+    cancelled_at: null
+  }' > "$SESSION_FILE"
 
 # Create empty context.json
 cat > "$SESSION_DIR/context.json" <<EOF

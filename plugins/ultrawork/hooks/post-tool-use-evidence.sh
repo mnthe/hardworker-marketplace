@@ -285,4 +285,7 @@ case "$TOOL_NAME" in
     ;;
 esac
 
+# Output minimal hookSpecificOutput for PostToolUse
+echo '{"hookSpecificOutput": {"hookEventName": "PostToolUse"}}'
+
 exit 0

@@ -20,6 +20,7 @@ TOOL=$(echo "$HOOK_INPUT" | jq -r '.tool_name // ""')
 
 # Only process Task tool usage - exit silently for other tools
 if [[ "$TOOL" != "Task" ]]; then
+  echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}'
   exit 0
 fi
 
@@ -28,6 +29,7 @@ SESSION_ID="$ULTRAWORK_STDIN_SESSION_ID"
 
 # No active ultrawork session - allow without tracking
 if [[ -z "$SESSION_ID" ]]; then
+  echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}'
   exit 0
 fi
 
@@ -37,14 +39,14 @@ SESSION_FILE="$SESSION_DIR/session.json"
 
 # Session file doesn't exist - allow without tracking
 if [[ ! -f "$SESSION_FILE" ]]; then
-  jq -n '{"decision": "allow"}'
+  echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}'
   exit 0
 fi
 
 # Track during active phases (EXPLORATION, EXECUTION, VERIFICATION)
 PHASE=$(jq -r '.phase // "unknown"' "$SESSION_FILE" 2>/dev/null)
 if [[ "$PHASE" != "EXPLORATION" && "$PHASE" != "EXECUTION" && "$PHASE" != "VERIFICATION" ]]; then
-  jq -n '{"decision": "allow"}'
+  echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}'
   exit 0
 fi
 
@@ -54,7 +56,7 @@ DESCRIPTION=$(echo "$HOOK_INPUT" | jq -r '.tool_input.description // ""')
 
 # If no task_id, this isn't a worker spawn (might be TaskCreate, TaskUpdate, etc.)
 if [[ -z "$TASK_ID" ]]; then
-  jq -n '{"decision": "allow"}'
+  echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}'
   exit 0
 fi
 
@@ -83,6 +85,6 @@ TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 ) 2>/dev/null || true
 
 # Allow the Task tool to proceed
-jq -n '{"decision": "allow"}'
+echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}'
 
 exit 0

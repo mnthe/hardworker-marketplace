@@ -33,18 +33,14 @@ fi
 
 # Output session ID for AI to use
 if [[ -n "$SESSION_ID" ]]; then
-  cat << EOF
-═══════════════════════════════════════════════════════════
- ULTRAWORK SESSION ID (USE THIS VALUE DIRECTLY)
-═══════════════════════════════════════════════════════════
- CLAUDE_SESSION_ID: $SESSION_ID
-
- When calling ultrawork scripts, use the EXACT value above:
- --session $SESSION_ID
-
- DO NOT use placeholders like {SESSION_ID} or \$SESSION_ID
-═══════════════════════════════════════════════════════════
-EOF
+  jq -n --arg sid "$SESSION_ID" '{
+    "hookSpecificOutput": {
+      "hookEventName": "SessionStart",
+      "additionalContext": ("═══════════════════════════════════════════════════════════\n ULTRAWORK SESSION ID (USE THIS VALUE DIRECTLY)\n═══════════════════════════════════════════════════════════\n CLAUDE_SESSION_ID: " + $sid + "\n\n When calling ultrawork scripts, use the EXACT value above:\n --session " + $sid + "\n\n DO NOT use placeholders like {SESSION_ID} or $SESSION_ID\n═══════════════════════════════════════════════════════════")
+    }
+  }'
+else
+  echo '{"hookSpecificOutput": {"hookEventName": "SessionStart"}}'
 fi
 
 exit 0

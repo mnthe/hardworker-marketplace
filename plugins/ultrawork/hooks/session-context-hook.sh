@@ -30,7 +30,12 @@ SESSION_FILE="$SESSION_DIR/session.json"
 # Session file doesn't exist - still provide session_id for new sessions
 if [[ ! -f "$SESSION_FILE" ]]; then
   # Provide session_id so AI can pass it to setup-ultrawork.sh
-  jq -n --arg sid "$SESSION_ID" '{"systemMessage": ("CLAUDE_SESSION_ID: " + $sid + "\nUse this when calling ultrawork scripts: --session " + $sid)}'
+  jq -n --arg sid "$SESSION_ID" '{
+    "hookSpecificOutput": {
+      "hookEventName": "UserPromptSubmit",
+      "additionalContext": ("CLAUDE_SESSION_ID: " + $sid + "\nUse this when calling ultrawork scripts: --session " + $sid)
+    }
+  }'
   exit 0
 fi
 
@@ -41,6 +46,7 @@ EXPLORATION_STAGE=$(grep -o '"exploration_stage": *"[^"]*"' "$SESSION_FILE" | cu
 
 # Terminal states - no injection needed
 if [[ "$PHASE" == "COMPLETE" || "$PHASE" == "CANCELLED" || "$PHASE" == "FAILED" ]]; then
+  echo '{"hookSpecificOutput": {"hookEventName": "UserPromptSubmit"}}'
   exit 0
 fi
 
@@ -232,7 +238,12 @@ COMMANDS:
 </ultrawork-session>
 EOF
 
-# Output JSON with system message injection
-jq -n --arg msg "$CONTEXT_MSG" '{"systemMessage": $msg}'
+# Output JSON with context injection for Claude
+jq -n --arg msg "$CONTEXT_MSG" '{
+  "hookSpecificOutput": {
+    "hookEventName": "UserPromptSubmit",
+    "additionalContext": $msg
+  }
+}'
 
 exit 0

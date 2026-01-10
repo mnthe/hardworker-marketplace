@@ -25,6 +25,7 @@ SESSION_ID="$ULTRAWORK_STDIN_SESSION_ID"
 
 # No active ultrawork session - not an ultrawork worker
 if [[ -z "$SESSION_ID" ]]; then
+  echo '{"hookSpecificOutput": {"hookEventName": "SubagentStop"}}'
   exit 0
 fi
 
@@ -34,6 +35,7 @@ SESSION_FILE="$SESSION_DIR/session.json"
 
 # Session file doesn't exist - exit silently
 if [[ ! -f "$SESSION_FILE" ]]; then
+  echo '{"hookSpecificOutput": {"hookEventName": "SubagentStop"}}'
   exit 0
 fi
 
@@ -47,9 +49,11 @@ if [[ "$WORKER_EXISTS" != "true" ]]; then
   if [[ -n "$TASK_ID" ]]; then
     TASK_FILE="$SESSION_DIR/tasks/$TASK_ID.json"
     if [[ ! -f "$TASK_FILE" ]]; then
+      echo '{"hookSpecificOutput": {"hookEventName": "SubagentStop"}}'
       exit 0  # Not an ultrawork worker
     fi
   else
+    echo '{"hookSpecificOutput": {"hookEventName": "SubagentStop"}}'
     exit 0  # No task_id and not in workers array
   fi
 fi
@@ -129,5 +133,8 @@ fi
 
 # Log completion for debugging
 echo "Agent $AGENT_ID completed (task: $TASK_ID, status: $STATUS)" >&2
+
+# Output hookSpecificOutput
+echo '{"hookSpecificOutput": {"hookEventName": "SubagentStop"}}'
 
 exit 0
