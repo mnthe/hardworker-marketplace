@@ -89,28 +89,31 @@ function isFileAllowed(filePath) {
  * Create denial response with detailed reason
  * @param {string} tool
  * @param {string} filePath
+ * @param {string} sessionId
+ * @param {string} sessionFile
  * @returns {PreToolUseOutput}
  */
-function createDenialResponse(tool, filePath) {
+function createDenialResponse(tool, filePath, sessionId, sessionFile) {
   const reason = `⛔ GATE VIOLATION: ${tool} blocked in PLANNING phase.
 
 Current Phase: PLANNING
 Blocked Tool: ${tool}
 Target File: ${filePath}
 
+Session ID: ${sessionId}
+Session File: ${sessionFile}
+
 Direct file modifications are prohibited during PLANNING phase.
 
-Correct procedure:
-1. Write design.md (Write allowed)
-2. Create tasks with task-create.sh
-3. Get user approval
-4. Transition to EXECUTION phase
-5. Worker agent performs actual work
+To proceed, either:
+1. Complete planning → transition to EXECUTION phase
+2. Cancel session: /ultrawork-cancel
 
-Allowed files:
-- design.md (planning document)
-- session.json, context.json (session state)
-- exploration/*.md (exploration results)`;
+If this is unexpected (orphaned session), cancel with:
+  /ultrawork-cancel
+
+Allowed files during PLANNING:
+- design.md, session.json, context.json, exploration/*.md`;
 
   return {
     hookSpecificOutput: {
@@ -139,6 +142,9 @@ function createAllowResponse() {
  * @returns {Promise<void>}
  */
 async function main() {
+  // Import here to get path utilities
+  const { getSessionFile } = require('../lib/session-utils.js');
+
   try {
     // Read stdin JSON
     const input = await readStdin();
@@ -172,6 +178,9 @@ async function main() {
       return;
     }
 
+    // Get session file path for error message
+    const sessionFile = getSessionFile(sessionId);
+
     // Get session data
     /** @type {Session} */
     let session;
@@ -201,8 +210,8 @@ async function main() {
       return;
     }
 
-    // Block with clear message
-    console.log(JSON.stringify(createDenialResponse(toolName, filePath)));
+    // Block with clear message including session details
+    console.log(JSON.stringify(createDenialResponse(toolName, filePath, sessionId, sessionFile)));
     process.exit(0);
   } catch (err) {
     // On error, allow (fail open for safety)

@@ -322,6 +322,30 @@ function createSession(args) {
 
   fs.writeFileSync(sessionFile, JSON.stringify(session, null, 2), 'utf-8');
 
+  // CRITICAL: Verify session file was written correctly
+  // This prevents the "orphaned session" issue where hook blocks but file doesn't exist
+  if (!fs.existsSync(sessionFile)) {
+    console.error(`❌ Error: Failed to create session file`);
+    console.error(`   Expected: ${sessionFile}`);
+    console.error('');
+    console.error('   Session setup failed. Check directory permissions.');
+    process.exit(1);
+  }
+
+  // Verify content is readable and valid JSON
+  try {
+    const verifyContent = fs.readFileSync(sessionFile, 'utf-8');
+    const verified = JSON.parse(verifyContent);
+    if (verified.session_id !== sessionId) {
+      throw new Error('Session ID mismatch');
+    }
+  } catch (verifyErr) {
+    console.error(`❌ Error: Session file verification failed`);
+    console.error(`   File: ${sessionFile}`);
+    console.error(`   Error: ${verifyErr.message}`);
+    process.exit(1);
+  }
+
   // Create empty context.json
   /** @type {Context} */
   const context = {

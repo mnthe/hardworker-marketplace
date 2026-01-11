@@ -80,26 +80,27 @@ if [[ "$ALLOWED" == "true" ]]; then
   exit 0
 fi
 
-# Block with clear message
+# Block with clear message including session details for debugging
 REASON="⛔ GATE VIOLATION: $TOOL blocked in PLANNING phase.
 
 Current Phase: PLANNING
 Blocked Tool: $TOOL
 Target File: $FILE_PATH
 
+Session ID: $SESSION_ID
+Session File: $SESSION_FILE
+
 Direct file modifications are prohibited during PLANNING phase.
 
-Correct procedure:
-1. Write design.md (Write allowed)
-2. Create tasks with task-create.sh
-3. Get user approval
-4. Transition to EXECUTION phase
-5. Worker agent performs actual work
+To proceed, either:
+1. Complete planning → transition to EXECUTION phase
+2. Cancel session: /ultrawork-cancel
 
-Allowed files:
-- design.md (planning document)
-- session.json, context.json (session state)
-- exploration/*.md (exploration results)"
+If this is unexpected (orphaned session), cancel with:
+  /ultrawork-cancel
+
+Allowed files during PLANNING:
+- design.md, session.json, context.json, exploration/*.md"
 
 jq -n \
   --arg reason "$REASON" \

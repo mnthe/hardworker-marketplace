@@ -233,6 +233,26 @@ jq -n \
     cancelled_at: null
   }' > "$SESSION_FILE"
 
+# CRITICAL: Verify session file was written correctly
+# This prevents the "orphaned session" issue where hook blocks but file doesn't exist
+if [[ ! -f "$SESSION_FILE" ]]; then
+  echo "❌ Error: Failed to create session file" >&2
+  echo "   Expected: $SESSION_FILE" >&2
+  echo "" >&2
+  echo "   Session setup failed. Check directory permissions." >&2
+  exit 1
+fi
+
+# Verify content is readable and valid JSON
+VERIFIED_SID=$(jq -r '.session_id // empty' "$SESSION_FILE" 2>/dev/null || echo "")
+if [[ "$VERIFIED_SID" != "$SESSION_ID" ]]; then
+  echo "❌ Error: Session file verification failed" >&2
+  echo "   File: $SESSION_FILE" >&2
+  echo "   Expected session_id: $SESSION_ID" >&2
+  echo "   Got session_id: $VERIFIED_SID" >&2
+  exit 1
+fi
+
 # Create empty context.json
 cat > "$SESSION_DIR/context.json" <<EOF
 {
