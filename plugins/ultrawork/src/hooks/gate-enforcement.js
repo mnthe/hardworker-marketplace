@@ -66,15 +66,15 @@ function isFileAllowed(filePath) {
   // - exploration/*.md (explorer output)
   // - Any file in /.claude/ultrawork/ (session directory)
 
-  if (filePath.includes('design.md')) {
+  if (filePath.endsWith('design.md')) {
     return true;
   }
 
-  if (filePath.includes('session.json')) {
+  if (filePath.endsWith('session.json')) {
     return true;
   }
 
-  if (filePath.includes('context.json')) {
+  if (filePath.endsWith('context.json')) {
     return true;
   }
 
@@ -83,6 +83,11 @@ function isFileAllowed(filePath) {
   }
 
   if (filePath.includes('/.claude/ultrawork/')) {
+    return true;
+  }
+
+  // Plan documents in docs/plans/ (planner agent output)
+  if (filePath.includes('/docs/plans/') || filePath.includes('docs/plans/')) {
     return true;
   }
 
@@ -117,7 +122,7 @@ If this is unexpected (orphaned session), cancel with:
   /ultrawork-cancel
 
 Allowed files during PLANNING:
-- design.md, session.json, context.json, exploration/*.md`;
+- -design.md, session.json, context.json, exploration/*.md, docs/plans/*.md`;
 
   return {
     hookSpecificOutput: {
@@ -275,7 +280,6 @@ async function main() {
     if (toolName !== 'Edit' && toolName !== 'Write') {
       console.log(JSON.stringify(createAllowResponse()));
       process.exit(0);
-      return;
     }
 
     // Extract session ID
@@ -285,14 +289,12 @@ async function main() {
     if (!sessionId) {
       console.log(JSON.stringify(createAllowResponse()));
       process.exit(0);
-      return;
     }
 
     // Check if session is active
     if (!isSessionActive(sessionId)) {
       console.log(JSON.stringify(createAllowResponse()));
       process.exit(0);
-      return;
     }
 
     // Get session file path for error message
@@ -307,7 +309,6 @@ async function main() {
       // Session file error - allow
       console.log(JSON.stringify(createAllowResponse()));
       process.exit(0);
-      return;
     }
 
     // Get file path from tool input
@@ -321,13 +322,11 @@ async function main() {
       if (isFileAllowed(filePath)) {
         console.log(JSON.stringify(createAllowResponse()));
         process.exit(0);
-        return;
       }
 
       // Block with clear message including session details
       console.log(JSON.stringify(createDenialResponse(toolName, filePath, sessionId, sessionFile)));
       process.exit(0);
-      return;
     }
 
     // =========================================================================
@@ -345,7 +344,6 @@ async function main() {
             // Block: trying to write implementation before test
             console.log(JSON.stringify(createTddViolationResponse(toolName, filePath, tddTask)));
             process.exit(0);
-            return;
           }
         }
       }

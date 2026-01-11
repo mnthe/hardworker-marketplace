@@ -8,7 +8,7 @@
       "name": "ultrawork",
       "source": "./plugins/ultrawork",
       "description": "Node.js cross-platform version of ultrawork - strict verification-first development with TDD support",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "author": {
         "name": "mnthe"
       },
