@@ -78,87 +78,58 @@ case "$PHASE" in
         not_started)
           NEXT_ACTION="⛔ GATE SYSTEM - Skill-based Exploration
 
-┌─ GATE 1: OVERVIEW [CURRENT] ────────────────────────┐
-│                                                      │
-│ FIRST ACTION (required):                             │
-│ Skill(skill=\"ultrawork:overview-exploration\")        │
-│                                                      │
-│ Direct exploration (no agent spawn):                 │
-│ ✓ Use Glob, Read, Grep to understand project        │
-│ ✓ Write overview.md                                  │
-│ ✗ No file edits (Edit, Write - except overview.md)  │
-│                                                      │
-│ Follow the procedure guided by the skill.           │
-└──────────────────────────────────────────────────────┘
+[GATE 1: OVERVIEW] → CURRENT
+  ACTION: Skill(skill=\"ultrawork:overview-exploration\")
+  PROCESS: Glob/Read/Grep to understand project → Write overview.md
+  ALLOWED: Glob, Read, Grep, Write overview.md
+  BLOCKED: Edit, Write (except overview.md), agent spawns
 
-┌─ GATE 2: TARGETED EXPLORATION [LOCKED] ─────────────┐
-│ Unlocks when: overview.md exists                     │
-│ Agent: Task(subagent_type=\"ultrawork:explorer\")      │
-└──────────────────────────────────────────────────────┘
+[GATE 2: TARGETED] → LOCKED (requires: overview.md)
+  Agent: Task(subagent_type=\"ultrawork:explorer\")
 
-┌─ GATE 3: PLANNING [LOCKED] ─────────────────────────┐
-│ Unlocks when: exploration_stage == \"complete\"        │
-└──────────────────────────────────────────────────────┘
-
-┌─ GATE 4: EXECUTION [LOCKED] ────────────────────────┐
-│ Unlocks when: design.md + tasks/*.json exist         │
-└──────────────────────────────────────────────────────┘"
+[GATE 3: PLANNING] → LOCKED (requires: exploration_stage=complete)
+[GATE 4: EXECUTION] → LOCKED (requires: design.md + tasks/*.json)"
           ;;
         overview)
-          NEXT_ACTION="⛔ GATE SYSTEM - You CANNOT skip gates
+          NEXT_ACTION="⛔ GATE SYSTEM - No gate skipping
 
-┌─ GATE 1: EXPLORATION [COMPLETE] ✓ ──────────────────┐
-└──────────────────────────────────────────────────────┘
+[GATE 1: OVERVIEW] → COMPLETE ✓
 
-┌─ GATE 2: TARGETED EXPLORATION [CURRENT] ────────────┐
-│                                                      │
-│ 1. Read exploration/overview.md                      │
-│ 2. Analyze goal + overview → generate search hints   │
-│ 3. Spawn targeted explorers (parallel in single msg) │
-│                                                      │
-│ ALLOWED: Read overview.md, spawn explorers           │
-│ BLOCKED: Direct exploration, file edits              │
-└──────────────────────────────────────────────────────┘
+[GATE 2: TARGETED] → CURRENT
+  STEPS:
+    1. Read exploration/overview.md
+    2. Analyze goal + overview → generate search hints
+    3. Spawn targeted explorers (parallel, single message)
+  ALLOWED: Read overview.md, spawn explorers
+  BLOCKED: Direct exploration, file edits
 
-┌─ GATE 3: PLANNING [LOCKED] ─────────────────────────┐
-│ Unlocks when: exploration_stage == \"complete\"        │
-└──────────────────────────────────────────────────────┘"
+[GATE 3: PLANNING] → LOCKED (requires: exploration_stage=complete)"
           ;;
         analyzing|targeted)
           NEXT_ACTION="⛔ GATE SYSTEM
 
-┌─ GATE 1-2: EXPLORATION [IN PROGRESS] ───────────────┐
-│ Stage: $EXPLORATION_STAGE                            │
-│ Wait for all explorers to complete                   │
-└──────────────────────────────────────────────────────┘
+[GATE 1-2: EXPLORATION] → IN PROGRESS (stage: $EXPLORATION_STAGE)
+  Wait for all explorers to complete
 
-┌─ GATE 3: PLANNING [LOCKED] ─────────────────────────┐
-│ Unlocks when: exploration_stage == \"complete\"        │
-└──────────────────────────────────────────────────────┘"
+[GATE 3: PLANNING] → LOCKED (requires: exploration_stage=complete)"
           ;;
         complete)
           NEXT_ACTION="⛔ GATE SYSTEM
 
-┌─ GATE 1-2: EXPLORATION [COMPLETE] ✓ ────────────────┐
-└──────────────────────────────────────────────────────┘
+[GATE 1-2: EXPLORATION] → COMPLETE ✓
 
-┌─ GATE 3: PLANNING [CURRENT] ────────────────────────┐
-│                                                      │
-│ 1. Read context.json and exploration/*.md            │
-│ 2. Present findings to user                          │
-│ 3. AskUserQuestion for clarifications                │
-│ 4. Write design.md                                   │
-│ 5. Create tasks with task-create.sh (NOT TodoWrite)  │
-│ 6. Get user approval                                 │
-│                                                      │
-│ ALLOWED: Read exploration/*, AskUserQuestion,        │
-│          Write design.md, task-create.sh             │
-│ BLOCKED: Direct code edits, TodoWrite for tasks      │
-└──────────────────────────────────────────────────────┘
+[GATE 3: PLANNING] → CURRENT
+  STEPS:
+    1. Read context.json and exploration/*.md
+    2. Present findings to user
+    3. AskUserQuestion for clarifications
+    4. Write design.md
+    5. Create tasks with task-create.sh (NOT TodoWrite)
+    6. Get user approval
+  ALLOWED: Read exploration/*, AskUserQuestion, Write design.md, task-create.sh
+  BLOCKED: Direct code edits, TodoWrite for tasks
 
-┌─ GATE 4: EXECUTION [LOCKED] ────────────────────────┐
-│ Unlocks when: design.md + tasks/*.json + approval    │
-└──────────────────────────────────────────────────────┘"
+[GATE 4: EXECUTION] → LOCKED (requires: design.md + tasks/*.json + approval)"
           ;;
         *)
           NEXT_ACTION="Unknown exploration_stage: $EXPLORATION_STAGE - check session.json"

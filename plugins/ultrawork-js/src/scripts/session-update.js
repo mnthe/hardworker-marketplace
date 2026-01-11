@@ -23,6 +23,7 @@ const { updateSession, resolveSessionId, readSession } = require('../lib/session
  * @property {boolean} [planApproved]
  * @property {ExplorationStage} [explorationStage]
  * @property {number} [iteration]
+ * @property {boolean} [quiet]
  */
 
 /**
@@ -53,10 +54,14 @@ function parseArgs(args) {
       case '--iteration':
         result.iteration = parseInt(args[++i], 10);
         break;
+      case '-q':
+      case '--quiet':
+        result.quiet = true;
+        break;
       case '-h':
       case '--help':
         console.log(
-          'Usage: session-update.js --session <ID> [--phase ...] [--plan-approved] [--exploration-stage STAGE] [--iteration N]'
+          'Usage: session-update.js --session <ID> [--phase ...] [--plan-approved] [--exploration-stage STAGE] [--iteration N] [--quiet]'
         );
         console.log('');
         console.log('Exploration stages: not_started, overview, analyzing, targeted, complete');
@@ -115,8 +120,17 @@ async function main() {
 
     // Read and output updated session
     const updatedSession = readSession(args.sessionId);
-    console.log('OK: Session updated');
-    console.log(JSON.stringify(updatedSession, null, 2));
+
+    if (args.quiet) {
+      // Compact single-line output
+      console.log(
+        `Session updated: phase=${updatedSession.phase} iteration=${updatedSession.iteration} updated_at=${updatedSession.updated_at}`
+      );
+    } else {
+      // Default full JSON output
+      console.log('OK: Session updated');
+      console.log(JSON.stringify(updatedSession, null, 2));
+    }
   } catch (error) {
     console.error('Error:', error instanceof Error ? error.message : String(error));
     process.exit(1);

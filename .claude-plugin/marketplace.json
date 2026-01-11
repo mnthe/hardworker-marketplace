@@ -8,7 +8,7 @@
       "name": "ultrawork",
       "source": "./plugins/ultrawork",
       "description": "Strict verification-first development mode with session isolation, mandatory planning, success criteria, evidence collection, and context management",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "author": {
         "name": "mnthe"
       },
@@ -25,7 +25,7 @@
       "name": "ultrawork-js",
       "source": "./plugins/ultrawork-js",
       "description": "Node.js cross-platform version of ultrawork - strict verification-first development mode with session isolation",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "author": {
         "name": "mnthe"
       },

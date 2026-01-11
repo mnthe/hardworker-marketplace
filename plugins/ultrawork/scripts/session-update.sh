@@ -13,6 +13,7 @@ NEW_PHASE=""
 PLAN_APPROVED=false
 EXPLORATION_STAGE=""
 ITERATION=""
+QUIET=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -21,8 +22,9 @@ while [[ $# -gt 0 ]]; do
     --plan-approved) PLAN_APPROVED=true; shift ;;
     --exploration-stage) EXPLORATION_STAGE="$2"; shift 2 ;;
     --iteration) ITERATION="$2"; shift 2 ;;
+    -q|--quiet) QUIET=true; shift ;;
     -h|--help)
-      echo "Usage: session-update.sh --session <ID> [--phase ...] [--plan-approved] [--exploration-stage STAGE] [--iteration N]"
+      echo "Usage: session-update.sh --session <ID> [--phase ...] [--plan-approved] [--exploration-stage STAGE] [--iteration N] [--quiet]"
       echo ""
       echo "Exploration stages: not_started, overview, analyzing, targeted, complete"
       exit 0
@@ -65,5 +67,12 @@ TEMP_FILE=$(mktemp)
 jq "${JQ_ARGS[@]}" "$JQ_FILTER" "$SESSION_FILE" > "$TEMP_FILE"
 mv "$TEMP_FILE" "$SESSION_FILE"
 
-echo "OK: Session updated"
-cat "$SESSION_FILE"
+if [[ "$QUIET" == "true" ]]; then
+  PHASE=$(jq -r '.phase // "unknown"' "$SESSION_FILE")
+  ITER=$(jq -r '.iteration // "0"' "$SESSION_FILE")
+  UPDATED=$(jq -r '.updated_at // "unknown"' "$SESSION_FILE")
+  echo "Session updated: phase=$PHASE iteration=$ITER updated_at=$UPDATED"
+else
+  echo "OK: Session updated"
+  cat "$SESSION_FILE"
+fi
