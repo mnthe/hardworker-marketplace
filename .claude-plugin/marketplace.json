@@ -57,6 +57,27 @@
       "category": "productivity"
     },
     {
+      "name": "teamwork-js",
+      "source": "./plugins/teamwork-js",
+      "description": "Node.js cross-platform version of teamwork - multi-session collaboration with role-based workers and task management",
+      "version": "0.1.0",
+      "author": {
+        "name": "mnthe"
+      },
+      "keywords": [
+        "teamwork",
+        "collaboration",
+        "multi-session",
+        "role-based",
+        "workers",
+        "task-management",
+        "parallel",
+        "typescript",
+        "cross-platform"
+      ],
+      "category": "productivity"
+    },
+    {
       "name": "knowledge-extraction",
       "source": "./plugins/knowledge-extraction",
       "description": "Collect insights from Claude sessions and extract them into reusable components (Skills, Commands, Agents, CLAUDE.md)",

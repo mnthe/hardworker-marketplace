@@ -1,0 +1,16 @@
+{
+  "description": "Teamwork plugin hooks for continuous worker mode",
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/loop-detector.js"
+          }
+        ]
+      }
+    ]
+  }
+}
