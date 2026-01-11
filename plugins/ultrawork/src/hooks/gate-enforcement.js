@@ -122,7 +122,7 @@ If this is unexpected (orphaned session), cancel with:
   /ultrawork-cancel
 
 Allowed files during PLANNING:
-- -design.md, session.json, context.json, exploration/*.md, docs/plans/*.md`;
+- *-design.md, session.json, context.json, exploration/*.md, docs/plans/*.md`;
 
   return {
     hookSpecificOutput: {
