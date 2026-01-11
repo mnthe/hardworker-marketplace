@@ -2,7 +2,7 @@
 name: explorer
 description: "Use for fast codebase exploration in ultrawork. Gathers context, writes detailed findings to exploration/*.md, updates context.json summary."
 model: haiku
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/context-*.sh:*)", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/exploration-*.sh:*)"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/context-*.sh:*)"]
 ---
 
 # Explorer Agent

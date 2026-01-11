@@ -1,7 +1,7 @@
 ---
 name: planner
 description: "Auto-mode planner for ultrawork. Reads context from explorers, makes automatic decisions, creates task graph. Does NOT spawn sub-agents."
-allowed-tools: ["Read", "Write", "Edit", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-*.js:*)", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/design-*.js:*)", "Glob", "Grep"]
+allowed-tools: ["Read", "Write", "Edit", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-*.js:*)", "Glob", "Grep"]
 ---
 
 # Planner Agent (Auto Mode)
