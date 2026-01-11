@@ -108,18 +108,19 @@ When running within an ultrawork session:
 **Note**: `SESSION_DIR` is the session metadata directory (e.g., `~/.claude/ultrawork/sessions/{SESSION_ID}`), not the project working directory. All exploration artifacts are stored in the session directory to maintain session isolation.
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
+# For ultrawork, use Node.js scripts
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Update stage
-$SCRIPTS/session-update.sh --session {SESSION_ID} --exploration-stage overview
+node $SCRIPTS/session-update.js --session {SESSION_ID} --exploration-stage overview
 
 # Get session directory and write findings
-SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
+SESSION_DIR=$(node $SCRIPTS/session-get.js --session {SESSION_ID} --dir)
 mkdir -p "$SESSION_DIR/exploration"
 # Write findings to $SESSION_DIR/exploration/overview.md using Write tool
 
 # Add to context (file path is relative to SESSION_DIR)
-$SCRIPTS/context-add.sh --session {SESSION_ID} \
+node $SCRIPTS/context-add.js --session {SESSION_ID} \
   --explorer-id "overview" \
   --file "exploration/overview.md" \
   --summary "{summary}" \
@@ -127,7 +128,7 @@ $SCRIPTS/context-add.sh --session {SESSION_ID} \
   --patterns "{patterns}"
 
 # Advance stage
-$SCRIPTS/session-update.sh --session {SESSION_ID} --exploration-stage analyzing
+node $SCRIPTS/session-update.js --session {SESSION_ID} --exploration-stage analyzing
 ```
 
 ---

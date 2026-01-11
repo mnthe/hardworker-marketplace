@@ -62,7 +62,7 @@ Tests: 15 passed, 15 total
 **Conclusion**: All tests passing, criterion met.
 ```
 
-## Manual Testing for Bash
+## Manual Testing for Node.js
 
 Since this project lacks automated test framework:
 
@@ -70,10 +70,10 @@ Since this project lacks automated test framework:
 
 ```bash
 # Syntax check
-bash -n scripts/*.sh
+node --check src/scripts/*.js
 
-# shellcheck (if available)
-shellcheck scripts/*.sh
+# ESLint (if available)
+npx eslint src/scripts/*.js
 ```
 
 ### Functional Testing

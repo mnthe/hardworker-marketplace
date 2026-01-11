@@ -123,7 +123,7 @@ Make decisions automatically based on:
 **IMPORTANT: Design documents go to PROJECT directory.**
 
 ```bash
-WORKING_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --field working_dir)
+WORKING_DIR=$(node $SCRIPTS/session-get.js --session {SESSION_ID} --field working_dir)
 DESIGN_PATH="$WORKING_DIR/docs/plans/$(date +%Y-%m-%d)-{goal-slug}-design.md"
 ```
 
@@ -168,10 +168,10 @@ Verify task      → blockedBy: [all]
 ### Create Tasks
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Standard task (default approach)
-$SCRIPTS/task-create.sh --session {SESSION_ID} \
+node $SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "1" \
   --subject "Task title" \
   --description "Detailed description" \
@@ -179,7 +179,7 @@ $SCRIPTS/task-create.sh --session {SESSION_ID} \
   --criteria "criterion1|criterion2"
 
 # TDD task - requires test-first evidence
-$SCRIPTS/task-create.sh --session {SESSION_ID} \
+node $SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "2" \
   --subject "Add validateUser function" \
   --description "Create validation function with TDD approach" \
@@ -189,7 +189,7 @@ $SCRIPTS/task-create.sh --session {SESSION_ID} \
   --criteria "TDD-RED: Test fails initially|TDD-GREEN: Test passes after implementation"
 
 # Always include verify task
-$SCRIPTS/task-create.sh --session {SESSION_ID} \
+node $SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "verify" \
   --subject "[VERIFY] Integration verification" \
   --description "Verify all flows work end-to-end" \

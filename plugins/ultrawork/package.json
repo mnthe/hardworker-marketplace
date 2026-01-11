@@ -1,0 +1,10 @@
+{
+  "name": "ultrawork",
+  "version": "0.10.0",
+  "description": "TypeScript implementation of ultrawork plugin",
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

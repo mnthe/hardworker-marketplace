@@ -15,38 +15,16 @@ Claude Code plugin marketplace. A collection of plugins focused on "hardworker" 
 
 | Plugin | Description |
 |--------|-------------|
-| ultrawork | Verification-first development (Bash version, requires jq) |
-| ultrawork-js | Verification-first development (Node.js version, cross-platform) |
+| ultrawork | Verification-first development with session isolation and evidence-based completion |
 | teamwork | Multi-session collaboration with role-based workers |
-
-### ⚠️ Dual-Version Maintenance: ultrawork / ultrawork-js
-
-**ultrawork** and **ultrawork-js** are implementations of the same functionality in different runtimes.
-
-| Version | Runtime | Dependencies | Target Environment |
-|---------|---------|--------------|-------------------|
-| ultrawork | Bash | jq | Linux, macOS, Git Bash |
-| ultrawork-js | Node.js | None | All platforms (including Windows) |
-
-**When making changes, you MUST update both versions:**
-
-1. **Feature changes**: Implement the same feature in both
-2. **Bug fixes**: Apply the same fix to both
-3. **Schema changes**: Sync session.json, task.json structure changes
-4. **Version sync**: Keep version numbers identical
-
-```bash
-# Check for differences
-diff -r plugins/ultrawork/scripts/ plugins/ultrawork-js/src/scripts/ --brief
-diff -r plugins/ultrawork/hooks/ plugins/ultrawork-js/src/hooks/ --brief
-```
+| knowledge-extraction | Extract and manage knowledge from codebases |
 
 ### Tech Stack
 
-- **Language**: Pure Bash (POSIX-compliant, bash 3.2+)
-- **Dependencies**: jq (JSON parsing), git (version control)
+- **Language**: JavaScript (Node.js)
+- **Dependencies**: git (version control)
 - **Data Format**: JSON (state), Markdown (documentation)
-- **Runtime**: Claude Code CLI environment
+- **Runtime**: Claude Code CLI environment (Node.js 18+)
 
 ## Development Standards
 
@@ -83,34 +61,35 @@ diff -r plugins/ultrawork/hooks/ plugins/ultrawork-js/src/hooks/ --brief
 
 ### Script Specification
 
-All Bash scripts must follow these conventions:
+All Node.js scripts must follow these conventions:
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail  # REQUIRED: Strict mode
+```javascript
+#!/usr/bin/env node
 
-# REQUIRED: Parameter parsing with flags
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --param-name) PARAM_VAR="$2"; shift 2 ;;
-        --flag-only) FLAG=true; shift ;;
-        *) shift ;;
-    esac
-done
+// REQUIRED: Parameter parsing with flags
+const args = process.argv.slice(2);
+const params = {};
+for (let i = 0; i < args.length; i += 2) {
+    const key = args[i].replace(/^--/, '');
+    params[key] = args[i + 1];
+}
 
-# REQUIRED: Input validation
-[[ -z "${PARAM_VAR:-}" ]] && { echo "Error: --param-name required" >&2; exit 1; }
+// REQUIRED: Input validation
+if (!params.paramName) {
+    console.error('Error: --param-name required');
+    process.exit(1);
+}
 
-# REQUIRED: JSON output for data
-echo '{"status": "success", "data": {...}}'
+// REQUIRED: JSON output for data
+console.log(JSON.stringify({ status: 'success', data: {...} }));
 ```
 
 **Required patterns:**
-- `set -euo pipefail` at start
 - Flag-based parameters (no positional args)
 - Error messages to stderr
 - JSON output for structured data
 - Exit codes: 0 (success), 1 (error)
+- JSDoc type annotations for clarity
 
 ### Command Specification
 
@@ -179,7 +158,7 @@ Hook configuration (`hooks/hooks.json`):
       "hooks": [
         {
           "type": "command",
-          "command": "./hooks/script.sh"
+          "command": "./hooks/script.js"
         }
       ]
     }
@@ -216,8 +195,11 @@ plugins/{plugin-name}/
 │   └── plugin.json      # Plugin metadata (REQUIRED)
 ├── commands/            # Command definitions (.md)
 ├── agents/              # Agent definitions (AGENT.md)
-├── scripts/             # Bash implementations (.sh)
-├── hooks/               # Lifecycle hooks
+├── src/
+│   ├── scripts/         # Node.js script implementations (.js)
+│   ├── hooks/           # Hook implementations (.js)
+│   └── lib/             # Shared libraries
+├── hooks/
 │   └── hooks.json       # Hook configuration
 ├── skills/              # Skill definitions (optional)
 ├── CLAUDE.md            # Plugin-level context (REQUIRED)
@@ -233,30 +215,28 @@ plugins/{plugin-name}/
 
 ## Development Guidelines
 
-### Bash Script Conventions
+### Node.js Script Conventions
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail  # Always use strict mode
+```javascript
+#!/usr/bin/env node
 
-# Flag-based parameters
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --session) SESSION_DIR="$2"; shift 2 ;;
-        --field) FIELD="$2"; shift 2 ;;
-        *) shift ;;
-    esac
-done
+// Flag-based parameters
+const args = process.argv.slice(2);
+const params = {};
+for (let i = 0; i < args.length; i += 2) {
+    const key = args[i].replace(/^--/, '');
+    params[key] = args[i + 1];
+}
 ```
 
 ### Script Naming Convention
 
-- `{entity}-{action}.sh` pattern
-- Examples: `session-get.sh`, `task-create.sh`, `task-list.sh`
+- `{entity}-{action}.js` pattern
+- Examples: `session-get.js`, `task-create.js`, `task-list.js`
 
 ### JSON Manipulation
 
-- Use `jq` for all JSON operations
+- Use native JSON.parse/JSON.stringify for all JSON operations
 - Validate JSON before writing to files
 - Handle empty/missing files gracefully
 
@@ -265,7 +245,7 @@ done
 Commands delegate to agents or scripts:
 
 ```
-Command (.md) → Agent (AGENT.md) → Script (.sh) → State (JSON)
+Command (.md) → Agent (AGENT.md) → Script (.js) → State (JSON)
 ```
 
 ### Script Modification Rules
@@ -273,7 +253,7 @@ Command (.md) → Agent (AGENT.md) → Script (.sh) → State (JSON)
 **When modifying scripts, you MUST check and sync all calling components:**
 
 ```
-When modifying Script (.sh), check:
+When modifying Script (.js), check:
 ├── Agents (agents/*/AGENT.md)    → Agents that call the script
 ├── Skills (skills/*.md)          → Skills that call the script
 └── Commands (commands/*.md)      → Commands that call the script
@@ -282,7 +262,7 @@ When modifying Script (.sh), check:
 **How to check:**
 ```bash
 # Find files that reference a specific script
-grep -r "script-name.sh" agents/ skills/ commands/
+grep -r "script-name.js" agents/ skills/ commands/
 ```
 
 **Why this matters:**
@@ -313,25 +293,25 @@ Hook safety rules:
 1. Create plugin directory: `plugins/{plugin-name}/`
 2. Create `.claude-plugin/plugin.json` with metadata
 3. Add commands in `commands/` directory
-4. Implement scripts in `scripts/` directory
+4. Implement scripts in `src/scripts/` directory
 5. Add CLAUDE.md for context tracking
 6. Add README.md with usage documentation
 
 ### Plugin Requirements
 
 - Self-contained (no cross-plugin dependencies)
-- Pure bash (no npm/pip runtime dependencies)
-- JSON state management with jq
+- Node.js-based (uses runtime bundled with Claude Code)
+- JSON state management with native JSON methods
 - Lifecycle hooks for automation support
 - CLAUDE.md for AI agent context
 
 ### Code Review Checklist
 
-- [ ] `set -euo pipefail` in all scripts
-- [ ] Flag-based parameter parsing
+- [ ] Flag-based parameter parsing in Node.js scripts
 - [ ] Error handling with meaningful messages
 - [ ] No hardcoded paths (use environment variables)
 - [ ] JSON validation before writes
+- [ ] JSDoc type annotations for clarity
 - [ ] CLAUDE.md updated with changes
 - [ ] **Version synced**: `plugin.json` == `marketplace.json`
 
@@ -343,10 +323,10 @@ This project does not have an automated test framework. Follow manual testing pr
 
 ```bash
 # Syntax check
-bash -n scripts/*.sh
+node --check src/scripts/*.js
 
-# shellcheck (if available)
-shellcheck scripts/*.sh
+# ESLint (if available)
+npx eslint src/scripts/*.js
 ```
 
 ### Functional Testing
@@ -387,9 +367,17 @@ cat ~/.claude/ultrawork/{team}/sessions/{id}/session.json
 4. Tag release if significant milestone
 
 ```bash
-# Verify version sync
-diff <(jq -r '.version' plugins/ultrawork/.claude-plugin/plugin.json) \
-     <(jq -r '.plugins[] | select(.name=="ultrawork") | .version' .claude-plugin/marketplace.json)
+# Verify version sync using Node.js
+node -e "
+  const pluginVersion = require('./plugins/ultrawork/.claude-plugin/plugin.json').version;
+  const marketplaceVersion = require('./.claude-plugin/marketplace.json').plugins
+    .find(p => p.name === 'ultrawork').version;
+  if (pluginVersion !== marketplaceVersion) {
+    console.error('Version mismatch:', pluginVersion, '!=', marketplaceVersion);
+    process.exit(1);
+  }
+  console.log('Versions match:', pluginVersion);
+"
 ```
 
 **Version mismatch impact**: Plugins installed from marketplace will use outdated versions, causing bug fixes to not apply.

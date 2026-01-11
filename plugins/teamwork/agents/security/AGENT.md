@@ -1,7 +1,7 @@
 ---
 name: security
 description: "Security specialist worker for teamwork. Auth, permissions, input validation."
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/task-*.sh:*)", "Glob", "Grep"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
 ---
 
 # Security Worker Agent

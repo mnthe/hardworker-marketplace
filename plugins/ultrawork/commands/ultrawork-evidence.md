@@ -2,7 +2,7 @@
 name: ultrawork-evidence
 description: "Show collected evidence for ultrawork session"
 argument-hint: "[--help]"
-allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/ultrawork-evidence.sh:*)"]
+allowed-tools: ["Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-evidence.js:*)"]
 ---
 
 # Ultrawork Evidence Command
@@ -17,7 +17,7 @@ You MUST pass it to the script via `--session` flag.
 Execute the evidence script with `--session`:
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}/scripts/ultrawork-evidence.sh" --session {SESSION_ID}
+node "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-evidence.js" --session {SESSION_ID}
 ```
 
 After displaying raw evidence, interpret and summarize:

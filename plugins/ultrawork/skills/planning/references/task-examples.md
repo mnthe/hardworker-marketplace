@@ -36,17 +36,17 @@ Wave 3 (Verification):
 ### Script Commands
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Wave 1 - Independent
-$SCRIPTS/task-create.sh --session {SESSION_ID} \
+node $SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "1" \
   --subject "Setup NextAuth.js configuration" \
   --description "Install next-auth@5, create auth config with Google provider, add environment variables" \
   --complexity standard \
   --criteria "next-auth installed|auth.ts config created|GOOGLE_CLIENT_ID in .env"
 
-$SCRIPTS/task-create.sh --session {SESSION_ID} \
+node $SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "2" \
   --subject "Create user database schema" \
   --description "Add User model to Prisma schema with OAuth fields (id, email, name, image, provider)" \
@@ -54,7 +54,7 @@ $SCRIPTS/task-create.sh --session {SESSION_ID} \
   --criteria "Schema updated|Migration created|Types generated"
 
 # Wave 2 - Sequential
-$SCRIPTS/task-create.sh --session {SESSION_ID} \
+node $SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "3" \
   --subject "Implement auth API routes" \
   --description "Create /api/auth/[...nextauth]/route.ts with NextAuth handler" \
@@ -62,7 +62,7 @@ $SCRIPTS/task-create.sh --session {SESSION_ID} \
   --complexity standard \
   --criteria "Route file created|Auth endpoints respond 200"
 
-$SCRIPTS/task-create.sh --session {SESSION_ID} \
+node $SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "4" \
   --subject "Add session provider to app" \
   --description "Wrap root layout with SessionProvider from next-auth/react" \
@@ -70,7 +70,7 @@ $SCRIPTS/task-create.sh --session {SESSION_ID} \
   --complexity standard \
   --criteria "SessionProvider added|useSession hook works"
 
-$SCRIPTS/task-create.sh --session {SESSION_ID} \
+node $SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "5" \
   --subject "Create login UI components" \
   --description "Add login button, callback page, user menu with signOut" \
@@ -79,7 +79,7 @@ $SCRIPTS/task-create.sh --session {SESSION_ID} \
   --criteria "Login button works|Callback page created|User menu functional"
 
 # Wave 3 - Verification
-$SCRIPTS/task-create.sh --session {SESSION_ID} \
+node $SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "verify" \
   --subject "[VERIFY] OAuth authentication integration" \
   --description "Verify complete OAuth flow: login, session persistence, user data storage, logout" \

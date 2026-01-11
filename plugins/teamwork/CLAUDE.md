@@ -7,7 +7,51 @@
 
 # teamwork
 
-Multi-session collaboration plugin with role-based workers, file-per-task storage, and parallel execution.
+Multi-session collaboration plugin with role-based workers.
+
+## File Structure
+
+- src/lib/types.js - JSDoc type definitions (@typedef)
+- src/lib/file-lock.js - Cross-platform file locking
+- src/lib/task-utils.js - Task management utilities
+- src/scripts/*.js - CLI scripts
+- src/hooks/*.js - Lifecycle hooks
+
+## No Build Step Required
+
+Scripts run directly from source. No compilation needed.
+
+## Hook Configuration
+
+**IMPORTANT**: hooks.json must use explicit `node` prefix for cross-platform compatibility.
+
+```json
+// WRONG - shebang doesn't work on Windows
+"command": "${CLAUDE_PLUGIN_ROOT}/src/hooks/stop-hook.js"
+
+// CORRECT - explicit node invocation
+"command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/stop-hook.js"
+```
+
+Hook paths: `src/hooks/*.js`
+
+## Multi-Session Coordination
+
+### Shared State Management
+- Tasks stored in `~/.claude/teamwork/{project}/{team}/tasks/{id}.json`
+- Session state in `~/.claude/teamwork/{project}/{team}/session.json`
+- Loop state per terminal in `~/.claude/teamwork/.loop-state/{pid}.json`
+
+### Concurrency Safety
+- Workers must claim tasks atomically (file-based locking)
+- Task status updates must be atomic operations
+- Multiple workers can run in parallel without conflicts
+
+### Worker Coordination
+- Each worker runs in separate terminal/session
+- Workers claim tasks based on role matching
+- Workers communicate through shared task files
+- Coordinator monitors progress through task status
 
 ## Development Rules
 
@@ -23,75 +67,6 @@ Multi-session collaboration plugin with role-based workers, file-per-task storag
 | `coordinator/AGENT.md` | `agents/coordinator/AGENT.md` | Main orchestration agent |
 | `worker/AGENT.md` | `agents/worker/AGENT.md` | General purpose worker agent |
 | Role agents | `agents/{role}/AGENT.md` | Specialized worker agents (frontend, backend, etc.) |
-
-**Why this matters:**
-- Commands and agents have interdependencies for multi-session coordination
-- Workflow changes in one component may require updates in others
-- Example: Task format change in coordinator → worker cannot parse tasks
-
-### Multi-Session Coordination Rules
-
-**Shared State Management:**
-- Tasks stored in `~/.claude/teamwork/{project}/{team}/tasks/{id}.json`
-- Session state in `~/.claude/teamwork/{project}/{team}/session.json`
-- Loop state per terminal in `~/.claude/teamwork/.loop-state/{pid}.json`
-
-**Concurrency Safety:**
-- Workers must claim tasks atomically (file-based locking)
-- Task status updates must be atomic operations
-- Multiple workers can run in parallel without conflicts
-
-**Worker Coordination:**
-- Each worker runs in separate terminal/session
-- Workers claim tasks based on role matching
-- Workers communicate through shared task files
-- Coordinator monitors progress through task status
-
-### Agent Coordination Guidelines
-
-**Coordinator Agent:**
-- Breaks down goals into discrete tasks
-- Assigns appropriate roles to tasks
-- Monitors overall progress
-- Does NOT execute tasks directly
-
-**Worker Agents:**
-- Claim one task at a time
-- Execute task according to role
-- Update task status with evidence
-- Signal completion or failure
-
-**Role-Based Agents:**
-- Frontend, backend, devops, test, docs, security, review
-- Each agent has specific expertise
-- Workers can filter tasks by role
-- Role mismatch = skip task
-
-### Loop Mode Coordination
-
-**Hook-Based Continuation:**
-1. Worker completes task
-2. Worker checks for more tasks
-3. If tasks available → outputs `__TEAMWORK_CONTINUE__`
-4. Stop hook detects marker and re-triggers worker
-5. Loop continues until no open tasks
-
-**Loop State Tracking:**
-- Per-terminal PID-based state files
-- Prevents infinite loops
-- Allows graceful shutdown
-- Clean state on worker exit
-
-### Verification Checklist
-
-When modifying teamwork-related documents:
-- [ ] Check changes in command files (teamwork.md, teamwork-worker.md, teamwork-status.md)
-- [ ] Verify if coordinator agent needs sync
-- [ ] Verify if worker agents need sync
-- [ ] Verify if role-based agents need sync
-- [ ] Test multi-session coordination
-- [ ] Test loop mode behavior
-- [ ] Verify concurrency safety
 
 ### Task File Format
 
@@ -126,70 +101,3 @@ When modifying teamwork-related documents:
   }
 }
 ```
-
-## Architecture Patterns
-
-### Multi-Session Coordination
-
-```
-Terminal 1: /teamwork "goal"
-    ↓
-Coordinator Agent
-    ↓
-Creates tasks/{id}.json files
-    ↓
-Terminal 2: /teamwork-worker --role backend --loop
-Terminal 3: /teamwork-worker --role frontend --loop
-Terminal 4: /teamwork-worker --role test --loop
-    ↓
-Workers claim and execute tasks in parallel
-    ↓
-Status updates through shared task files
-```
-
-### Atomic Task Claiming
-
-```bash
-# Worker attempts to claim task
-1. Read task file
-2. Check if status == "open"
-3. If open, update to "in_progress" with session ID
-4. Verify claim succeeded (re-read and check session ID)
-5. If claim failed, retry with next task
-```
-
-### Hook-Based Loop Mode
-
-```
-Worker completes task → Check for more tasks → If yes: output marker
-    ↓                                              ↓
-Stop hook triggered                           Stop hook detects marker
-    ↓                                              ↓
-Normal exit                                   Re-trigger /teamwork-worker
-```
-
-## Common Issues
-
-### Task Claiming Race Condition
-
-**Symptom**: Multiple workers claim same task
-
-**Solution**: Implement atomic claim-and-verify pattern in worker logic
-
-### Loop Mode Infinite Loop
-
-**Symptom**: Worker doesn't stop when no tasks left
-
-**Solution**: Check loop state file exists and is valid before continuing
-
-### Role Mismatch
-
-**Symptom**: Worker claims task but can't complete it
-
-**Solution**: Verify role filtering logic in worker agent
-
-### Shared State Corruption
-
-**Symptom**: Task status inconsistent across workers
-
-**Solution**: Ensure all state updates use atomic write operations (write to temp, then move)

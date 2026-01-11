@@ -2,7 +2,7 @@
 name: teamwork-worker
 description: "Claim and complete teamwork tasks (one-shot or continuous loop)"
 argument-hint: "[--project NAME] [--team NAME] [--role ROLE] [--loop] | --help"
-allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/worker-setup.sh:*)", "Task", "TaskOutput", "Read", "Edit"]
+allowed-tools: ["Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/worker-setup.js:*)", "Task", "TaskOutput", "Read", "Edit"]
 ---
 
 # Teamwork Worker Command
@@ -18,7 +18,7 @@ Workers claim and complete tasks from a teamwork project. Can run in one-shot mo
 Execute the worker setup script:
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}/scripts/worker-setup.sh" $ARGUMENTS
+node "${CLAUDE_PLUGIN_ROOT}/src/scripts/worker-setup.js" $ARGUMENTS
 ```
 
 Parse the output to get:
@@ -34,7 +34,7 @@ Parse the output to get:
 Register loop state for this terminal:
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}/scripts/loop-state.sh" start "{PROJECT}" "{SUB_TEAM}" "{ROLE}"
+node "${CLAUDE_PLUGIN_ROOT}/src/scripts/loop-state.js" start "{PROJECT}" "{SUB_TEAM}" "{ROLE}"
 ```
 
 ## Step 2: Check for Available Tasks
@@ -105,12 +105,12 @@ Output the continue marker:
 __TEAMWORK_CONTINUE__
 ```
 
-The hook reads state from `loop-state.sh` and triggers the next iteration with saved context.
+The hook reads state from `loop-state.js` and triggers the next iteration with saved context.
 
 **If no more tasks:**
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}/scripts/loop-state.sh" stop
+node "${CLAUDE_PLUGIN_ROOT}/src/scripts/loop-state.js" stop
 ```
 
 Exit and report completion.

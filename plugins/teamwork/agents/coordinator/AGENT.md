@@ -2,7 +2,7 @@
 name: coordinator
 description: "Use when setting up teamwork projects and creating tasks for multi-session collaboration."
 model: opus
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/task-*.sh:*)", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/project-*.sh:*)"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/project-*.js:*)"]
 ---
 
 # Coordinator Agent
@@ -34,18 +34,18 @@ Options:
 ## Utility Scripts
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Create project
-$SCRIPTS/project-create.sh --dir {TEAMWORK_DIR} \
+node $SCRIPTS/project-create.js --dir {TEAMWORK_DIR} \
   --project {PROJECT} --team {SUB_TEAM} --goal "..."
 
 # Create task
-$SCRIPTS/task-create.sh --dir {TEAMWORK_DIR} \
+node $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
   --id "1" --subject "..." --role backend --blocked-by "2,3"
 
 # List tasks
-$SCRIPTS/task-list.sh --dir {TEAMWORK_DIR} --format json
+node $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --format json
 ```
 
 ## Process
@@ -90,7 +90,7 @@ Use Glob/Grep/Read to understand:
 **Step 1: Create project**
 
 ```bash
-$SCRIPTS/project-create.sh --dir {TEAMWORK_DIR} \
+node $SCRIPTS/project-create.js --dir {TEAMWORK_DIR} \
   --project {PROJECT} --team {SUB_TEAM} \
   --goal "{goal}"
 ```
@@ -100,7 +100,7 @@ $SCRIPTS/project-create.sh --dir {TEAMWORK_DIR} \
 For EACH task:
 
 ```bash
-$SCRIPTS/task-create.sh --dir {TEAMWORK_DIR} \
+node $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
   --id "1" \
   --subject "Clear, actionable title" \
   --description "Specific deliverable with context" \
@@ -111,7 +111,7 @@ $SCRIPTS/task-create.sh --dir {TEAMWORK_DIR} \
 With dependencies:
 
 ```bash
-$SCRIPTS/task-create.sh --dir {TEAMWORK_DIR} \
+node $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
   --id "3" \
   --subject "Build API endpoints" \
   --role backend \

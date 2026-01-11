@@ -18,7 +18,7 @@ description: |
   </example>
 model: inherit
 color: magenta
-tools: ["Read", "Edit", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/task-*.sh:*)", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/session-*.sh:*)", "Glob", "Grep"]
+tools: ["Read", "Edit", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/task-*.js:*)", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/session-*.js:*)", "Glob", "Grep"]
 ---
 
 # Verifier Agent
@@ -67,24 +67,24 @@ Run final tests.
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
 
 # Get session directory path
-SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
+SESSION_DIR=$($SCRIPTS/session-get.js --session {SESSION_ID} --dir)
 
 # Get session data
-$SCRIPTS/session-get.sh --session {SESSION_ID}               # Full JSON
-$SCRIPTS/session-get.sh --session {SESSION_ID} --field phase # Specific field
+$SCRIPTS/session-get.js --session {SESSION_ID}               # Full JSON
+$SCRIPTS/session-get.js --session {SESSION_ID} --field phase # Specific field
 
 # List tasks
-$SCRIPTS/task-list.sh --session {SESSION_ID} --format json
+$SCRIPTS/task-list.js --session {SESSION_ID} --format json
 
 # Get single task
-$SCRIPTS/task-get.sh --session {SESSION_ID} --id 1
+$SCRIPTS/task-get.js --session {SESSION_ID} --id 1
 
 # Update task
-$SCRIPTS/task-update.sh --session {SESSION_ID} --id verify \
+$SCRIPTS/task-update.js --session {SESSION_ID} --id verify \
   --status resolved --add-evidence "VERDICT: PASS"
 
 # Update session
-$SCRIPTS/session-update.sh --session {SESSION_ID} --phase COMPLETE
+$SCRIPTS/session-update.js --session {SESSION_ID} --phase COMPLETE
 ```
 
 ---
@@ -133,8 +133,8 @@ Each piece of evidence MUST include:
 ### Phase 1: Read Session & Tasks
 
 ```bash
-$SCRIPTS/task-list.sh --session {SESSION_ID} --format json
-$SCRIPTS/task-get.sh --session {SESSION_ID} --id 1
+$SCRIPTS/task-list.js --session {SESSION_ID} --format json
+$SCRIPTS/task-get.js --session {SESSION_ID} --id 1
 # ... read each task
 ```
 
@@ -216,29 +216,29 @@ Record ALL outputs as final evidence.
 **On PASS:**
 
 ```bash
-$SCRIPTS/task-update.sh --session {SESSION_ID} --id verify \
+$SCRIPTS/task-update.js --session {SESSION_ID} --id verify \
   --status resolved \
   --add-evidence "VERDICT: PASS" \
   --add-evidence "All tasks verified with evidence"
 
-$SCRIPTS/session-update.sh --session {SESSION_ID} --phase COMPLETE
+$SCRIPTS/session-update.js --session {SESSION_ID} --phase COMPLETE
 ```
 
 **On FAIL (Ralph Loop):**
 
 ```bash
 # Create fix tasks
-$SCRIPTS/task-create.sh --session {SESSION_ID} \
+$SCRIPTS/task-create.js --session {SESSION_ID} \
   --subject "Fix: [Specific issue]" \
   --description "Verification failed: [reason]. Action: [fix]." \
   --criteria '["Issue resolved with evidence"]'
 
 # Update verify task
-$SCRIPTS/task-update.sh --session {SESSION_ID} --id verify \
+$SCRIPTS/task-update.js --session {SESSION_ID} --id verify \
   --add-evidence "VERDICT: FAIL - Created fix tasks"
 
 # Return to EXECUTION phase
-$SCRIPTS/session-update.sh --session {SESSION_ID} --phase EXECUTION
+$SCRIPTS/session-update.js --session {SESSION_ID} --phase EXECUTION
 ```
 
 ---

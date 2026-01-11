@@ -15,32 +15,34 @@
 
 ## Implementation Standards
 
-### Bash Scripts
+### Node.js Scripts
 
-All Bash scripts MUST follow:
-- `set -euo pipefail` at start (strict mode)
+All Node.js scripts MUST follow:
 - Flag-based parameters (no positional args)
 - Error messages to stderr
 - JSON output for structured data
 - Exit codes: 0 (success), 1 (error)
+- JSDoc type annotations for clarity
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
+```javascript
+#!/usr/bin/env node
 
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --param) PARAM="$2"; shift 2 ;;
-        *) shift ;;
-    esac
-done
+const args = process.argv.slice(2);
+const params = {};
+for (let i = 0; i < args.length; i += 2) {
+    const key = args[i].replace(/^--/, '');
+    params[key] = args[i + 1];
+}
 
-[[ -z "${PARAM:-}" ]] && { echo "Error: --param required" >&2; exit 1; }
+if (!params.param) {
+    console.error('Error: --param required');
+    process.exit(1);
+}
 ```
 
 ### JSON Manipulation
 
-- Use `jq` for all JSON operations
+- Use native JSON.parse/JSON.stringify for all JSON operations
 - Validate JSON before writing to files
 - Handle empty/missing files gracefully
 
@@ -53,7 +55,7 @@ When modifying scripts, MUST check all calling components:
 
 ```bash
 # Find files referencing a script
-grep -r "script-name.sh" agents/ skills/ commands/
+grep -r "script-name.js" agents/ skills/ commands/
 ```
 
 ## Autonomy Boundaries

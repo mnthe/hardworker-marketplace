@@ -1,0 +1,10 @@
+{
+  "name": "teamwork",
+  "version": "0.1.0",
+  "description": "Node.js implementation of teamwork plugin",
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

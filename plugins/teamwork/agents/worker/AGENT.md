@@ -1,7 +1,7 @@
 ---
 name: worker
 description: "Use for claiming and completing teamwork tasks. Generic worker for any role."
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/task-*.sh:*)", "Glob", "Grep"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
 ---
 
 # Worker Agent
@@ -31,23 +31,23 @@ Options:
 ## Utility Scripts
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # List available tasks
-$SCRIPTS/task-list.sh --dir {TEAMWORK_DIR} --available --format json
+node $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --available --format json
 
 # List by role
-$SCRIPTS/task-list.sh --dir {TEAMWORK_DIR} --available --role backend
+node $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --available --role backend
 
 # Claim a task
-$SCRIPTS/task-claim.sh --dir {TEAMWORK_DIR} --id 1
+node $SCRIPTS/task-claim.js --dir {TEAMWORK_DIR} --id 1
 
 # Update task
-$SCRIPTS/task-update.sh --dir {TEAMWORK_DIR} --id 1 \
+node $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id 1 \
   --status resolved --add-evidence "npm test: 15/15 passed"
 
 # Release task (on failure)
-$SCRIPTS/task-update.sh --dir {TEAMWORK_DIR} --id 1 --release
+node $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id 1 --release
 ```
 
 ## Process
@@ -56,10 +56,10 @@ $SCRIPTS/task-update.sh --dir {TEAMWORK_DIR} --id 1 --release
 
 ```bash
 # List available tasks (open, unblocked, unclaimed)
-$SCRIPTS/task-list.sh --dir {TEAMWORK_DIR} --available --format json
+node $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --available --format json
 
 # Or filter by role
-$SCRIPTS/task-list.sh --dir {TEAMWORK_DIR} --available --role {role_filter}
+node $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --available --role {role_filter}
 ```
 
 **If no task found:** Report "No available tasks" and exit.
@@ -67,7 +67,7 @@ $SCRIPTS/task-list.sh --dir {TEAMWORK_DIR} --available --role {role_filter}
 ### Phase 2: Claim Task
 
 ```bash
-$SCRIPTS/task-claim.sh --dir {TEAMWORK_DIR} --id {TASK_ID}
+node $SCRIPTS/task-claim.js --dir {TEAMWORK_DIR} --id {TASK_ID}
 ```
 
 **If claim fails (conflict):** Find another task.
@@ -101,7 +101,7 @@ Status: 200 OK
 **On Success:**
 
 ```bash
-$SCRIPTS/task-update.sh --dir {TEAMWORK_DIR} --id {TASK_ID} \
+node $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id {TASK_ID} \
   --status resolved \
   --add-evidence "Created src/models/User.ts" \
   --add-evidence "npm test: 15/15 passed, exit 0"
@@ -111,11 +111,11 @@ $SCRIPTS/task-update.sh --dir {TEAMWORK_DIR} --id {TASK_ID} \
 
 ```bash
 # Add evidence of what went wrong
-$SCRIPTS/task-update.sh --dir {TEAMWORK_DIR} --id {TASK_ID} \
+node $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id {TASK_ID} \
   --add-evidence "FAILED: npm test exited with code 1"
 
 # Release the task for another worker
-$SCRIPTS/task-update.sh --dir {TEAMWORK_DIR} --id {TASK_ID} --release
+node $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id {TASK_ID} --release
 ```
 
 Do NOT mark as resolved if failed - release the task for retry.

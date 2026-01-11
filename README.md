@@ -4,7 +4,7 @@ Claude Code plugin marketplace focused on "hardworker" productivity patterns: ve
 
 ## Features
 
-### ultrawork - Verification-First Development (Bash)
+### ultrawork - Verification-First Development
 
 Strict verification-first development mode with session isolation and mandatory evidence collection.
 
@@ -15,26 +15,13 @@ Strict verification-first development mode with session isolation and mandatory 
 - Execute→Verify loop (auto-retry on failure, max 5 iterations)
 - Zero tolerance for partial implementation
 - Parallel task execution with worker agents
-- File-based state management with jq
-
-**Requirements:** bash 3.2+, jq, git
-
-[Full Documentation →](plugins/ultrawork/)
-
-### ultrawork-js - Verification-First Development (Node.js)
-
-Cross-platform Node.js version of ultrawork with identical functionality.
-
-**Key Features:**
-- All features of ultrawork (bash version)
 - Cross-platform: Windows, MacOS, Linux
-- No jq dependency (native JSON parsing)
 - Pure JavaScript with JSDoc type annotations
 - No build step required
 
 **Requirements:** Node.js 18+ (bundled with Claude Code)
 
-[Full Documentation →](plugins/ultrawork-js/)
+[Full Documentation →](plugins/ultrawork/)
 
 ### teamwork - Multi-Session Collaboration
 
@@ -48,9 +35,23 @@ Role-based worker agents for parallel development across multiple terminal sessi
 - Project and team isolation
 - Works with vanilla Claude Code
 
-**Requirements:** bash 3.2+, jq, git
+**Requirements:** Node.js 18+ (bundled with Claude Code)
 
 [Full Documentation →](plugins/teamwork/)
+
+### knowledge-extraction - Extract Knowledge from Codebases
+
+Extract and manage knowledge from codebases for AI agent context.
+
+**Key Features:**
+- Pattern-based knowledge extraction
+- Markdown documentation generation
+- Context management for AI agents
+- Integration with ultrawork and teamwork
+
+**Requirements:** Node.js 18+ (bundled with Claude Code)
+
+[Full Documentation →](plugins/knowledge-extraction/)
 
 ## Quick Start
 
@@ -60,12 +61,14 @@ Role-based worker agents for parallel development across multiple terminal sessi
 # Add marketplace
 claude plugin marketplace add mnthe/hardworker-marketplace
 
-# Install verification-first development (choose one)
-claude plugin install ultrawork@hardworker-marketplace        # Bash version
-claude plugin install ultrawork-js@hardworker-marketplace     # Node.js version
+# Install verification-first development
+claude plugin install ultrawork@hardworker-marketplace
 
 # Install multi-session collaboration
 claude plugin install teamwork@hardworker-marketplace
+
+# Install knowledge extraction
+claude plugin install knowledge-extraction@hardworker-marketplace
 ```
 
 ### Example: ultrawork Session
@@ -123,8 +126,8 @@ claude plugin install teamwork@hardworker-marketplace
 | Plugin | Storage Pattern | Location |
 |--------|-----------------|----------|
 | ultrawork | Session-based isolation | `~/.claude/ultrawork/sessions/{session-id}/` |
-| ultrawork-js | Session-based isolation | `~/.claude/ultrawork/sessions/{session-id}/` |
 | teamwork | Project-based collaboration | `~/.claude/teamwork/{project}/{team}/` |
+| knowledge-extraction | Cache-based storage | `~/.claude/knowledge-extraction/cache/` |
 
 ### Component Architecture
 
@@ -133,12 +136,12 @@ Command (.md)
     ↓
 Agent (AGENT.md)
     ↓
-Script (.sh or .js)
+Script (.js)
     ↓
 State (JSON files)
 ```
 
-**ultrawork/ultrawork-js Workflow:**
+**ultrawork Workflow:**
 ```
 /ultrawork "goal"
     ↓
@@ -193,32 +196,23 @@ Hooks enable continuous mode without modifying Claude Code core.
 2. Update `.claude-plugin/marketplace.json` (MUST match!)
 
 ```bash
-# Verify version sync
-diff <(jq -r '.version' plugins/ultrawork/.claude-plugin/plugin.json) \
-     <(jq -r '.plugins[] | select(.name=="ultrawork") | .version' .claude-plugin/marketplace.json)
-```
-
-### Dual-Version Maintenance: ultrawork / ultrawork-js
-
-When making changes to ultrawork or ultrawork-js, you MUST update both versions:
-
-| Change Type | Action |
-|-------------|--------|
-| Feature addition | Implement in both Bash and Node.js |
-| Bug fix | Apply to both versions |
-| Schema change | Sync session.json, task.json structure |
-| Version bump | Keep version numbers identical |
-
-```bash
-# Check for differences
-diff -r plugins/ultrawork/scripts/ plugins/ultrawork-js/src/scripts/ --brief
-diff -r plugins/ultrawork/hooks/ plugins/ultrawork-js/src/hooks/ --brief
+# Verify version sync using Node.js
+node -e "
+  const pluginVersion = require('./plugins/ultrawork/.claude-plugin/plugin.json').version;
+  const marketplaceVersion = require('./.claude-plugin/marketplace.json').plugins
+    .find(p => p.name === 'ultrawork').version;
+  if (pluginVersion !== marketplaceVersion) {
+    console.error('Version mismatch:', pluginVersion, '!=', marketplaceVersion);
+    process.exit(1);
+  }
+  console.log('Versions match:', pluginVersion);
+"
 ```
 
 ### Development Guidelines
 
 **Script Requirements:**
-- Bash scripts: `set -euo pipefail` strict mode
+- Node.js scripts with JSDoc type annotations
 - Flag-based parameters (no positional args)
 - JSON output for structured data
 - Error messages to stderr
@@ -226,7 +220,7 @@ diff -r plugins/ultrawork/hooks/ plugins/ultrawork-js/src/hooks/ --brief
 
 **Testing:**
 - Manual testing (no automated test framework)
-- Syntax validation: `bash -n scripts/*.sh`
+- Syntax validation: `node --check src/scripts/*.js`
 - Functional verification: create session, verify JSON structure
 
 **Version Bumps:**
@@ -247,14 +241,13 @@ refactor(plugin): Refactor code
 
 ### Code Review Checklist
 
-- [ ] `set -euo pipefail` in all Bash scripts
-- [ ] Flag-based parameter parsing
+- [ ] Flag-based parameter parsing in Node.js scripts
 - [ ] Error handling with meaningful messages
 - [ ] No hardcoded paths (use environment variables)
 - [ ] JSON validation before writes
+- [ ] JSDoc type annotations for clarity
 - [ ] CLAUDE.md updated with changes
 - [ ] Version synced: `plugin.json` == `marketplace.json`
-- [ ] Dual-version sync: ultrawork == ultrawork-js (if applicable)
 
 ## Plugin Structure
 
@@ -264,8 +257,11 @@ plugins/{plugin-name}/
 │   └── plugin.json      # Plugin metadata (REQUIRED)
 ├── commands/            # Command definitions (.md)
 ├── agents/              # Agent definitions (AGENT.md)
-├── scripts/             # Bash implementations (.sh)
-├── hooks/               # Lifecycle hooks
+├── src/
+│   ├── scripts/         # Node.js script implementations (.js)
+│   ├── hooks/           # Hook implementations (.js)
+│   └── lib/             # Shared libraries
+├── hooks/
 │   └── hooks.json       # Hook configuration
 ├── skills/              # Skill definitions (optional)
 ├── CLAUDE.md            # Plugin-level context (REQUIRED)

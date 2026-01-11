@@ -7,23 +7,6 @@
     {
       "name": "ultrawork",
       "source": "./plugins/ultrawork",
-      "description": "Strict verification-first development mode with session isolation, mandatory planning, success criteria, evidence collection, and TDD support",
-      "version": "0.10.0",
-      "author": {
-        "name": "mnthe"
-      },
-      "keywords": [
-        "ultrawork",
-        "verification",
-        "planning",
-        "tdd",
-        "evidence-based"
-      ],
-      "category": "productivity"
-    },
-    {
-      "name": "ultrawork-js",
-      "source": "./plugins/ultrawork-js",
       "description": "Node.js cross-platform version of ultrawork - strict verification-first development with TDD support",
       "version": "0.10.0",
       "author": {
@@ -42,23 +25,6 @@
     {
       "name": "teamwork",
       "source": "./plugins/teamwork",
-      "description": "Multi-session collaboration plugin with role-based workers, file-per-task storage, and dashboard status",
-      "version": "0.0.2",
-      "author": {
-        "name": "mnthe"
-      },
-      "keywords": [
-        "teamwork",
-        "collaboration",
-        "multi-session",
-        "workers",
-        "parallel"
-      ],
-      "category": "productivity"
-    },
-    {
-      "name": "teamwork-js",
-      "source": "./plugins/teamwork-js",
       "description": "Node.js cross-platform version of teamwork - multi-session collaboration with role-based workers and task management",
       "version": "0.1.0",
       "author": {

@@ -34,13 +34,7 @@ This command downloads the marketplace configuration from GitHub and makes plugi
 
 ### Install a Plugin
 
-Install the ultrawork-js plugin (recommended for cross-platform compatibility):
-
-```bash
-claude plugin install ultrawork-js@hardworker-marketplace
-```
-
-For Linux/macOS with jq installed, you can use the Bash version:
+Install the ultrawork plugin:
 
 ```bash
 claude plugin install ultrawork@hardworker-marketplace
@@ -172,21 +166,9 @@ Workers execute tasks in parallel when possible.
 
 ## Available Plugins
 
-### ultrawork / ultrawork-js
+### ultrawork
 
-Verification-first development with strict evidence requirements.
-
-**Choose ultrawork-js if:**
-- You use Windows
-- You want consistent behavior across platforms
-- You prefer JavaScript over Bash
-
-**Choose ultrawork if:**
-- You use Linux/macOS exclusively
-- You have jq installed
-- You prefer Bash scripts
-
-Both versions have identical features and workflows.
+Verification-first development with strict evidence requirements. Cross-platform compatible (Windows, MacOS, Linux).
 
 ### teamwork
 

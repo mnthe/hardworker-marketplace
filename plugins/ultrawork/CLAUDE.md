@@ -7,29 +7,30 @@
 
 # ultrawork
 
-Verification-first development plugin with strict session isolation.
+Verification-first development plugin with evidence-based task completion.
 
-## Development Rules
+## File Structure
 
-### Document Synchronization
+- src/lib/types.js - JSDoc type definitions (@typedef)
+- src/lib/file-lock.js - Cross-platform file locking
+- src/lib/session-utils.js - Session management utilities
+- src/scripts/*.js - CLI scripts (12 files)
+- src/hooks/*.js - Lifecycle hooks (8 files)
 
-**When modifying ultrawork.md, you MUST also update the following files:**
+## No Build Step Required
 
-| File | Location | Role |
-|------|----------|------|
-| `ultrawork.md` | `skills/ultrawork.md` | Core skill definition |
-| `ultrawork-plan.md` | `commands/ultrawork-plan.md` | Planning phase command |
-| `ultrawork-exec.md` | `commands/ultrawork-exec.md` | Execution phase command |
-| `ultrawork` skill | `skills/ultrawork.md` | Skill implementation |
+Scripts run directly from source. No compilation needed.
 
-**Why this matters:**
-- These files have interdependencies; individual changes cause behavior inconsistencies
-- Example: Workflow change in ultrawork.md → command cannot invoke that workflow
+## Hook Configuration
 
-### Verification Checklist
+**IMPORTANT**: hooks.json must use explicit `node` prefix for cross-platform compatibility.
 
-When modifying ultrawork-related documents:
-- [ ] Check changes in ultrawork.md
-- [ ] Verify if ultrawork-plan.md needs sync
-- [ ] Verify if ultrawork-exec.md needs sync
-- [ ] Verify if skills/ultrawork.md needs sync
+```json
+// WRONG - shebang doesn't work on Windows
+"command": "${CLAUDE_PLUGIN_ROOT}/src/hooks/stop-hook.js"
+
+// CORRECT - explicit node invocation
+"command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/stop-hook.js"
+```
+
+Hook paths: `src/hooks/*.js`

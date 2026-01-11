@@ -23,11 +23,10 @@ plugins/{plugin-name}/
 │   └── worker/
 │       └── AGENT.md
 ├── scripts/             # Implementation scripts
-│   ├── session-get.sh   # Bash version
-│   └── session-get.js   # Node.js version
+│   └── session-get.js   # Node.js implementation
 ├── hooks/               # Lifecycle hooks
 │   ├── hooks.json       # Hook configuration
-│   └── post-tool.sh     # Hook implementation
+│   └── post-tool.js     # Hook implementation
 ├── skills/              # Skill definitions (optional)
 │   └── skill.md
 ├── CLAUDE.md            # Plugin context (REQUIRED)
@@ -38,13 +37,13 @@ All paths shown are mandatory unless marked optional.
 
 ### Core Components
 
-| Component | Format | Purpose |
-|-----------|--------|---------|
-| plugin.json | JSON | Plugin metadata, version, entry points |
-| Commands | Markdown | User-facing command definitions |
-| Agents | Markdown | AI agent role specifications |
-| Scripts | Bash/JS | Implementation logic |
-| Hooks | JSON + scripts | Lifecycle automation |
+| Component   | Format         | Purpose                                |
+| ----------- | -------------- | -------------------------------------- |
+| plugin.json | JSON           | Plugin metadata, version, entry points |
+| Commands    | Markdown       | User-facing command definitions        |
+| Agents      | Markdown       | AI agent role specifications           |
+| Scripts     | JavaScript     | Implementation logic                   |
+| Hooks       | JSON + scripts | Lifecycle automation                   |
 
 ## Creating Your First Plugin
 
@@ -177,48 +176,7 @@ Agent files must include:
 
 Scripts handle state management and coordination.
 
-File: `plugins/myplugin/scripts/session-create.sh` (Bash version)
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Parameter parsing
-SESSION_ID=""
-GOAL=""
-
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --session-id) SESSION_ID="$2"; shift 2 ;;
-        --goal) GOAL="$2"; shift 2 ;;
-        *) shift ;;
-    esac
-done
-
-# Validation
-[[ -z "$SESSION_ID" ]] && { echo "Error: --session-id required" >&2; exit 1; }
-[[ -z "$GOAL" ]] && { echo "Error: --goal required" >&2; exit 1; }
-
-# Create session directory
-SESSION_DIR="$HOME/.claude/myplugin/sessions/$SESSION_ID"
-mkdir -p "$SESSION_DIR"
-
-# Create session.json
-cat > "$SESSION_DIR/session.json" <<EOF
-{
-  "id": "$SESSION_ID",
-  "goal": "$GOAL",
-  "phase": "planning",
-  "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "tasks": []
-}
-EOF
-
-# Output session path
-echo "$SESSION_DIR"
-```
-
-File: `plugins/myplugin/scripts/session-create.js` (Node.js version)
+File: `plugins/myplugin/scripts/session-create.js`
 
 ```javascript
 #!/usr/bin/env node
@@ -273,8 +231,7 @@ console.log(sessionDir);
 ```
 
 Script requirements:
-- Shebang line (`#!/usr/bin/env bash` or `#!/usr/bin/env node`)
-- Strict mode (`set -euo pipefail` for Bash)
+- Shebang line (`#!/usr/bin/env node`)
 - Flag-based parameter parsing
 - Input validation with error messages to stderr
 - JSON output for structured data
@@ -299,7 +256,7 @@ File: `plugins/myplugin/hooks/hooks.json`
       "hooks": [
         {
           "type": "command",
-          "command": "./hooks/collect-evidence.sh"
+          "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/collect-evidence.js"
         }
       ]
     }
@@ -311,29 +268,41 @@ This hook runs after every Bash tool invocation.
 
 ### Hook Implementation
 
-File: `plugins/myplugin/hooks/collect-evidence.sh`
+File: `plugins/myplugin/hooks/collect-evidence.js`
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
+```javascript
+#!/usr/bin/env node
 
-# Read tool result from stdin
-TOOL_RESULT=$(cat)
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
-# Extract exit code
-EXIT_CODE=$(echo "$TOOL_RESULT" | jq -r '.exit_code // 0')
+// Read tool result from stdin
+let input = '';
+process.stdin.on('data', chunk => { input += chunk; });
 
-# Only record non-zero exits
-if [[ "$EXIT_CODE" -ne 0 ]]; then
-    # Append to evidence file
-    SESSION_DIR=$(cat "$HOME/.claude/myplugin/current-session" 2>/dev/null || echo "")
-    if [[ -n "$SESSION_DIR" ]]; then
-        echo "Command failed with exit code $EXIT_CODE" >> "$SESSION_DIR/evidence.log"
-    fi
-fi
+process.stdin.on('end', () => {
+  try {
+    const toolResult = JSON.parse(input);
+    const exitCode = toolResult.exit_code || 0;
 
-# Output unmodified result
-echo "$TOOL_RESULT"
+    // Only record non-zero exits
+    if (exitCode !== 0) {
+      const sessionFile = path.join(os.homedir(), '.claude', 'myplugin', 'current-session');
+      if (fs.existsSync(sessionFile)) {
+        const sessionDir = fs.readFileSync(sessionFile, 'utf8').trim();
+        const evidenceLog = path.join(sessionDir, 'evidence.log');
+        fs.appendFileSync(evidenceLog, `Command failed with exit code ${exitCode}\n`);
+      }
+    }
+
+    // Output unmodified result
+    console.log(input);
+  } catch (err) {
+    // Pass through on error
+    console.log(input);
+  }
+});
 ```
 
 Hook requirements:
@@ -345,12 +314,12 @@ Hook requirements:
 
 ### Available Hook Events
 
-| Tool | Event | When |
-|------|-------|------|
-| Bash | after | After command execution |
-| Read | after | After file read |
-| Write | after | After file write |
-| Edit | after | After file edit |
+| Tool  | Event | When                    |
+| ----- | ----- | ----------------------- |
+| Bash  | after | After command execution |
+| Read  | after | After file read         |
+| Write | after | After file write        |
+| Edit  | after | After file edit         |
 
 ## State Management
 
@@ -394,17 +363,8 @@ Required fields:
 
 Use file locking for concurrent writes:
 
-```bash
-# Bash version
-(
-  flock -x 200
-  jq '.phase = "executing"' session.json > session.tmp
-  mv session.tmp session.json
-) 200>session.lock
-```
-
 ```javascript
-// Node.js version with file-lock.js utility
+// Use file-lock.js utility for safe concurrent access
 const { withLock } = require('./lib/file-lock.js');
 
 await withLock('session.lock', async () => {
@@ -421,12 +381,6 @@ This project uses manual testing procedures (no automated test framework).
 ### Script Validation
 
 ```bash
-# Syntax check all scripts
-bash -n plugins/myplugin/scripts/*.sh
-
-# shellcheck (if available)
-shellcheck plugins/myplugin/scripts/*.sh
-
 # Node.js syntax check
 node --check plugins/myplugin/scripts/*.js
 ```
@@ -473,23 +427,11 @@ Test these scenarios:
 
 ### Semantic Versioning Rules
 
-| Change Type | Version Bump | Examples |
-|-------------|--------------|----------|
-| Bug fix | Patch (0.0.x) | Script error fix |
-| New feature | Minor (0.x.0) | Add new command |
+| Change Type     | Version Bump  | Examples            |
+| --------------- | ------------- | ------------------- |
+| Bug fix         | Patch (0.0.x) | Script error fix    |
+| New feature     | Minor (0.x.0) | Add new command     |
 | Breaking change | Major (x.0.0) | Change state format |
-
-### Dual-Version Sync
-
-If creating both Bash and Node.js versions (like ultrawork/ultrawork-js), keep versions synchronized:
-
-```bash
-# Verify version sync
-diff <(jq -r '.version' plugins/myplugin/.claude-plugin/plugin.json) \
-     <(jq -r '.version' plugins/myplugin-js/.claude-plugin/plugin.json)
-```
-
-Update both `plugin.json` files simultaneously when bumping versions.
 
 ### Marketplace Registration
 
@@ -526,34 +468,33 @@ Use concrete facts, not speculation:
 
 ### Error Handling
 
-```bash
-# Always validate inputs
-[[ -z "${REQUIRED_VAR:-}" ]] && { echo "Error: missing required parameter" >&2; exit 1; }
+```javascript
+// Always validate inputs
+if (!args['required-param']) {
+  console.error('Error: missing required parameter');
+  process.exit(1);
+}
 
-# Check command success
-if ! some_command; then
-    echo "Error: command failed" >&2
-    exit 1
-fi
+// Check command success
+try {
+  await someCommand();
+} catch (err) {
+  console.error('Error: command failed:', err.message);
+  process.exit(1);
+}
 ```
 
 ### Cross-Platform Paths
 
 ```javascript
-// Node.js: Use path.join()
+// Use path.join() for cross-platform compatibility
 const sessionPath = path.join(os.homedir(), '.claude', 'myplugin', 'sessions', id);
-
-// Bash: Use forward slashes
-SESSION_PATH="$HOME/.claude/myplugin/sessions/$ID"
 ```
 
 ### JSON Manipulation
 
-```bash
-# Bash: Use jq
-jq '.phase = "complete"' session.json > session.tmp && mv session.tmp session.json
-
-# Node.js: Native JSON
+```javascript
+// Use native JSON parsing and stringification
 const data = JSON.parse(fs.readFileSync('session.json', 'utf8'));
 data.phase = 'complete';
 fs.writeFileSync('session.json', JSON.stringify(data, null, 2));
@@ -584,8 +525,8 @@ watch -n 1 jq '.' ~/.claude/myplugin/sessions/{id}/session.json
 ### Trace Script Execution
 
 ```bash
-# Bash: Add -x flag
-bash -x plugins/myplugin/scripts/session-create.sh --session-id test --goal "test"
+# Node.js: Use --inspect flag for debugging
+node --inspect plugins/myplugin/scripts/session-create.js --session-id test --goal "test"
 ```
 
 ## Publishing Plugins
@@ -610,4 +551,4 @@ bash -x plugins/myplugin/scripts/session-create.sh --session-id test --goal "tes
 
 - Repository: https://github.com/mnthe/hardworker-marketplace
 - Plugin specification: See `/CLAUDE.md` in repository root
-- Example plugins: ultrawork, ultrawork-js, teamwork
+- Example plugins: ultrawork, ultrawork, teamwork

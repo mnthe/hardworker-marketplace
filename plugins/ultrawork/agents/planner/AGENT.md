@@ -18,7 +18,7 @@ description: |
   </example>
 model: inherit
 color: blue
-tools: ["Read", "Write", "Edit", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/task-*.sh:*)", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/session-*.sh:*)", "Glob", "Grep"]
+tools: ["Read", "Write", "Edit", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/task-*.js:*)", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/session-*.js:*)", "Glob", "Grep"]
 ---
 
 # Planner Agent (Auto Mode)
@@ -65,17 +65,17 @@ Options:
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
 
 # Get session directory path
-SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
+SESSION_DIR=$($SCRIPTS/session-get.js --session {SESSION_ID} --dir)
 
 # Get session data
-$SCRIPTS/session-get.sh --session {SESSION_ID}               # Full JSON
-$SCRIPTS/session-get.sh --session {SESSION_ID} --field goal  # Specific field
+$SCRIPTS/session-get.js --session {SESSION_ID}               # Full JSON
+$SCRIPTS/session-get.js --session {SESSION_ID} --field goal  # Specific field
 
 # Update session
-$SCRIPTS/session-update.sh --session {SESSION_ID} --phase EXECUTION
+$SCRIPTS/session-update.js --session {SESSION_ID} --phase EXECUTION
 
 # Create tasks
-$SCRIPTS/task-create.sh --session {SESSION_ID} --id "1" --subject "..." ...
+$SCRIPTS/task-create.js --session {SESSION_ID} --id "1" --subject "..." ...
 ```
 
 ---
@@ -99,8 +99,8 @@ Classify the work intent to adjust your approach:
 ### Phase 1: Read Context
 
 ```bash
-SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
-$SCRIPTS/session-get.sh --session {SESSION_ID}
+SESSION_DIR=$($SCRIPTS/session-get.js --session {SESSION_ID} --dir)
+$SCRIPTS/session-get.js --session {SESSION_ID}
 ```
 
 Read exploration files with Read tool:
@@ -120,7 +120,7 @@ For each decision point:
 **IMPORTANT: Design documents go to PROJECT directory (NOT session directory).**
 
 ```bash
-WORKING_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --field working_dir)
+WORKING_DIR=$($SCRIPTS/session-get.js --session {SESSION_ID} --field working_dir)
 mkdir -p "$WORKING_DIR/docs/plans"
 ```
 
@@ -148,7 +148,7 @@ Write comprehensive design document with:
 **Task Creation:**
 
 ```bash
-$SCRIPTS/task-create.sh --session {SESSION_ID} \
+$SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "1" \
   --subject "Brief title" \
   --description "What to implement, files to modify" \
@@ -156,7 +156,7 @@ $SCRIPTS/task-create.sh --session {SESSION_ID} \
   --criteria "criterion1|criterion2"
 
 # With dependencies
-$SCRIPTS/task-create.sh --session {SESSION_ID} \
+$SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "2" \
   --subject "Second task" \
   --blocked-by "1" \
@@ -169,13 +169,13 @@ $SCRIPTS/task-create.sh --session {SESSION_ID} \
 **Update session phase:**
 
 ```bash
-$SCRIPTS/session-update.sh --session {SESSION_ID} --phase EXECUTION
+$SCRIPTS/session-update.js --session {SESSION_ID} --phase EXECUTION
 ```
 
 **Always include verify task:**
 
 ```bash
-$SCRIPTS/task-create.sh --session {SESSION_ID} \
+$SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "verify" \
   --subject "[VERIFY] Final verification" \
   --description "Verify all success criteria met" \

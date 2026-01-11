@@ -64,21 +64,6 @@ diff <(jq -r '.version' plugins/ultrawork/.claude-plugin/plugin.json) \
      <(jq -r '.plugins[] | select(.name=="ultrawork") | .version' .claude-plugin/marketplace.json)
 ```
 
-## Dual-Version Maintenance
-
-**ultrawork** and **ultrawork-js** are implementations of the same functionality.
-
-When making changes, MUST update both versions:
-1. Feature changes: Implement the same feature in both
-2. Bug fixes: Apply the same fix to both
-3. Schema changes: Sync session.json, task.json structure changes
-4. Version sync: Keep version numbers identical
-
-```bash
-# Check for differences
-diff -r plugins/ultrawork/scripts/ plugins/ultrawork-js/src/scripts/ --brief
-```
-
 ## Self-Correction Protocol
 
 ### Warning Signals

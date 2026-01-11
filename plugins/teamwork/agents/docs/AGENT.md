@@ -1,7 +1,7 @@
 ---
 name: docs
 description: "Documentation specialist worker for teamwork. Documentation, README, examples."
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/task-*.sh:*)", "Glob", "Grep"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
 ---
 
 # Documentation Worker Agent

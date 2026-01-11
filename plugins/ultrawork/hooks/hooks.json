@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-start-hook.sh"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/session-start-hook.js"
           }
         ]
       }
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-context-hook.sh"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/session-context-hook.js"
           }
         ]
       }
@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/agent-lifecycle-tracking.sh"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/agent-lifecycle-tracking.js"
           }
         ]
       },
@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/gate-enforcement.sh"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/gate-enforcement.js"
           }
         ]
       }
@@ -49,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use-evidence.sh"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/post-tool-use-evidence.js"
           }
         ]
       },
@@ -58,7 +58,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/gate-status-notification.sh"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/gate-status-notification.js"
           }
         ]
       }
@@ -69,7 +69,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/subagent-stop-tracking.sh"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/subagent-stop-tracking.js"
           }
         ]
       }
@@ -80,7 +80,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/stop-hook.js"
           }
         ]
       }

@@ -1,6 +1,6 @@
 # teamwork
 
-Multi-session collaboration plugin for Claude Code with role-based workers.
+Cross-platform JavaScript/Node.js version of the teamwork plugin for Claude Code. Uses JavaScript with JSDoc type annotations (no TypeScript build step required).
 
 ## Features
 
@@ -8,7 +8,7 @@ Multi-session collaboration plugin for Claude Code with role-based workers.
 - File-per-task storage
 - Continuous loop mode (hook-based auto-continue)
 - Dashboard status overview
-- Works with vanilla Claude Code
+- **Cross-platform**: Works on Windows, MacOS, and Linux
 
 ## Installation
 
@@ -92,6 +92,11 @@ Tasks completed in parallel
 4. Loop continues until no more tasks
 
 State is tracked per-terminal in `~/.claude/teamwork/.loop-state/`
+
+## Requirements
+
+- Node.js 18+ (bundled with Claude Code)
+- No external dependencies
 
 ## License
 
