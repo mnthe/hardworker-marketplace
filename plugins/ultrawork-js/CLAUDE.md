@@ -28,3 +28,17 @@ Node.js cross-platform version of ultrawork plugin.
 ## No Build Step Required
 
 Scripts run directly from source. No compilation needed.
+
+## Hook Configuration
+
+**IMPORTANT**: hooks.json must use explicit `node` prefix for cross-platform compatibility.
+
+```json
+// WRONG - shebang doesn't work on Windows
+"command": "${CLAUDE_PLUGIN_ROOT}/src/hooks/stop-hook.js"
+
+// CORRECT - explicit node invocation
+"command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/stop-hook.js"
+```
+
+Hook paths: `src/hooks/*.js` (NOT `hooks/*.sh` like the bash version)

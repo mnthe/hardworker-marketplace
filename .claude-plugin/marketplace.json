@@ -25,7 +25,7 @@
       "name": "ultrawork-js",
       "source": "./plugins/ultrawork-js",
       "description": "Node.js cross-platform version of ultrawork - strict verification-first development mode with session isolation",
-      "version": "0.8.1",
+      "version": "0.8.2",
       "author": {
         "name": "mnthe"
       },
