@@ -1,0 +1,20 @@
+{
+  "name": "knowledge-extraction",
+  "version": "0.1.0",
+  "description": "Collect insights from Claude sessions and extract them into reusable components (Skills, Commands, Agents, CLAUDE.md).",
+  "author": {
+    "name": "mnthe"
+  },
+  "keywords": [
+    "knowledge",
+    "insights",
+    "extraction",
+    "skills",
+    "learning",
+    "productivity"
+  ],
+  "license": "MIT",
+  "commands": "./commands/",
+  "agents": ["./agents/insight-extractor.md"],
+  "skills": "./skills/"
+}

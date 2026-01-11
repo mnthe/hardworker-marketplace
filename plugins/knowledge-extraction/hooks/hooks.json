@@ -1,0 +1,29 @@
+{
+  "description": "Knowledge Extraction plugin hooks for insight collection reminders",
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/check-insights.js",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/check-threshold.js",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}
