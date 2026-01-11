@@ -7,120 +7,124 @@ description: "This skill should be used when the user has a large, complex task 
 
 ## Overview
 
-Ultrawork enforces **verification-first development**:
-- No implementation without a plan
-- No completion claims without evidence
-- No partial work accepted
+Ultrawork enforces **verification-first development** - a strict mode where every completion claim requires concrete evidence.
+
+### Core Principles
+
+1. **No implementation without planning** - Explore codebase, design approach, decompose into tasks
+2. **No completion without evidence** - Every criterion needs proof (command output, test results)
+3. **No partial work accepted** - "Should work" or "basic implementation" triggers automatic rejection
+
+### Workflow Phases
+
+```
+PLANNING → EXECUTION → VERIFICATION → COMPLETE
+    ↑                        │
+    └── (Ralph Loop on fail) ←┘
+```
+
+| Phase | Description | Key Outputs |
+|-------|-------------|-------------|
+| **Planning** | Explore → Design → Task decomposition | design.md, tasks/*.json |
+| **Execution** | Workers implement tasks in parallel waves | Code changes, evidence |
+| **Verification** | Verifier audits ALL evidence against criteria | PASS/FAIL decision |
+
+---
 
 ## Activation
 
-See `/ultrawork` command for detailed usage and workflow.
+Start ultrawork with the `/ultrawork` command:
 
-Quick reference:
-```
+```bash
 /ultrawork "your goal"         # Interactive: asks questions, user approves plan
 /ultrawork --auto "your goal"  # Auto: decides autonomously, no confirmations
+/ultrawork --plan-only "goal"  # Planning only, no execution
 ```
 
----
+### Mode Selection
 
-## Examples
-
-### Example 1: Adding Authentication (Interactive)
-
-**Goal**: "Add OAuth authentication with Google"
-
-**Process**:
-1. **Exploration**: Discovers Next.js project, no existing auth
-2. **Planning Questions**:
-   - "Which auth method?" → User chooses "OAuth + Email"
-   - "Which library?" → User chooses "NextAuth.js"
-3. **Design Created**: Design document saved to project docs/
-4. **Tasks Generated**: 5 tasks with dependencies
-5. **Execution**: Workers implement in parallel
-6. **Verification**: Tests pass, OAuth flow works
-
-**Result**: Complete auth system with evidence.
-
-### Example 2: Refactoring Database Layer (Auto)
-
-**Goal**: "Migrate from direct SQL to Prisma ORM"
-
-**Process**:
-1. **Exploration**: Finds all SQL query locations
-2. **Planning**: Auto-decides on migration strategy (no user input)
-3. **Design**: Migration plan with rollback strategy
-4. **Tasks**: Schema definition → Migration scripts → Update queries → Tests
-5. **Execution**: Sequential migration with verification
-6. **Verification**: All queries work, tests pass
-
-**Result**: Complete migration with backward compatibility.
+| Mode | Best For | User Interaction |
+|------|----------|------------------|
+| **Interactive** (default) | Complex features, unclear requirements | Questions + approval |
+| **Auto** (`--auto`) | Well-defined tasks, CI/CD | None |
+| **Plan-only** (`--plan-only`) | Design review before implementation | Planning only |
 
 ---
 
-## When to Use Ultrawork
+## When to Use
 
 **USE ultrawork for:**
-- Multi-file implementations
-- Architecture changes
-- New features with unknowns
-- Refactoring with risk
+- Multi-file implementations (3+ files)
+- Architecture changes or refactoring
+- New features with design decisions
+- Work requiring verification trails
 
 **DON'T use ultrawork for:**
-- Single-file edits
-- Simple bug fixes
+- Single-file edits or bug fixes
 - Documentation updates
-- Quick questions
+- Quick questions or exploration
+- Tasks completable in < 5 minutes
 
 ---
 
 ## Zero Tolerance Rules
 
-**BLOCKED phrases (cannot claim completion with these):**
+Verification automatically **FAILS** if output contains blocked patterns.
 
-| Phrase | Why Blocked |
-|--------|-------------|
-| "should work now" | No evidence |
-| "basic implementation" | Incomplete |
-| "simplified version" | Partial work |
-| "you can extend this" | Not done |
-| "implementation complete" | Without evidence |
+See `references/blocked-patterns.md` for complete list.
 
-## Evidence Requirements
-
-| Claim | Required Evidence |
-|-------|-------------------|
-| "Tests pass" | Test command output |
-| "Build succeeds" | Build command output |
-| "Feature works" | Demo or test proving it |
-| "Bug fixed" | Before/after showing fix |
+**Common blocked phrases:**
+- "should work", "probably works"
+- "basic implementation", "simplified version"
+- "TODO", "FIXME", "not implemented"
 
 ---
 
-## Key Concepts
+## Evidence Requirements
 
-### Session Isolation
-- Each ultrawork session has its own directory
-- State tracked in session.json
-- Context preserved across exploration/planning/execution
+Every completion claim requires concrete proof.
 
-### Evidence Collection
-- Every completion claim requires proof
-- Tests must pass (with output)
-- Builds must succeed (with output)
-- Features must be demonstrated
+| Claim | Required Evidence |
+|-------|-------------------|
+| "Tests pass" | `npm test` output with exit code 0 |
+| "Build succeeds" | Build command output with exit code 0 |
+| "Feature works" | Demo, test output, or screenshot |
+| "Bug fixed" | Before/after comparison |
 
-### Task Dependencies
-- Tasks unblock automatically when dependencies complete
-- Workers execute in parallel waves
-- Verification always runs last
+See `references/verification-protocol.md` for detailed verification requirements.
+
+---
+
+## Session State
+
+Each session has isolated state in `~/.claude/ultrawork/sessions/{SESSION_ID}/`.
+
+See `references/state-schema.md` for complete schema documentation.
+
+**Key files:**
+- `session.json` - Phase, options, metadata
+- `context.json` - Exploration summaries
+- `exploration/*.md` - Detailed findings
+- `tasks/*.json` - Task definitions and evidence
 
 ---
 
 ## Related Commands
 
-- `/ultrawork-status` - Check current phase/progress
-- `/ultrawork-evidence` - View collected evidence
-- `/ultrawork-cancel` - Cancel active session
+| Command | Purpose |
+|---------|---------|
+| `/ultrawork-status` | Check current phase and progress |
+| `/ultrawork-evidence` | View collected evidence log |
+| `/ultrawork-cancel` | Cancel active session |
+| `/ultrawork-exec` | Execute existing plan |
+| `/ultrawork-plan` | Planning phase only |
 
-For detailed workflow, see `/ultrawork` command documentation.
+---
+
+## Additional Resources
+
+### Reference Files
+
+- **`references/blocked-patterns.md`** - Complete list of blocked phrases and why
+- **`references/verification-protocol.md`** - Detailed verification requirements
+- **`references/state-schema.md`** - Session and task JSON schemas
