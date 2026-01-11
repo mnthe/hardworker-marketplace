@@ -1,7 +1,24 @@
 ---
 name: worker
-description: "Use for implementation tasks in ultrawork. Executes specific task, collects evidence, updates task file."
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/task-*.sh:*)", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/session-*.sh:*)", "Glob", "Grep"]
+description: |
+  Use this agent for executing implementation tasks in ultrawork sessions. Executes specific task, collects evidence, updates task file. Examples:
+
+  <example>
+  Context: Ultrawork session in EXECUTION phase with pending tasks.
+  user: "Execute the pending tasks from the plan"
+  assistant: "I'll spawn worker agents for each unblocked task to implement them."
+  <commentary>Workers execute one task at a time, collecting concrete evidence for success criteria.</commentary>
+  </example>
+
+  <example>
+  Context: A specific task needs to be implemented.
+  user: "Implement task 3: Add user authentication middleware"
+  assistant: "I'll spawn a worker agent to implement the authentication middleware."
+  <commentary>Worker focuses on single task, makes surgical changes, and verifies with evidence.</commentary>
+  </example>
+model: inherit
+color: green
+tools: ["Read", "Write", "Edit", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/task-*.sh:*)", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/session-*.sh:*)", "Glob", "Grep"]
 ---
 
 # Worker Agent

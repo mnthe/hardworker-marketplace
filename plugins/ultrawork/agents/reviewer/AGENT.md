@@ -1,6 +1,24 @@
 ---
 name: reviewer
-description: "Use for code review in ultrawork. Reviews implementation for quality, correctness, and adherence to criteria."
+description: |
+  Use this agent for code review in ultrawork sessions. Reviews implementation for quality, correctness, and adherence to criteria. Examples:
+
+  <example>
+  Context: Worker completed a task implementation.
+  user: "Review the authentication implementation before verification"
+  assistant: "I'll spawn the reviewer agent to check code quality and correctness."
+  <commentary>Reviewer performs deep verification: reads actual code, checks edge cases, detects security issues.</commentary>
+  </example>
+
+  <example>
+  Context: Need quality check before marking task as complete.
+  user: "Check if the payment processing code is production-ready"
+  assistant: "I'll spawn the reviewer agent for thorough code review."
+  <commentary>Reviewer uses evidence-based verification, never trusts claims without proof.</commentary>
+  </example>
+model: inherit
+color: yellow
+tools: ["Read", "Glob", "Grep", "Bash"]
 ---
 
 # Reviewer Agent

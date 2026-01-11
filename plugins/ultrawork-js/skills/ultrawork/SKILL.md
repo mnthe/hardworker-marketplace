@@ -1,6 +1,6 @@
 ---
 name: ultrawork
-description: "For LARGE, COMPLEX tasks only. Suggest when: (1) Multi-file or multi-step implementation, (2) Major refactoring or architecture changes, (3) New feature spanning multiple components. NOT for: simple fixes, single-file edits, quick questions. Activates strict verification with planning, success criteria, and evidence collection."
+description: "This skill should be used when the user has a large, complex task requiring: (1) multi-file or multi-step implementation, (2) major refactoring or architecture changes, (3) new feature spanning multiple components. This skill should NOT be used for simple fixes, single-file edits, or quick questions. Activates strict verification with planning, success criteria, and evidence collection."
 ---
 
 # Ultrawork Mode

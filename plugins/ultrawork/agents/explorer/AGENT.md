@@ -1,8 +1,24 @@
 ---
 name: explorer
-description: "Use for fast codebase exploration in ultrawork. Gathers context, writes detailed findings to exploration/*.md, updates context.json summary."
+description: |
+  Use this agent for fast codebase exploration in ultrawork sessions. Gathers context, writes detailed findings to exploration/*.md, updates context.json summary. Examples:
+
+  <example>
+  Context: Ultrawork session started, need to understand the codebase before planning.
+  user: "Start ultrawork for adding authentication to this project"
+  assistant: "I'll spawn an explorer agent to analyze the codebase structure and existing patterns."
+  <commentary>Explorer runs first to gather context about project type, tech stack, and existing patterns before planning.</commentary>
+  </example>
+
+  <example>
+  Context: Planning phase needs specific information about a subsystem.
+  user: "The planner needs to understand how the database layer works"
+  assistant: "I'll spawn a targeted explorer to investigate the database implementation."
+  <commentary>Targeted exploration for specific areas when overview is insufficient.</commentary>
+  </example>
 model: haiku
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/context-*.sh:*)"]
+color: cyan
+tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/context-*.sh:*)"]
 ---
 
 # Explorer Agent

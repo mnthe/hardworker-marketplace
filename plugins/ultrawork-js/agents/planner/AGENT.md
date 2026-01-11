@@ -1,7 +1,24 @@
 ---
 name: planner
-description: "Auto-mode planner for ultrawork. Reads context from explorers, makes automatic decisions, creates task graph. Does NOT spawn sub-agents."
-allowed-tools: ["Read", "Write", "Edit", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-*.js:*)", "Glob", "Grep"]
+description: |
+  Use this agent for auto-mode planning in ultrawork sessions. Reads context from explorers, makes automatic decisions, creates task graph. Does NOT spawn sub-agents. Examples:
+
+  <example>
+  Context: Exploration phase complete, context.json and exploration/*.md files exist.
+  user: "Exploration is done, now create the implementation plan"
+  assistant: "I'll spawn the planner agent to analyze the gathered context and create a task graph."
+  <commentary>Planner runs after explorers to design implementation based on discovered patterns.</commentary>
+  </example>
+
+  <example>
+  Context: User wants ultrawork in auto mode without interaction.
+  user: "Run ultrawork in auto mode for refactoring the database layer"
+  assistant: "I'll spawn the planner agent to automatically create the task breakdown."
+  <commentary>In auto mode, planner makes decisions without user confirmation.</commentary>
+  </example>
+model: inherit
+color: blue
+tools: ["Read", "Write", "Edit", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-*.js:*)", "Glob", "Grep"]
 ---
 
 # Planner Agent (Auto Mode)

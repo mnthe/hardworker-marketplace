@@ -1,6 +1,6 @@
 ---
 name: planning
-description: "Design exploration and task decomposition protocol. Used by orchestrator (interactive) and planner agent (auto)."
+description: "This skill should be used when designing implementation plans, decomposing complex work into tasks, or making architectural decisions during ultrawork sessions. Used by orchestrator (interactive mode) and planner agent (auto mode)."
 ---
 
 # Planning Protocol

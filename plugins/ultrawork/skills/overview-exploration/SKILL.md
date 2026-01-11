@@ -1,6 +1,6 @@
 ---
 name: overview-exploration
-description: "Quick project overview exploration - direct execution without agent spawn. Use at the start of ultrawork sessions."
+description: "This skill should be used when performing quick project overview exploration at the start of ultrawork sessions. Executes directly without agent spawn for fast codebase understanding."
 ---
 
 # Overview Exploration Skill

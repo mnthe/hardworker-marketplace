@@ -1,7 +1,24 @@
 ---
 name: verifier
-description: "Use for verification phase in ultrawork. Validates evidence, checks success criteria, scans for blocked patterns, runs final tests."
-allowed-tools: ["Read", "Edit", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/task-*.sh:*)", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/session-*.sh:*)", "Glob", "Grep"]
+description: |
+  Use this agent for verification phase in ultrawork sessions. Validates evidence, checks success criteria, scans for blocked patterns, runs final tests. Examples:
+
+  <example>
+  Context: All implementation tasks completed, ready for final verification.
+  user: "Verify that all success criteria are met"
+  assistant: "I'll spawn the verifier agent to audit evidence and run final tests."
+  <commentary>Verifier is the quality gatekeeper with zero tolerance for speculation.</commentary>
+  </example>
+
+  <example>
+  Context: Need to check if ultrawork session can be marked complete.
+  user: "Check if we're ready to complete the ultrawork session"
+  assistant: "I'll spawn the verifier agent to validate all criteria and scan for blocked patterns."
+  <commentary>Verifier checks every criterion, runs verification commands, and makes PASS/FAIL determination.</commentary>
+  </example>
+model: inherit
+color: magenta
+tools: ["Read", "Edit", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/task-*.sh:*)", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/session-*.sh:*)", "Glob", "Grep"]
 ---
 
 # Verifier Agent
