@@ -7,10 +7,9 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 const {
-  getTeamworkBase,
   getProjectDir,
-  getProjectFile,
 } = require('../lib/project-utils.js');
 
 // ============================================================================
@@ -25,153 +24,11 @@ const {
  * @property {boolean} help
  */
 
-/**
- * Show help message
- * @returns {void}
- */
-function showHelp() {
-  console.log(`\
-═══════════════════════════════════════════════════════════
- TEAMWORK - Multi-Session Collaboration Mode
-═══════════════════════════════════════════════════════════
-
-USAGE:
-  /teamwork [OPTIONS] <GOAL...>
-
-ARGUMENTS:
-  GOAL...    Project goal (can be multiple words without quotes)
-
-OPTIONS:
-  --project NAME    Override project name (default: git repo name)
-  --team NAME       Override sub-team name (default: branch name)
-  -h, --help        Show this help message
-
-───────────────────────────────────────────────────────────
- WHAT IT DOES
-───────────────────────────────────────────────────────────
-
-Teamwork enables multi-session collaboration:
-
-  ✓ File-per-task storage (no conflicts)
-  ✓ Role-based workers (frontend, backend, etc.)
-  ✓ Parallel execution across terminals
-  ✓ Dashboard status view
-
-───────────────────────────────────────────────────────────
- WORKFLOW
-───────────────────────────────────────────────────────────
-
-  1. COORDINATOR    Create project and tasks
-                    → Analyze goal
-                    → Break down work
-                    → Assign roles
-
-  2. WORKERS        Claim and complete tasks
-                    → Each terminal = one worker
-                    → Concurrent execution
-                    → Evidence collection
-
-  3. MONITOR        Track progress
-                    → Dashboard view
-                    → By-role breakdown
-                    → Active workers
-
-───────────────────────────────────────────────────────────
- EXAMPLES
-───────────────────────────────────────────────────────────
-
-  Basic usage:
-    /teamwork build a payment processing system
-
-  Override project:
-    /teamwork --project payments add checkout flow
-
-  Override sub-team:
-    /teamwork --team sprint-5 implement user stories
-
-───────────────────────────────────────────────────────────
- RELATED COMMANDS
-───────────────────────────────────────────────────────────
-
-  /teamwork-worker        Claim and complete tasks
-  /teamwork-worker --loop Continuous worker mode
-  /teamwork-status        Check project status
-
-───────────────────────────────────────────────────────────
- DIRECTORY STRUCTURE
-───────────────────────────────────────────────────────────
-
-  ~/.claude/teamwork/{project}/{sub-team}/
-    ├── project.json        # Project metadata
-    └── tasks/
-        ├── 1.json          # Task files
-        ├── 2.json
-        └── ...
-
-═══════════════════════════════════════════════════════════`);
-}
-
-/**
- * Parse command-line arguments
- * @param {string[]} argv - Process argv array
- * @returns {CliArgs} Parsed arguments
- */
-function parseArgs(argv) {
-  /** @type {CliArgs} */
-  const args = {
-    goal: '',
-    project: '',
-    team: '',
-    help: false,
-  };
-
-  /** @type {string[]} */
-  const goalParts = [];
-  let i = 2; // Skip 'bun' and script path
-
-  while (i < argv.length) {
-    const arg = argv[i];
-
-    switch (arg) {
-      case '-h':
-      case '--help':
-        args.help = true;
-        i++;
-        break;
-
-      case '--project': {
-        const value = argv[i + 1];
-        if (!value) {
-          console.error('❌ Error: --project requires a name argument');
-          process.exit(1);
-        }
-        args.project = value;
-        i += 2;
-        break;
-      }
-
-      case '--team': {
-        const value = argv[i + 1];
-        if (!value) {
-          console.error('❌ Error: --team requires a name argument');
-          process.exit(1);
-        }
-        args.team = value;
-        i += 2;
-        break;
-      }
-
-      default:
-        // Positional argument (goal part)
-        goalParts.push(arg);
-        i++;
-        break;
-    }
-  }
-
-  args.goal = goalParts.join(' ');
-  return args;
-}
+const ARG_SPEC = {
+  '--project': { key: 'project', alias: '-p' },
+  '--team': { key: 'team', alias: '-t' },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 /**
  * Validate arguments
@@ -238,22 +95,48 @@ function detectTeamName() {
  * @returns {void}
  */
 function main() {
-  const args = parseArgs(process.argv);
-
-  // Show help if requested
-  if (args.help) {
-    showHelp();
+  // Check for help flag first
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('setup-teamwork.js', ARG_SPEC, 'Initialize teamwork project structure for multi-session collaboration'));
     process.exit(0);
   }
 
+  const args = parseArgs(ARG_SPEC);
+
+  // Collect positional arguments for goal
+  const goalParts = [];
+  for (let i = 2; i < process.argv.length; i++) {
+    const arg = process.argv[i];
+    // Skip flag arguments and their values
+    if (arg === '--project' || arg === '-p' || arg === '--team' || arg === '-t') {
+      i++; // Skip next value
+      continue;
+    }
+    if (arg === '--help' || arg === '-h') {
+      continue;
+    }
+    // Collect positional arg
+    goalParts.push(arg);
+  }
+  const goal = goalParts.join(' ');
+
+  // Create args object with goal
+  /** @type {CliArgs} */
+  const fullArgs = {
+    goal,
+    project: args.project || '',
+    team: args.team || '',
+    help: args.help || false
+  };
+
   // Validate arguments
-  validateArgs(args);
+  validateArgs(fullArgs);
 
   // Detect project name
-  const project = args.project || detectProjectName();
+  const project = fullArgs.project || detectProjectName();
 
   // Detect team name
-  const team = args.team || detectTeamName();
+  const team = fullArgs.team || detectTeamName();
 
   // Create directory structure
   const teamworkDir = getProjectDir(project, team);
@@ -273,7 +156,7 @@ function main() {
 
  Project: ${project}
  Sub-team: ${team}
- Goal: ${args.goal}
+ Goal: ${goal}
  Started: ${timestamp}
 
 ───────────────────────────────────────────────────────────
@@ -295,7 +178,7 @@ function main() {
 TEAMWORK_DIR=${teamworkDir}
 PROJECT=${project}
 SUB_TEAM=${team}
-GOAL=${args.goal}`);
+GOAL=${goal}`);
 }
 
 // Run main and handle errors

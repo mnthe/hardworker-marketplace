@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const { getSessionDir, resolveSessionId } = require('../lib/session-utils.js');
 const { acquireLock, releaseLock } = require('../lib/file-lock.js');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -29,47 +30,13 @@ const { acquireLock, releaseLock } = require('../lib/file-lock.js');
  * @property {boolean} [help]
  */
 
-/**
- * Parse command-line arguments
- * @param {string[]} argv - Process argv array
- * @returns {ParsedArgs} Parsed arguments
- */
-function parseArgs(argv) {
-  /** @type {ParsedArgs} */
-  const args = {};
-
-  for (let i = 2; i < argv.length; i++) {
-    const arg = argv[i];
-    const next = argv[i + 1];
-
-    switch (arg) {
-      case '--session':
-        args.session = next;
-        i++;
-        break;
-      case '--task-id':
-      case '--task':
-      case '--id':
-        args.id = next;
-        i++;
-        break;
-      case '--status':
-        args.status = /** @type {TaskStatus} */ (next);
-        i++;
-        break;
-      case '--add-evidence':
-        args.addEvidence = next;
-        i++;
-        break;
-      case '-h':
-      case '--help':
-        args.help = true;
-        break;
-    }
-  }
-
-  return args;
-}
+const ARG_SPEC = {
+  '--session': { key: 'session', alias: '-s', required: true },
+  '--task-id': { key: 'id', alias: '-t', required: true },
+  '--status': { key: 'status', alias: '-S' },
+  '--add-evidence': { key: 'addEvidence', alias: '-e' },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Main Logic
@@ -80,20 +47,13 @@ function parseArgs(argv) {
  * @returns {Promise<void>}
  */
 async function main() {
-  const args = parseArgs(process.argv);
-
-  // Handle help
-  if (args.help) {
-    console.log('Usage: task-update.js --session <ID> --task-id <id> [--status open|resolved] [--add-evidence "..."]');
-    console.log('  Aliases: --task-id, --task, --id (all accepted)');
+  // Check for help flag first (before validation)
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('task-update.js', ARG_SPEC, 'Update task status and add evidence'));
     process.exit(0);
   }
 
-  // Validate required arguments
-  if (!args.session || !args.id) {
-    console.error('Error: --session and --task-id required (aliases: --task, --id)');
-    process.exit(1);
-  }
+  const args = parseArgs(ARG_SPEC);
 
   try {
     // Validate session exists

@@ -7,12 +7,11 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 const {
   getProjectDir,
-  getProjectFile,
   getTasksDir,
   projectExists,
-  listTasks,
 } = require('../lib/project-utils.js');
 
 // ============================================================================
@@ -33,156 +32,13 @@ const {
  * @property {boolean} help
  */
 
-/**
- * Show help message
- * @returns {void}
- */
-function showHelp() {
-  console.log(`\
-═══════════════════════════════════════════════════════════
- TEAMWORK WORKER - Claim and Complete Tasks
-═══════════════════════════════════════════════════════════
-
-USAGE:
-  /teamwork-worker [OPTIONS]
-
-OPTIONS:
-  --project NAME    Override project name (default: git repo name)
-  --team NAME       Override sub-team name (default: branch name)
-  --role ROLE       Only claim tasks with this role
-  --loop            Continuous mode (keep claiming tasks)
-  -h, --help        Show this help message
-
-───────────────────────────────────────────────────────────
- ROLES
-───────────────────────────────────────────────────────────
-
-  frontend    UI, components, styling
-  backend     API, services, database
-  test        Tests, fixtures, mocks
-  devops      CI/CD, deployment
-  docs        Documentation
-  security    Auth, permissions
-  review      Code review
-
-───────────────────────────────────────────────────────────
- EXAMPLES
-───────────────────────────────────────────────────────────
-
-  One-shot mode (complete one task):
-    /teamwork-worker
-
-  Continuous mode (keep working):
-    /teamwork-worker --loop
-
-  Role-specific:
-    /teamwork-worker --role frontend
-    /teamwork-worker --role backend --loop
-
-  Specific project:
-    /teamwork-worker --project myapp --team feature-x
-
-───────────────────────────────────────────────────────────
- HOW IT WORKS
-───────────────────────────────────────────────────────────
-
-  1. Find an open, unblocked task
-  2. Claim it (mark as owned)
-  3. Complete the work
-  4. Collect evidence
-  5. Mark as resolved
-
-  In --loop mode, repeat until no tasks remain.
-
-═══════════════════════════════════════════════════════════`);
-}
-
-/**
- * Valid worker roles
- * @type {Role[]}
- */
-const VALID_ROLES = ['frontend', 'backend', 'devops', 'test', 'docs', 'security', 'review', 'worker'];
-
-/**
- * Parse command-line arguments
- * @param {string[]} argv - Process argv array
- * @returns {CliArgs} Parsed arguments
- */
-function parseArgs(argv) {
-  /** @type {CliArgs} */
-  const args = {
-    project: '',
-    team: '',
-    role: null,
-    loop: false,
-    help: false,
-  };
-
-  let i = 2; // Skip 'bun' and script path
-
-  while (i < argv.length) {
-    const arg = argv[i];
-
-    switch (arg) {
-      case '-h':
-      case '--help':
-        args.help = true;
-        i++;
-        break;
-
-      case '--project': {
-        const value = argv[i + 1];
-        if (!value) {
-          console.error('❌ Error: --project requires a name argument');
-          process.exit(1);
-        }
-        args.project = value;
-        i += 2;
-        break;
-      }
-
-      case '--team': {
-        const value = argv[i + 1];
-        if (!value) {
-          console.error('❌ Error: --team requires a name argument');
-          process.exit(1);
-        }
-        args.team = value;
-        i += 2;
-        break;
-      }
-
-      case '--role': {
-        const value = argv[i + 1];
-        if (!value) {
-          console.error('❌ Error: --role requires a role name');
-          console.error('   Valid roles: frontend, backend, test, devops, docs, security, review');
-          process.exit(1);
-        }
-        if (!VALID_ROLES.includes(value)) {
-          console.error(`❌ Error: Invalid role "${value}"`);
-          console.error('   Valid roles: frontend, backend, test, devops, docs, security, review');
-          process.exit(1);
-        }
-        args.role = /** @type {Role} */ (value);
-        i += 2;
-        break;
-      }
-
-      case '--loop':
-        args.loop = true;
-        i++;
-        break;
-
-      default:
-        console.error(`⚠️  Unknown argument: ${arg}`);
-        i++;
-        break;
-    }
-  }
-
-  return args;
-}
+const ARG_SPEC = {
+  '--project': { key: 'project', alias: '-p' },
+  '--team': { key: 'team', alias: '-t' },
+  '--role': { key: 'role', alias: '-r' },
+  '--loop': { key: 'loop', alias: '-l', flag: true },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Git Detection
@@ -279,13 +135,13 @@ function countTasks(project, team, roleFilter) {
  * @returns {void}
  */
 function main() {
-  const args = parseArgs(process.argv);
-
-  // Show help if requested
-  if (args.help) {
-    showHelp();
+  // Check for help flag first
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('worker-setup.js', ARG_SPEC, 'Prepare teamwork worker environment and validate project exists'));
     process.exit(0);
   }
+
+  const args = parseArgs(ARG_SPEC);
 
   // Detect or use override for project name
   const project = args.project || detectProjectName();

@@ -5,6 +5,7 @@
  */
 
 const { updateSession, resolveSessionId, readSession } = require('../lib/session-utils.js');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // Phase Validation
@@ -12,6 +13,16 @@ const { updateSession, resolveSessionId, readSession } = require('../lib/session
 
 /** @type {import('../lib/types.js').Phase[]} */
 const VALID_PHASES = ['PLANNING', 'EXECUTION', 'VERIFICATION', 'COMPLETE', 'CANCELLED', 'FAILED', 'unknown'];
+
+const ARG_SPEC = {
+  '--session': { key: 'sessionId', alias: '-s', required: true },
+  '--phase': { key: 'phase', alias: '-p' },
+  '--plan-approved': { key: 'planApproved', alias: '-P', flag: true },
+  '--exploration-stage': { key: 'explorationStage', alias: '-e' },
+  '--iteration': { key: 'iteration', alias: '-i' },
+  '--quiet': { key: 'quiet', alias: '-q', flag: true },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 /**
  * Normalize phase value to canonical form
@@ -63,54 +74,8 @@ function normalizePhase(phase) {
  * @property {ExplorationStage} [explorationStage]
  * @property {number} [iteration]
  * @property {boolean} [quiet]
+ * @property {boolean} [help]
  */
-
-/**
- * Parse command-line arguments
- * @param {string[]} args - Process argv array
- * @returns {UpdateArgs} Parsed arguments
- */
-function parseArgs(args) {
-  /** @type {UpdateArgs} */
-  const result = {};
-
-  for (let i = 2; i < args.length; i++) {
-    const arg = args[i];
-
-    switch (arg) {
-      case '--session':
-        result.sessionId = args[++i];
-        break;
-      case '--phase':
-        result.phase = /** @type {Phase} */ (args[++i]);
-        break;
-      case '--plan-approved':
-        result.planApproved = true;
-        break;
-      case '--exploration-stage':
-        result.explorationStage = /** @type {ExplorationStage} */ (args[++i]);
-        break;
-      case '--iteration':
-        result.iteration = parseInt(args[++i], 10);
-        break;
-      case '-q':
-      case '--quiet':
-        result.quiet = true;
-        break;
-      case '-h':
-      case '--help':
-        console.log(
-          'Usage: session-update.js --session <ID> [--phase ...] [--plan-approved] [--exploration-stage STAGE] [--iteration N] [--quiet]'
-        );
-        console.log('');
-        console.log('Exploration stages: not_started, overview, analyzing, targeted, complete');
-        process.exit(0);
-        break;
-    }
-  }
-
-  return result;
-}
 
 // ============================================================================
 // Main Logic
@@ -121,12 +86,13 @@ function parseArgs(args) {
  * @returns {Promise<void>}
  */
 async function main() {
-  const args = parseArgs(process.argv);
-
-  if (!args.sessionId) {
-    console.error('Error: --session is required');
-    process.exit(1);
+  // Check for help flag first (before validation)
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('session-update.js', ARG_SPEC, 'Update session phase, plan approval, exploration stage, or iteration number'));
+    process.exit(0);
   }
+
+  const args = parseArgs(ARG_SPEC);
 
   try {
     // Validate session exists

@@ -11,6 +11,7 @@ const {
   resolveSessionId,
   readSession,
 } = require('../lib/session-utils.js');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -29,58 +30,13 @@ const {
  * @property {boolean} help
  */
 
-/**
- * Parse command-line arguments
- * @param {string[]} argv - Process argv array
- * @returns {CliArgs} Parsed arguments
- */
-function parseArgs(argv) {
-  /** @type {CliArgs} */
-  const args = {
-    getDir: false,
-    getFile: false,
-    help: false,
-  };
-
-  for (let i = 2; i < argv.length; i++) {
-    const arg = argv[i];
-
-    switch (arg) {
-      case '--session':
-        args.sessionId = argv[++i];
-        break;
-      case '--field':
-        args.field = argv[++i];
-        break;
-      case '--dir':
-        args.getDir = true;
-        break;
-      case '--file':
-        args.getFile = true;
-        break;
-      case '-h':
-      case '--help':
-        args.help = true;
-        break;
-    }
-  }
-
-  return args;
-}
-
-/**
- * Show help message
- * @returns {void}
- */
-function showHelp() {
-  console.log('Usage: session-get.js --session <ID> [--field phase|goal|options] [--dir] [--file]');
-  console.log('');
-  console.log('Options:');
-  console.log('  --session <ID>   Session ID (required)');
-  console.log('  --field <name>   Get specific field from session.json');
-  console.log('  --dir            Return session directory path');
-  console.log('  --file           Return session.json file path');
-}
+const ARG_SPEC = {
+  '--session': { key: 'sessionId', alias: '-s', required: true },
+  '--field': { key: 'field', alias: '-f' },
+  '--dir': { key: 'getDir', alias: '-d', flag: true },
+  '--file': { key: 'getFile', alias: '-F', flag: true },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Main Logic
@@ -112,19 +68,13 @@ function getFieldValue(obj, fieldPath) {
  * @returns {void}
  */
 function main() {
-  const args = parseArgs(process.argv);
-
-  // Show help
-  if (args.help) {
-    showHelp();
+  // Check for help flag first (before validation)
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('session-get.js', ARG_SPEC, 'Get session info, specific field, directory path, or file path'));
     process.exit(0);
   }
 
-  // Validate session ID
-  if (!args.sessionId) {
-    console.error('Error: --session <ID> required');
-    process.exit(1);
-  }
+  const args = parseArgs(ARG_SPEC);
 
   // Return session directory path
   if (args.getDir) {
@@ -178,4 +128,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { parseArgs, getFieldValue };
+module.exports = { getFieldValue };

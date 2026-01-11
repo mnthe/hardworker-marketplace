@@ -7,6 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getSessionDir } = require('../lib/session-utils.js');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // Types
@@ -31,74 +32,16 @@ const { getSessionDir } = require('../lib/session-utils.js');
  * @property {string[]} constraints
  */
 
-// ============================================================================
-// Argument Parsing
-// ============================================================================
-
-/**
- * @typedef {Object} Args
- * @property {string} sessionId
- * @property {string} explorerId
- * @property {string} hint
- * @property {string} file
- * @property {string} summary
- * @property {string} keyFiles
- * @property {string} patterns
- */
-
-/**
- * Parse command-line arguments
- * @returns {Args} Parsed arguments
- */
-function parseArgs() {
-  const args = process.argv.slice(2);
-  let sessionId = '';
-  let explorerId = '';
-  let hint = '';
-  let file = '';
-  let summary = '';
-  let keyFiles = '';
-  let patterns = '';
-
-  for (let i = 0; i < args.length; i++) {
-    switch (args[i]) {
-      case '--session':
-        sessionId = args[++i] || '';
-        break;
-      case '--explorer-id':
-        explorerId = args[++i] || '';
-        break;
-      case '--hint':
-        hint = args[++i] || '';
-        break;
-      case '--file':
-        file = args[++i] || '';
-        break;
-      case '--summary':
-        summary = args[++i] || '';
-        break;
-      case '--key-files':
-        keyFiles = args[++i] || '';
-        break;
-      case '--patterns':
-        patterns = args[++i] || '';
-        break;
-      case '-h':
-      case '--help':
-        console.log('Usage: context-add.js --session <ID> --explorer-id <id> --hint "..." --file "exploration/exp-1.md" --summary "..." --key-files "f1,f2" --patterns "p1,p2"');
-        console.log('');
-        console.log('Adds a lightweight explorer entry to context.json with link to detailed markdown.');
-        process.exit(0);
-    }
-  }
-
-  if (!sessionId || !explorerId) {
-    console.error('Error: --session and --explorer-id required');
-    process.exit(1);
-  }
-
-  return { sessionId, explorerId, hint, file, summary, keyFiles, patterns };
-}
+const ARG_SPEC = {
+  '--session': { key: 'sessionId', alias: '-s', required: true },
+  '--explorer-id': { key: 'explorerId', alias: '-e', required: true },
+  '--hint': { key: 'hint', alias: '-H', default: '' },
+  '--file': { key: 'file', alias: '-f', default: '' },
+  '--summary': { key: 'summary', alias: '-S', default: '' },
+  '--key-files': { key: 'keyFiles', alias: '-k', default: '' },
+  '--patterns': { key: 'patterns', alias: '-p', default: '' },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Helper Functions
@@ -153,7 +96,15 @@ function arraysEqual(arr1, arr2) {
  * @returns {void}
  */
 function main() {
-  const { sessionId, explorerId, hint, file, summary, keyFiles, patterns } = parseArgs();
+  // Check for help flag first (before validation)
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('context-add.js', ARG_SPEC, 'Add explorer summary to context.json with key files and patterns'));
+    process.exit(0);
+  }
+
+  const args = parseArgs(ARG_SPEC);
+
+  const { sessionId, explorerId, hint, file, summary, keyFiles, patterns } = args;
 
   try {
     // Get session directory

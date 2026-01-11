@@ -8,6 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getSessionDir } = require('../lib/session-utils.js');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -25,39 +26,12 @@ const { getSessionDir } = require('../lib/session-utils.js');
  * @property {boolean} [help]
  */
 
-/**
- * Parse command-line arguments
- * @param {string[]} argv - Process argv array
- * @returns {Args} Parsed arguments
- */
-function parseArgs(argv) {
-  /** @type {Args} */
-  const args = {};
-
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-
-    switch (arg) {
-      case '--session':
-        args.session = argv[++i];
-        break;
-      case '--task-id':
-      case '--task':
-      case '--id':
-        args.id = argv[++i];
-        break;
-      case '--field':
-        args.field = argv[++i];
-        break;
-      case '-h':
-      case '--help':
-        args.help = true;
-        break;
-    }
-  }
-
-  return args;
-}
+const ARG_SPEC = {
+  '--session': { key: 'session', alias: '-s', required: true },
+  '--task-id': { key: 'id', alias: '-t', required: true },
+  '--field': { key: 'field', alias: '-f' },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Field Extraction
@@ -105,31 +79,13 @@ function getNestedField(obj, fieldPath) {
  * @returns {void}
  */
 function main() {
-  const args = parseArgs(process.argv.slice(2));
-
-  // Handle help
-  if (args.help) {
-    console.log('Usage: task-get.js --session <ID> --task-id <id> [--field <field>]');
-    console.log('  Aliases: --task-id, --task, --id (all accepted)');
-    console.log('');
-    console.log('Options:');
-    console.log('  --session <ID>     Session ID (required)');
-    console.log('  --task-id <id>     Task ID (required, aliases: --task, --id)');
-    console.log('  --field <field>    Extract specific field (optional)');
-    console.log('  -h, --help         Show this help');
-    console.log('');
-    console.log('Examples:');
-    console.log('  task-get.js --session abc123 --task-id 1');
-    console.log('  task-get.js --session abc123 --task 1 --field status');
-    console.log('  task-get.js --session abc123 --id 1 --field evidence[0].type');
+  // Check for help flag first (before validation)
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('task-get.js', ARG_SPEC, 'Get single task details or extract specific field with dot notation'));
     process.exit(0);
   }
 
-  // Validate required args
-  if (!args.session || !args.id) {
-    console.error('Error: --session and --task-id required (aliases: --task, --id)');
-    process.exit(1);
-  }
+  const args = parseArgs(ARG_SPEC);
 
   try {
     // Get session directory

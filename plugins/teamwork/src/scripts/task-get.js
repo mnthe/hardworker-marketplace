@@ -7,6 +7,7 @@
  */
 
 const fs = require('fs');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 const { getTaskFile } = require('../lib/project-utils.js');
 
 // ============================================================================
@@ -20,64 +21,12 @@ const { getTaskFile } = require('../lib/project-utils.js');
  * @property {string} [id]
  */
 
-/**
- * Parse command-line arguments
- * @param {string[]} argv - Process argv array
- * @returns {CliArgs} Parsed arguments
- */
-function parseArgs(argv) {
-  /** @type {CliArgs} */
-  const args = {};
-
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-
-    switch (arg) {
-      case '--project':
-        args.project = argv[++i];
-        break;
-      case '--team':
-        args.team = argv[++i];
-        break;
-      case '--id':
-        args.id = argv[++i];
-        break;
-      case '-h':
-      case '--help':
-        console.log('Usage: task-get.js --project <name> --team <name> --id <task_id>');
-        process.exit(0);
-        break;
-    }
-  }
-
-  return args;
-}
-
-// ============================================================================
-// Validation
-// ============================================================================
-
-/**
- * Validate CLI arguments
- * @param {CliArgs} args - Arguments to validate
- * @returns {void}
- */
-function validateArgs(args) {
-  if (!args.project) {
-    console.error('Error: --project required');
-    process.exit(1);
-  }
-
-  if (!args.team) {
-    console.error('Error: --team required');
-    process.exit(1);
-  }
-
-  if (!args.id) {
-    console.error('Error: --id required');
-    process.exit(1);
-  }
-}
+const ARG_SPEC = {
+  '--project': { key: 'project', alias: '-p', required: true },
+  '--team': { key: 'team', alias: '-t', required: true },
+  '--id': { key: 'id', alias: '-i', required: true },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Task Retrieval
@@ -111,8 +60,14 @@ function getTask(args) {
  */
 function main() {
   try {
-    const args = parseArgs(process.argv.slice(2));
-    validateArgs(args);
+    // Check for help flag first
+    if (process.argv.includes('--help') || process.argv.includes('-h')) {
+      console.log(generateHelp('task-get.js', ARG_SPEC, 'Retrieve and output a single task by ID'));
+      process.exit(0);
+    }
+
+    const args = parseArgs(ARG_SPEC, process.argv);
+
     getTask(args);
   } catch (error) {
     if (error instanceof Error) {

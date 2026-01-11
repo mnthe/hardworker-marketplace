@@ -7,11 +7,10 @@
  */
 
 const fs = require('fs');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 const {
-  getProjectDir,
   getTaskFile,
   getTasksDir,
-  writeTask,
 } = require('../lib/project-utils.js');
 
 // ============================================================================
@@ -33,91 +32,15 @@ const {
  * @property {Role} [role]
  */
 
-/**
- * Parse command-line arguments
- * @param {string[]} argv - Process argv array
- * @returns {CliArgs} Parsed arguments
- */
-function parseArgs(argv) {
-  /** @type {CliArgs} */
-  const args = {};
-
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-
-    switch (arg) {
-      case '--project':
-        args.project = argv[++i];
-        break;
-      case '--team':
-        args.team = argv[++i];
-        break;
-      case '--id':
-        args.id = argv[++i];
-        break;
-      case '--title':
-        args.title = argv[++i];
-        break;
-      case '--description':
-        args.description = argv[++i];
-        break;
-      case '--role':
-        args.role = /** @type {Role} */ (argv[++i]);
-        break;
-      case '-h':
-      case '--help':
-        console.log('Usage: task-create.js --project <name> --team <name> --id <id> --title "..." [options]');
-        console.log('Options:');
-        console.log('  --description "..."       Task description (defaults to title)');
-        console.log('  --role <role>            Worker role: frontend|backend|devops|test|docs|security|review|worker (default: worker)');
-        process.exit(0);
-        break;
-    }
-  }
-
-  return args;
-}
-
-// ============================================================================
-// Validation
-// ============================================================================
-
-/**
- * Validate CLI arguments
- * @param {CliArgs} args - Arguments to validate
- * @returns {void}
- */
-function validateArgs(args) {
-  if (!args.project) {
-    console.error('Error: --project required');
-    process.exit(1);
-  }
-
-  if (!args.team) {
-    console.error('Error: --team required');
-    process.exit(1);
-  }
-
-  if (!args.id) {
-    console.error('Error: --id required');
-    process.exit(1);
-  }
-
-  if (!args.title) {
-    console.error('Error: --title required');
-    process.exit(1);
-  }
-
-  // Validate role if provided
-  if (args.role) {
-    /** @type {Role[]} */
-    const validRoles = ['frontend', 'backend', 'devops', 'test', 'docs', 'security', 'review', 'worker'];
-    if (!validRoles.includes(args.role)) {
-      console.error(`Error: Invalid role "${args.role}". Must be one of: ${validRoles.join(', ')}`);
-      process.exit(1);
-    }
-  }
-}
+const ARG_SPEC = {
+  '--project': { key: 'project', alias: '-p', required: true },
+  '--team': { key: 'team', alias: '-t', required: true },
+  '--id': { key: 'id', alias: '-i', required: true },
+  '--title': { key: 'title', required: true },
+  '--description': { key: 'description', alias: '-d' },
+  '--role': { key: 'role', alias: '-r', default: 'worker' },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Task Creation
@@ -176,8 +99,13 @@ function createTask(args) {
  */
 function main() {
   try {
-    const args = parseArgs(process.argv.slice(2));
-    validateArgs(args);
+    // Check for help flag first
+    if (process.argv.includes('--help') || process.argv.includes('-h')) {
+      console.log(generateHelp('task-create.js', ARG_SPEC, 'Create a new task for a teamwork project'));
+      process.exit(0);
+    }
+
+    const args = parseArgs(ARG_SPEC, process.argv);
     createTask(args);
   } catch (error) {
     if (error instanceof Error) {

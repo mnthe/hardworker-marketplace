@@ -7,6 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getSessionDir } = require('../lib/session-utils.js');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // Types
@@ -31,44 +32,11 @@ const { getSessionDir } = require('../lib/session-utils.js');
  * @property {string[]} constraints
  */
 
-// ============================================================================
-// Argument Parsing
-// ============================================================================
-
-/**
- * Parse command-line arguments
- * @returns {{sessionId: string, expected: string}} Parsed arguments
- */
-function parseArgs() {
-  const args = process.argv.slice(2);
-  let sessionId = '';
-  let expected = '';
-
-  for (let i = 0; i < args.length; i++) {
-    switch (args[i]) {
-      case '--session':
-        sessionId = args[++i] || '';
-        break;
-      case '--expected':
-        expected = args[++i] || '';
-        break;
-      case '-h':
-      case '--help':
-        console.log('Usage: context-init.js --session <ID> --expected "overview,exp-1,exp-2"');
-        console.log('');
-        console.log('Initializes context.json with expected explorer IDs.');
-        console.log('exploration_complete will be set to true when all expected explorers are added.');
-        process.exit(0);
-    }
-  }
-
-  if (!sessionId || !expected) {
-    console.error('Error: --session and --expected required');
-    process.exit(1);
-  }
-
-  return { sessionId, expected };
-}
+const ARG_SPEC = {
+  '--session': { key: 'sessionId', alias: '-s', required: true },
+  '--expected': { key: 'expected', alias: '-e', required: true },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Main Logic
@@ -79,7 +47,15 @@ function parseArgs() {
  * @returns {void}
  */
 function main() {
-  const { sessionId, expected } = parseArgs();
+  // Check for help flag first (before validation)
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('context-init.js', ARG_SPEC, 'Initialize context.json with expected explorer IDs for tracking exploration completion'));
+    process.exit(0);
+  }
+
+  const args = parseArgs(ARG_SPEC);
+
+  const { sessionId, expected } = args;
 
   try {
     // Get session directory

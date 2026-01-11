@@ -8,6 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const { acquireLock, releaseLock } = require('../lib/file-lock.js');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -29,75 +30,32 @@ const { acquireLock, releaseLock } = require('../lib/file-lock.js');
  * @property {boolean} [help]
  */
 
-/**
- * Parse command-line arguments
- * @param {string[]} argv - Process argv array
- * @returns {ParsedArgs} Parsed arguments
- */
-function parseArgs(argv) {
-  /** @type {ParsedArgs} */
-  const args = {};
-
-  for (let i = 2; i < argv.length; i++) {
-    const arg = argv[i];
-    const next = argv[i + 1];
-
-    switch (arg) {
-      case '--dir':
-        args.dir = next;
-        i++;
-        break;
-      case '--id':
-        args.id = next;
-        i++;
-        break;
-      case '--status':
-        args.status = /** @type {TaskStatus} */ (next);
-        i++;
-        break;
-      case '--add-evidence':
-        args.addEvidence = next;
-        i++;
-        break;
-      case '--owner':
-        args.owner = next;
-        i++;
-        break;
-      case '--release':
-        args.release = true;
-        break;
-      case '-h':
-      case '--help':
-        args.help = true;
-        break;
-    }
-  }
-
-  return args;
-}
-
 // ============================================================================
 // Main Logic
 // ============================================================================
+
+const ARG_SPEC = {
+  '--dir': { key: 'dir', alias: '-d', required: true },
+  '--id': { key: 'id', alias: '-i', required: true },
+  '--status': { key: 'status', alias: '-s' },
+  '--add-evidence': { key: 'addEvidence', alias: '-e' },
+  '--owner': { key: 'owner', alias: '-o' },
+  '--release': { key: 'release', alias: '-r', flag: true },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 /**
  * Main execution function
  * @returns {Promise<void>}
  */
 async function main() {
-  const args = parseArgs(process.argv);
-
-  // Handle help
-  if (args.help) {
-    console.log('Usage: task-update.js --dir <path> --id <task_id> [--status open|resolved] [--add-evidence "..."] [--owner <id>] [--release]');
+  // Check for help flag first
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('task-update.js', ARG_SPEC, 'Update teamwork task status, evidence, or ownership'));
     process.exit(0);
   }
 
-  // Validate required arguments
-  if (!args.dir || !args.id) {
-    console.error('Error: --dir and --id required');
-    process.exit(1);
-  }
+  const args = parseArgs(ARG_SPEC);
 
   try {
     // Get task file path

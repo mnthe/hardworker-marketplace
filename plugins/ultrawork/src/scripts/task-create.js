@@ -9,6 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getSessionDir } = require('../lib/session-utils.js');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -31,65 +32,21 @@ const { getSessionDir } = require('../lib/session-utils.js');
  * @property {string} [blockedBy]
  * @property {TaskApproach} [approach]
  * @property {string} [testFile]
+ * @property {boolean} [help]
  */
 
-/**
- * Parse command-line arguments
- * @param {string[]} argv - Process argv array
- * @returns {CliArgs} Parsed arguments
- */
-function parseArgs(argv) {
-  /** @type {CliArgs} */
-  const args = {};
-
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-
-    switch (arg) {
-      case '--session':
-        args.session = argv[++i];
-        break;
-      case '--id':
-        args.id = argv[++i];
-        break;
-      case '--subject':
-        args.subject = argv[++i];
-        break;
-      case '--description':
-        args.description = argv[++i];
-        break;
-      case '--complexity':
-        args.complexity = /** @type {Complexity} */ (argv[++i]);
-        break;
-      case '--criteria':
-        args.criteria = argv[++i];
-        break;
-      case '--blocked-by':
-        args.blockedBy = argv[++i];
-        break;
-      case '--approach':
-        args.approach = /** @type {TaskApproach} */ (argv[++i]);
-        break;
-      case '--test-file':
-        args.testFile = argv[++i];
-        break;
-      case '-h':
-      case '--help':
-        console.log('Usage: task-create.js --session <ID> --id <id> --subject "..." [options]');
-        console.log('Options:');
-        console.log('  --description "..."       Task description (defaults to subject)');
-        console.log('  --complexity simple|standard|complex  (default: standard)');
-        console.log('  --criteria "..."          Pipe-separated criteria');
-        console.log('  --blocked-by "1,2"        Comma-separated task IDs');
-        console.log('  --approach standard|tdd   Development approach (default: standard)');
-        console.log('  --test-file "..."         Expected test file path (for TDD tasks)');
-        process.exit(0);
-        break;
-    }
-  }
-
-  return args;
-}
+const ARG_SPEC = {
+  '--session': { key: 'session', alias: '-s', required: true },
+  '--id': { key: 'id', alias: '-i', required: true },
+  '--subject': { key: 'subject', alias: '-S', required: true },
+  '--description': { key: 'description', alias: '-d' },
+  '--complexity': { key: 'complexity', alias: '-c', default: 'standard' },
+  '--criteria': { key: 'criteria', alias: '-C' },
+  '--blocked-by': { key: 'blockedBy', alias: '-b' },
+  '--approach': { key: 'approach', alias: '-a' },
+  '--test-file': { key: 'testFile', alias: '-t' },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Validation
@@ -101,20 +58,7 @@ function parseArgs(argv) {
  * @returns {void}
  */
 function validateArgs(args) {
-  if (!args.session) {
-    console.error('Error: --session required');
-    process.exit(1);
-  }
-
-  if (!args.id) {
-    console.error('Error: --id required');
-    process.exit(1);
-  }
-
-  if (!args.subject) {
-    console.error('Error: --subject required');
-    process.exit(1);
-  }
+  // Required args already validated by parseArgs
 
   // Validate complexity if provided
   if (args.complexity) {
@@ -242,7 +186,14 @@ function createTask(args) {
  */
 function main() {
   try {
-    const args = parseArgs(process.argv.slice(2));
+    // Check for help flag first (before validation)
+    if (process.argv.includes('--help') || process.argv.includes('-h')) {
+      console.log(generateHelp('task-create.js', ARG_SPEC, 'Create new task JSON file with validation and success criteria'));
+      process.exit(0);
+    }
+
+    const args = parseArgs(ARG_SPEC);
+
     validateArgs(args);
     createTask(args);
   } catch (error) {

@@ -6,6 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // CLI Arguments Parsing
@@ -17,73 +18,10 @@ const path = require('path');
  * @property {boolean} help
  */
 
-/**
- * Show help message
- * @returns {void}
- */
-function showHelp() {
-  console.log('Usage: project-get.js --dir <path>');
-}
-
-/**
- * Parse command-line arguments
- * @param {string[]} argv - Process argv array
- * @returns {CliArgs} Parsed arguments
- */
-function parseArgs(argv) {
-  /** @type {CliArgs} */
-  const args = {
-    dir: '',
-    help: false,
-  };
-
-  let i = 2; // Skip 'bun' and script path
-
-  while (i < argv.length) {
-    const arg = argv[i];
-
-    switch (arg) {
-      case '-h':
-      case '--help':
-        args.help = true;
-        i++;
-        break;
-
-      case '--dir': {
-        const value = argv[i + 1];
-        if (!value) {
-          console.error('Error: --dir requires a path argument');
-          process.exit(1);
-        }
-        args.dir = value;
-        i += 2;
-        break;
-      }
-
-      default:
-        i++;
-        break;
-    }
-  }
-
-  return args;
-}
-
-/**
- * Validate arguments
- * @param {CliArgs} args - Parsed arguments
- * @returns {void}
- */
-function validateArgs(args) {
-  if (args.help) {
-    return; // Skip validation for help
-  }
-
-  if (!args.dir) {
-    console.error('Error: --dir required');
-    process.exit(1);
-  }
-}
+const ARG_SPEC = {
+  '--dir': { key: 'dir', alias: '-d', required: true },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Main Entry Point
@@ -94,16 +32,13 @@ function validateArgs(args) {
  * @returns {void}
  */
 function main() {
-  const args = parseArgs(process.argv);
-
-  // Show help if requested
-  if (args.help) {
-    showHelp();
+  // Check for help flag first
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('project-get.js', ARG_SPEC, 'Retrieve and output teamwork project metadata'));
     process.exit(0);
   }
 
-  // Validate arguments
-  validateArgs(args);
+  const args = parseArgs(ARG_SPEC);
 
   // Check project file exists
   const projectFile = path.join(args.dir, 'project.json');

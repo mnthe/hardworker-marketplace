@@ -14,6 +14,7 @@ const {
   readSession,
 } = require('../lib/session-utils.js');
 const { acquireLock, releaseLock } = require('../lib/file-lock.js');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // CLI Arguments Parsing
@@ -38,138 +39,67 @@ const { acquireLock, releaseLock } = require('../lib/file-lock.js');
  * @property {boolean} help
  */
 
-/**
- * Show help message
- * @returns {void}
- */
-function showHelp() {
-  console.log(`\
-═══════════════════════════════════════════════════════════
- ULTRAWORK - Strict Verification-First Development Mode
-═══════════════════════════════════════════════════════════
-
-USAGE:
-  /ultrawork [OPTIONS] <GOAL...>
-
-ARGUMENTS:
-  GOAL...    Task description (can be multiple words without quotes)
-
-OPTIONS:
-  --session <id>         Session ID (required, provided by AI)
-  --max-workers <n>      Maximum parallel workers (default: unlimited)
-  --max-iterations <n>   Max execute→verify loops (default: 5)
-  --skip-verify          Skip verification phase (fast mode)
-  --plan-only            Only run planner, don't execute tasks
-  --auto                 Skip plan confirmation, run automatically
-  --force                Force start even if active session exists
-  --resume               Resume cancelled/failed session
-  -h, --help             Show this help message
-
-═══════════════════════════════════════════════════════════`);
-}
+const ARG_SPEC = {
+  '--session': { key: 'sessionId', alias: '-s', required: true },
+  '--max-workers': { key: 'maxWorkers', alias: '-w', default: 0 },
+  '--max-iterations': { key: 'maxIterations', alias: '-i', default: 5 },
+  '--skip-verify': { key: 'skipVerify', alias: '-V', flag: true },
+  '--plan-only': { key: 'planOnly', alias: '-p', flag: true },
+  '--auto': { key: 'autoMode', alias: '-a', flag: true },
+  '--force': { key: 'force', alias: '-f', flag: true },
+  '--resume': { key: 'resume', alias: '-r', flag: true },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 /**
- * Parse command-line arguments
+ * Parse command-line arguments with special handling for positional goal args
  * @param {string[]} argv - Process argv array
  * @returns {CliArgs} Parsed arguments
  */
-function parseArgs(argv) {
-  /** @type {CliArgs} */
-  const args = {
-    sessionId: '',
-    goal: '',
-    maxWorkers: 0,
-    maxIterations: 5,
-    skipVerify: false,
-    planOnly: false,
-    autoMode: false,
-    force: false,
-    resume: false,
-    help: false,
-  };
+function parseCliArgs(argv) {
+  // Parse flags using common utility
+  const flagArgs = parseArgs(ARG_SPEC, argv);
 
-  /** @type {string[]} */
+  // Collect positional arguments (goal parts)
+  // Skip bun, script, and all flags
   const goalParts = [];
-  let i = 2; // Skip 'bun' and script path
+  const knownFlags = new Set([
+    '--session', '-s',
+    '--max-workers', '-w',
+    '--max-iterations', '-i',
+    '--skip-verify', '-V',
+    '--plan-only', '-p',
+    '--auto', '-a',
+    '--force', '-f',
+    '--resume', '-r',
+    '--help', '-h'
+  ]);
 
-  while (i < argv.length) {
+  for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
 
-    switch (arg) {
-      case '-h':
-      case '--help':
-        args.help = true;
-        i++;
-        break;
-
-      case '--session': {
-        const value = argv[i + 1];
-        if (!value) {
-          console.error('❌ Error: --session requires a session ID argument');
-          process.exit(1);
-        }
-        args.sessionId = value;
-        i += 2;
-        break;
+    // Skip known flags
+    if (knownFlags.has(arg)) {
+      // Skip flag and its value (if not a boolean flag)
+      if (!['--skip-verify', '-V', '--plan-only', '-p', '--auto', '-a', '--force', '-f', '--resume', '-r', '--help', '-h'].includes(arg)) {
+        i++; // Skip next arg (the value)
       }
-
-      case '--max-workers': {
-        const value = argv[i + 1];
-        if (!value || !/^\d+$/.test(value)) {
-          console.error('❌ Error: --max-workers requires a positive integer');
-          process.exit(1);
-        }
-        args.maxWorkers = parseInt(value, 10);
-        i += 2;
-        break;
-      }
-
-      case '--max-iterations': {
-        const value = argv[i + 1];
-        if (!value || !/^\d+$/.test(value)) {
-          console.error('❌ Error: --max-iterations requires a positive integer');
-          process.exit(1);
-        }
-        args.maxIterations = parseInt(value, 10);
-        i += 2;
-        break;
-      }
-
-      case '--skip-verify':
-        args.skipVerify = true;
-        i++;
-        break;
-
-      case '--plan-only':
-        args.planOnly = true;
-        i++;
-        break;
-
-      case '--auto':
-        args.autoMode = true;
-        i++;
-        break;
-
-      case '--force':
-        args.force = true;
-        i++;
-        break;
-
-      case '--resume':
-        args.resume = true;
-        i++;
-        break;
-
-      default:
-        // Positional argument (goal part)
-        goalParts.push(arg);
-        i++;
-        break;
+      continue;
     }
+
+    // Check if this is a value for a previous flag
+    if (i > 2 && knownFlags.has(argv[i - 1])) {
+      continue;
+    }
+
+    // This is a positional arg (goal part)
+    goalParts.push(arg);
   }
 
-  args.goal = goalParts.join(' ');
-  return args;
+  return {
+    ...flagArgs,
+    goal: goalParts.join(' ')
+  };
 }
 
 // ============================================================================
@@ -430,13 +360,13 @@ function createSession(args) {
  * @returns {Promise<void>}
  */
 async function main() {
-  const args = parseArgs(process.argv);
-
-  // Show help if requested
-  if (args.help) {
-    showHelp();
+  // Check for help flag first (before validation)
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('setup-ultrawork.js', ARG_SPEC, 'Initialize ultrawork session with strict verification-first development workflow'));
     process.exit(0);
   }
+
+  const args = parseCliArgs(process.argv);
 
   // Validate --session is provided
   if (!args.sessionId) {

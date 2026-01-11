@@ -8,6 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // Constants
@@ -62,79 +63,24 @@ function getTimestamp() {
 
 /**
  * @typedef {Object} CliArgs
- * @property {'get'|'set'|'clear'|null} operation
+ * @property {boolean} [get]
+ * @property {boolean} [set]
+ * @property {boolean} [clear]
  * @property {string} [project]
  * @property {string} [team]
  * @property {string} [role]
- * @property {boolean} help
+ * @property {boolean} [help]
  */
 
-/**
- * Parse command-line arguments
- * @param {string[]} argv - Process argv array
- * @returns {CliArgs} Parsed arguments
- */
-function parseArgs(argv) {
-  /** @type {CliArgs} */
-  const args = {
-    operation: null,
-    help: false,
-  };
-
-  for (let i = 2; i < argv.length; i++) {
-    const arg = argv[i];
-
-    switch (arg) {
-      case '--get':
-        args.operation = 'get';
-        break;
-      case '--set':
-        args.operation = 'set';
-        break;
-      case '--clear':
-        args.operation = 'clear';
-        break;
-      case '--project':
-        args.project = argv[++i];
-        break;
-      case '--team':
-        args.team = argv[++i];
-        break;
-      case '--role':
-        args.role = argv[++i];
-        break;
-      case '-h':
-      case '--help':
-        args.help = true;
-        break;
-    }
-  }
-
-  return args;
-}
-
-/**
- * Show help message
- * @returns {void}
- */
-function showHelp() {
-  console.log('Usage: loop-state.js <operation> [options]');
-  console.log('');
-  console.log('Operations:');
-  console.log('  --get                        Get current loop state (returns JSON)');
-  console.log('  --set                        Set loop state (requires --project, --team, --role)');
-  console.log('  --clear                      Clear loop state');
-  console.log('');
-  console.log('Options (for --set):');
-  console.log('  --project <name>             Project name');
-  console.log('  --team <name>                Team name');
-  console.log('  --role <name>                Worker role');
-  console.log('');
-  console.log('Examples:');
-  console.log('  loop-state.js --get');
-  console.log('  loop-state.js --set --project myapp --team alpha --role backend');
-  console.log('  loop-state.js --clear');
-}
+const ARG_SPEC = {
+  '--get': { key: 'get', alias: '-g', flag: true },
+  '--set': { key: 'set', alias: '-s', flag: true },
+  '--clear': { key: 'clear', alias: '-c', flag: true },
+  '--project': { key: 'project', alias: '-p' },
+  '--team': { key: 'team', alias: '-t' },
+  '--role': { key: 'role', alias: '-r' },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Operations
@@ -218,36 +164,32 @@ function clearLoopState() {
  * @returns {void}
  */
 function main() {
-  const args = parseArgs(process.argv);
+  // Check for help flag first
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('loop-state.js', ARG_SPEC, 'Manage teamwork worker loop state per terminal session'));
+    process.exit(0);
+  }
 
-  // Show help
-  if (args.help || !args.operation) {
-    showHelp();
-    process.exit(args.operation ? 0 : 1);
+  const args = parseArgs(ARG_SPEC);
+
+  // Show help if no operation specified
+  if (!args.get && !args.set && !args.clear) {
+    console.log(generateHelp('loop-state.js', ARG_SPEC, 'Manage teamwork worker loop state per terminal session'));
+    process.exit(1);
   }
 
   // Execute operation
-  switch (args.operation) {
-    case 'get':
-      getLoopState();
-      break;
-
-    case 'set':
-      // Validate required parameters
-      if (!args.project || !args.team || !args.role) {
-        console.error('Error: --set requires --project, --team, and --role');
-        process.exit(1);
-      }
-      setLoopState(args.project, args.team, args.role);
-      break;
-
-    case 'clear':
-      clearLoopState();
-      break;
-
-    default:
-      console.error(`Error: Unknown operation '${args.operation}'`);
+  if (args.get) {
+    getLoopState();
+  } else if (args.set) {
+    // Validate required parameters
+    if (!args.project || !args.team || !args.role) {
+      console.error('Error: --set requires --project, --team, and --role');
       process.exit(1);
+    }
+    setLoopState(args.project, args.team, args.role);
+  } else if (args.clear) {
+    clearLoopState();
   }
 }
 
@@ -257,7 +199,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  parseArgs,
   getTerminalId,
   getStateFile,
   ensureStateDir,

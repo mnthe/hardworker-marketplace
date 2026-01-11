@@ -8,6 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getSessionDir } = require('../lib/session-utils.js');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -25,43 +26,12 @@ const { getSessionDir } = require('../lib/session-utils.js');
  * @property {boolean} help
  */
 
-/**
- * Parse command-line arguments
- * @param {string[]} argv - Process argv array
- * @returns {CliArgs} Parsed arguments
- */
-function parseArgs(argv) {
-  /** @type {CliArgs} */
-  const args = {
-    format: 'table',
-    help: false,
-  };
-
-  for (let i = 2; i < argv.length; i++) {
-    const arg = argv[i];
-
-    switch (arg) {
-      case '--session':
-        args.session = argv[++i];
-        break;
-      case '--status':
-        args.status = argv[++i];
-        break;
-      case '--format':
-        args.format = /** @type {'json' | 'table'} */ (argv[++i]);
-        break;
-      case '-h':
-      case '--help':
-        args.help = true;
-        break;
-      default:
-        // Skip unknown args
-        break;
-    }
-  }
-
-  return args;
-}
+const ARG_SPEC = {
+  '--session': { key: 'session', alias: '-s', required: true },
+  '--status': { key: 'status', alias: '-S' },
+  '--format': { key: 'format', alias: '-f', default: 'table' },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Task Collection
@@ -174,18 +144,13 @@ function outputTable(tasks) {
  * @returns {void}
  */
 function main() {
-  const args = parseArgs(process.argv);
-
-  if (args.help) {
-    console.log('Usage: task-list.js --session <ID> [--status open|resolved] [--format json|table]');
+  // Check for help flag first (before validation)
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('task-list.js', ARG_SPEC, 'List tasks with optional filtering by status and output format'));
     process.exit(0);
   }
 
-  // Validate required args
-  if (!args.session) {
-    console.error('Error: --session required');
-    process.exit(1);
-  }
+  const args = parseArgs(ARG_SPEC);
 
   try {
     // Get session directory

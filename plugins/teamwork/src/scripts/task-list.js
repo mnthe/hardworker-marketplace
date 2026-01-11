@@ -7,6 +7,7 @@
  */
 
 const fs = require('fs');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 const { getTasksDir, listTaskIds, readTask } = require('../lib/project-utils.js');
 
 // ============================================================================
@@ -29,76 +30,15 @@ const { getTasksDir, listTaskIds, readTask } = require('../lib/project-utils.js'
  * @property {'json'|'table'} [format]
  */
 
-/**
- * Parse command-line arguments
- * @param {string[]} argv - Process argv array
- * @returns {CliArgs} Parsed arguments
- */
-function parseArgs(argv) {
-  /** @type {CliArgs} */
-  const args = {
-    available: false,
-    format: 'table',
-  };
-
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-
-    switch (arg) {
-      case '--project':
-        args.project = argv[++i];
-        break;
-      case '--team':
-        args.team = argv[++i];
-        break;
-      case '--status':
-        args.status = /** @type {TaskStatus} */ (argv[++i]);
-        break;
-      case '--role':
-        args.role = /** @type {Role} */ (argv[++i]);
-        break;
-      case '--available':
-        args.available = true;
-        break;
-      case '--format':
-        args.format = /** @type {'json'|'table'} */ (argv[++i]);
-        break;
-      case '-h':
-      case '--help':
-        console.log('Usage: task-list.js --project <name> --team <name> [options]');
-        console.log('Options:');
-        console.log('  --status open|in_progress|resolved  Filter by status');
-        console.log('  --role <role>                       Filter by role');
-        console.log('  --available                         Show only available tasks (open, unclaimed)');
-        console.log('  --format json|table                 Output format (default: table)');
-        process.exit(0);
-        break;
-    }
-  }
-
-  return args;
-}
-
-// ============================================================================
-// Validation
-// ============================================================================
-
-/**
- * Validate CLI arguments
- * @param {CliArgs} args - Arguments to validate
- * @returns {void}
- */
-function validateArgs(args) {
-  if (!args.project) {
-    console.error('Error: --project required');
-    process.exit(1);
-  }
-
-  if (!args.team) {
-    console.error('Error: --team required');
-    process.exit(1);
-  }
-}
+const ARG_SPEC = {
+  '--project': { key: 'project', alias: '-p', required: true },
+  '--team': { key: 'team', alias: '-t', required: true },
+  '--status': { key: 'status', alias: '-s' },
+  '--role': { key: 'role', alias: '-r' },
+  '--available': { key: 'available', alias: '-a', flag: true },
+  '--format': { key: 'format', alias: '-f', default: 'table' },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Task Filtering
@@ -189,8 +129,14 @@ function listTasks(args) {
  */
 function main() {
   try {
-    const args = parseArgs(process.argv.slice(2));
-    validateArgs(args);
+    // Check for help flag first
+    if (process.argv.includes('--help') || process.argv.includes('-h')) {
+      console.log(generateHelp('task-list.js', ARG_SPEC, 'List tasks for a teamwork project with filtering options'));
+      process.exit(0);
+    }
+
+    const args = parseArgs(ARG_SPEC, process.argv);
+
     listTasks(args);
   } catch (error) {
     if (error instanceof Error) {

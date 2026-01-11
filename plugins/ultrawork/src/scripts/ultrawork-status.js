@@ -13,6 +13,7 @@ const {
   getSessionFile,
   readSession,
 } = require('../lib/session-utils.js');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // Argument Parsing
@@ -22,65 +23,11 @@ const {
  * @typedef {import('../lib/types.js').Session} Session
  */
 
-/**
- * Parse command-line arguments
- * @returns {{sessionId?: string, listAll: boolean, help: boolean}} Parsed arguments
- */
-function parseArgs() {
-  const args = process.argv.slice(2);
-  let sessionId;
-  let listAll = false;
-  let help = false;
-
-  for (let i = 0; i < args.length; i++) {
-    switch (args[i]) {
-      case '-h':
-      case '--help':
-        help = true;
-        break;
-      case '--session':
-        if (i + 1 < args.length) {
-          sessionId = args[i + 1];
-          i++; // Skip next argument
-        } else {
-          console.error('❌ Error: --session requires a session ID argument');
-          process.exit(1);
-        }
-        break;
-      case '--all':
-        listAll = true;
-        break;
-    }
-  }
-
-  return { sessionId, listAll, help };
-}
-
-// ============================================================================
-// Help Text
-// ============================================================================
-
-/**
- * Show help message
- * @returns {void}
- */
-function showHelp() {
-  console.log(`
-═══════════════════════════════════════════════════════════
- ULTRAWORK-STATUS - Check Session Progress
-═══════════════════════════════════════════════════════════
-
-USAGE:
-  ultrawork-status --session <id>
-
-OPTIONS:
-  --session <id>   Session ID (required, provided by AI)
-  --all            List all sessions
-  -h, --help       Show this help message
-
-═══════════════════════════════════════════════════════════
-`);
-}
+const ARG_SPEC = {
+  '--session': { key: 'sessionId', alias: '-s' },
+  '--all': { key: 'listAll', alias: '-a', flag: true },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // List All Sessions
@@ -270,22 +217,25 @@ function showSessionStatus(sessionId) {
  * @returns {void}
  */
 function main() {
-  const { sessionId, listAll, help } = parseArgs();
-
-  if (help) {
-    showHelp();
+  // Check for help flag first
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('ultrawork-status.js', ARG_SPEC, 'Display formatted session status with phase, tasks, and evidence summary'));
     process.exit(0);
   }
 
-  if (listAll) {
+  const args = parseArgs(ARG_SPEC);
+
+  if (args.listAll) {
     listAllSessions();
     process.exit(0);
   }
 
-  if (!sessionId) {
+  if (!args.sessionId) {
     console.error('❌ Error: --session is required');
     process.exit(1);
   }
+
+  const { sessionId } = args;
 
   showSessionStatus(sessionId);
 }

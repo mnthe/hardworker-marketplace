@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const { getSessionFile, readSession, updateSession } = require('../lib/session-utils.js');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // Argument Parsing
@@ -16,60 +17,10 @@ const { getSessionFile, readSession, updateSession } = require('../lib/session-u
  * @typedef {import('../lib/types.js').Session} Session
  */
 
-/**
- * Parse command-line arguments
- * @returns {{sessionId?: string, help: boolean}} Parsed arguments
- */
-function parseArgs() {
-  const args = process.argv.slice(2);
-  let sessionId;
-  let help = false;
-
-  for (let i = 0; i < args.length; i++) {
-    switch (args[i]) {
-      case '-h':
-      case '--help':
-        help = true;
-        break;
-      case '--session':
-        if (i + 1 < args.length) {
-          sessionId = args[i + 1];
-          i++; // Skip next argument
-        } else {
-          console.error('❌ Error: --session requires a session ID argument');
-          process.exit(1);
-        }
-        break;
-    }
-  }
-
-  return { sessionId, help };
-}
-
-// ============================================================================
-// Help Text
-// ============================================================================
-
-/**
- * Show help message
- * @returns {void}
- */
-function showHelp() {
-  console.log(`
-═══════════════════════════════════════════════════════════
- ULTRAWORK-CANCEL - Cancel Session
-═══════════════════════════════════════════════════════════
-
-USAGE:
-  ultrawork-cancel --session <id>
-
-OPTIONS:
-  --session <id>   Session ID (required, provided by AI)
-  -h, --help       Show this help message
-
-═══════════════════════════════════════════════════════════
-`);
-}
+const ARG_SPEC = {
+  '--session': { key: 'sessionId', alias: '-s', required: true },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Cancel Session
@@ -148,17 +99,15 @@ async function cancelSession(sessionId) {
  * @returns {Promise<void>}
  */
 async function main() {
-  const { sessionId, help } = parseArgs();
-
-  if (help) {
-    showHelp();
+  // Check for help flag first (before validation)
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('ultrawork-cancel.js', ARG_SPEC, 'Cancel active ultrawork session and preserve session history'));
     process.exit(0);
   }
 
-  if (!sessionId) {
-    console.error('❌ Error: --session is required');
-    process.exit(1);
-  }
+  const args = parseArgs(ARG_SPEC);
+
+  const { sessionId } = args;
 
   await cancelSession(sessionId);
 }

@@ -6,11 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const {
-  getProjectDir,
-  getProjectFile,
-  writeProject,
-} = require('../lib/project-utils.js');
+const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
 // CLI Arguments Parsing
@@ -29,115 +25,13 @@ const {
  * @property {boolean} help
  */
 
-/**
- * Show help message
- * @returns {void}
- */
-function showHelp() {
-  console.log('Usage: project-create.js --dir <path> --project <name> --team <name> --goal "..."');
-}
-
-/**
- * Parse command-line arguments
- * @param {string[]} argv - Process argv array
- * @returns {CliArgs} Parsed arguments
- */
-function parseArgs(argv) {
-  /** @type {CliArgs} */
-  const args = {
-    dir: '',
-    project: '',
-    team: '',
-    goal: '',
-    help: false,
-  };
-
-  let i = 2; // Skip 'bun' and script path
-
-  while (i < argv.length) {
-    const arg = argv[i];
-
-    switch (arg) {
-      case '-h':
-      case '--help':
-        args.help = true;
-        i++;
-        break;
-
-      case '--dir': {
-        const value = argv[i + 1];
-        if (!value) {
-          console.error('Error: --dir requires a path argument');
-          process.exit(1);
-        }
-        args.dir = value;
-        i += 2;
-        break;
-      }
-
-      case '--project': {
-        const value = argv[i + 1];
-        if (!value) {
-          console.error('Error: --project requires a name argument');
-          process.exit(1);
-        }
-        args.project = value;
-        i += 2;
-        break;
-      }
-
-      case '--team': {
-        const value = argv[i + 1];
-        if (!value) {
-          console.error('Error: --team requires a name argument');
-          process.exit(1);
-        }
-        args.team = value;
-        i += 2;
-        break;
-      }
-
-      case '--goal': {
-        const value = argv[i + 1];
-        if (!value) {
-          console.error('Error: --goal requires a string argument');
-          process.exit(1);
-        }
-        args.goal = value;
-        i += 2;
-        break;
-      }
-
-      default:
-        i++;
-        break;
-    }
-  }
-
-  return args;
-}
-
-/**
- * Validate arguments
- * @param {CliArgs} args - Parsed arguments
- * @returns {void}
- */
-function validateArgs(args) {
-  if (args.help) {
-    return; // Skip validation for help
-  }
-
-  const missing = [];
-  if (!args.dir) missing.push('--dir');
-  if (!args.project) missing.push('--project');
-  if (!args.team) missing.push('--team');
-  if (!args.goal) missing.push('--goal');
-
-  if (missing.length > 0) {
-    console.error(`Error: ${missing.join(', ')} required`);
-    process.exit(1);
-  }
-}
+const ARG_SPEC = {
+  '--dir': { key: 'dir', alias: '-d', required: true },
+  '--project': { key: 'project', alias: '-p', required: true },
+  '--team': { key: 'team', alias: '-t', required: true },
+  '--goal': { key: 'goal', alias: '-g', required: true },
+  '--help': { key: 'help', alias: '-h', flag: true }
+};
 
 // ============================================================================
 // Main Entry Point
@@ -148,16 +42,13 @@ function validateArgs(args) {
  * @returns {void}
  */
 function main() {
-  const args = parseArgs(process.argv);
-
-  // Show help if requested
-  if (args.help) {
-    showHelp();
+  // Check for help flag first
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(generateHelp('project-create.js', ARG_SPEC, 'Create a new teamwork project with metadata and directory structure'));
     process.exit(0);
   }
 
-  // Validate arguments
-  validateArgs(args);
+  const args = parseArgs(ARG_SPEC);
 
   // Create directory
   const tasksDir = path.join(args.dir, 'tasks');
