@@ -62,7 +62,7 @@ Tests: 15 passed, 15 total
 **Conclusion**: All tests passing, criterion met.
 ```
 
-## Manual Testing for Node.js
+## Manual Testing for Bun Scripts
 
 Since this project lacks automated test framework:
 
@@ -70,7 +70,7 @@ Since this project lacks automated test framework:
 
 ```bash
 # Syntax check
-node --check src/scripts/*.js
+bun --check src/scripts/*.js
 
 # ESLint (if available)
 npx eslint src/scripts/*.js

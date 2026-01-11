@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 /**
  * Cross-platform file locking utilities
  * Uses mkdir-based atomic locking for cross-platform compatibility

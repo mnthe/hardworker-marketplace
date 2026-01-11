@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/check-insights.js",
+            "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/check-insights.js",
             "timeout": 5000
           }
         ]
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hooks/check-threshold.js",
+            "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/check-threshold.js",
             "timeout": 5000
           }
         ]

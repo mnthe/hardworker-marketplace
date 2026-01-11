@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Stop Hook - Check if insights exist at session end

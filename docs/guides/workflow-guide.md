@@ -386,10 +386,11 @@ Use interactive mode when:
 Generate plan without execution:
 
 ```bash
-/ultrawork --plan-only "implement user authentication"
+/ultrawork-plan "implement user authentication"
 # Planner creates plan
 # Session stops after planning
-# Review plan at ~/.claude/ultrawork/{team}/sessions/{id}/plan.md
+# Review design at docs/plans/YYYY-MM-DD-{goal-slug}-design.md (in project directory)
+# Review tasks at ~/.claude/ultrawork/sessions/{id}/tasks/ (in session directory)
 ```
 
 Use cases:
@@ -399,22 +400,17 @@ Use cases:
 
 ### Manual Execution
 
-Execute pre-written plan:
+Execute pre-created plan:
 
-1. Create `plan.md` in session directory:
+1. Use `/ultrawork-plan` to create the plan with tasks:
 
-```markdown
-# Implementation Plan
-
-## Task 1: Create validation function
-- Criterion: Function accepts valid emails
-- Criterion: Function rejects invalid emails
-- Criterion: Tests pass (2/2)
-
-## Task 2: Integrate validation
-- Criterion: Registration endpoint uses validation
-- Criterion: Integration tests pass (3/3)
+```bash
+/ultrawork-plan "implement email validation"
 ```
+
+This creates:
+- Design document at `docs/plans/YYYY-MM-DD-{goal-slug}-design.md` (project directory)
+- Task files at `~/.claude/ultrawork/sessions/{id}/tasks/*.json` (session directory)
 
 2. Start execution:
 
@@ -422,7 +418,7 @@ Execute pre-written plan:
 /ultrawork-exec
 ```
 
-Workers execute tasks from `plan.md`.
+Workers execute tasks based on the created task files.
 
 ### Custom Retry Strategies
 
@@ -514,13 +510,16 @@ Inspect session state directly:
 
 ```bash
 # Session metadata
-cat ~/.claude/ultrawork/{team}/sessions/{id}/session.json
+cat ~/.claude/ultrawork/sessions/{id}/session.json
 
-# Task plan
-cat ~/.claude/ultrawork/{team}/sessions/{id}/plan.md
+# Exploration context
+cat ~/.claude/ultrawork/sessions/{id}/context.json
 
-# Session context
-cat ~/.claude/ultrawork/{team}/sessions/{id}/CLAUDE.md
+# Task details
+cat ~/.claude/ultrawork/sessions/{id}/tasks/*.json
+
+# Design document (in project directory, not session directory)
+cat docs/plans/YYYY-MM-DD-{goal-slug}-design.md
 ```
 
 Session directory persists after completion for audit purposes.

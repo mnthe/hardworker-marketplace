@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * context-add.js - Add explorer summary to context.json
  * Usage: context-add.js --session <ID> --explorer-id <id> --hint "..." --file "exploration/exp-1.md" --summary "..." --key-files "f1,f2" --patterns "p1,p2"

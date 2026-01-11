@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * PostToolUse Hook - Check if insight threshold is reached

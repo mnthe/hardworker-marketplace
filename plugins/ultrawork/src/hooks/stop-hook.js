@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Stop Hook - Validates evidence sufficiency on conversation stop

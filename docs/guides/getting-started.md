@@ -9,14 +9,14 @@ For advanced topics, see [Plugin Development Guide](plugin-development.md) and [
 Before starting, verify you have:
 
 - Claude Code CLI installed and running
-- Node.js 18+ (bundled with Claude Code)
+- Bun installed (for script execution)
 - Git installed (for version control features)
 
 Verify your setup:
 
 ```bash
 claude --version
-node --version
+bun --version
 git --version
 ```
 
@@ -105,7 +105,7 @@ Output shows:
 Ultrawork stores session data in:
 
 ```
-~/.claude/ultrawork/{team}/sessions/{session-id}/
+~/.claude/ultrawork/sessions/{session-id}/
 ├── session.json        # Session state, phase, tasks
 ├── plan.md            # Task graph from planner
 ├── CLAUDE.md          # Session context for agents
@@ -172,7 +172,7 @@ Verification-first development with strict evidence requirements. Cross-platform
 
 ### teamwork
 
-Multi-session collaboration with role-based workers (planned, not yet implemented).
+Multi-session collaboration with role-based workers. Enables parallel development across multiple sessions with specialized agents for frontend, backend, DevOps, testing, documentation, security, and review tasks.
 
 ## Common Commands
 

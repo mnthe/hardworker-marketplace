@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 /**
  * Type definitions for teamwork
  * Project state management and task tracking interfaces

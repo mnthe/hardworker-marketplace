@@ -2,7 +2,7 @@
 name: ultrawork-exec
 description: "Execute ultrawork plan with automatic retry loop"
 argument-hint: "[--session <id>] [--max-iterations N] [--skip-verify] | --help"
-allowed-tools: ["Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/*.js:*)", "Task", "TaskOutput", "Read", "Edit"]
+allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/*.js:*)", "Task", "TaskOutput", "Read", "Edit"]
 ---
 
 # Ultrawork Exec Command
@@ -27,10 +27,10 @@ Loop until: PASS or max_iterations reached
 
 The orchestrator MUST delegate work to sub-agents. Direct execution is prohibited.
 
-| Phase | Delegation | Direct Execution |
-|-------|------------|------------------|
-| Execution | ALWAYS via `Task(subagent_type="ultrawork:worker")` | NEVER |
-| Verification | ALWAYS via `Task(subagent_type="ultrawork:verifier")` | NEVER |
+| Phase        | Delegation                                            | Direct Execution |
+| ------------ | ----------------------------------------------------- | ---------------- |
+| Execution    | ALWAYS via `Task(subagent_type="ultrawork:worker")`   | NEVER            |
+| Verification | ALWAYS via `Task(subagent_type="ultrawork:verifier")` | NEVER            |
 
 **Exception**: User explicitly requests direct execution (e.g., "run this directly", "execute without agent").
 
@@ -40,9 +40,9 @@ The orchestrator MUST delegate work to sub-agents. Direct execution is prohibite
 
 Sub-agents can be run in **foreground** (default) or **background** mode. Choose based on the situation:
 
-| Mode | When to Use |
-|------|-------------|
-| **Foreground** | Sequential tasks, need result immediately |
+| Mode           | When to Use                                |
+| -------------- | ------------------------------------------ |
+| **Foreground** | Sequential tasks, need result immediately  |
 | **Background** | Parallel execution with worker pool limits |
 
 **Parallel execution**: Call multiple Tasks in a single message for automatic parallelization.
@@ -69,10 +69,10 @@ If the hook says `CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then
 
 ```bash
 # ✅ CORRECT - use the actual value
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --field phase
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --field phase
 
 # ❌ WRONG - do not use placeholders
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field phase
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field phase
 ```
 
 ### Script calls with SESSION_ID
@@ -80,9 +80,9 @@ node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} -
 All scripts accept session ID directly and derive the directory internally:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session <SESSION_ID> --field phase
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session <SESSION_ID> --phase EXECUTION
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session <SESSION_ID> --format json
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session <SESSION_ID> --field phase
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session <SESSION_ID> --phase EXECUTION
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session <SESSION_ID> --format json
 ```
 
 ---
@@ -94,10 +94,10 @@ Find and load the existing session:
 ```bash
 # Get SESSION_ID from hook output (see "Session ID Handling" section)
 # Get session directory via script
-SESSION_DIR=$(node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
 
 # Verify session exists and has tasks
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID}
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID}
 ```
 
 Read session state:
@@ -105,25 +105,25 @@ Read session state:
 ```bash
 # SESSION_ID from hook output
 # Get session data via script
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID}                    # Full JSON
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field phase      # Specific field
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field goal
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID}                    # Full JSON
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field phase      # Specific field
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field goal
 
 # Get specific options
-goal=$(node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field goal)
-phase=$(node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field phase)
+goal=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field goal)
+phase=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field phase)
 ```
 
 **Validate session is ready for execution:**
 
-| Phase | Action |
-|-------|--------|
-| `PLANNING_COMPLETE` | Ready to execute |
-| `EXECUTION` | Resume execution (check task states) |
-| `VERIFICATION` | Resume verification |
-| `COMPLETE` | Already done, report success |
-| `FAILED` | Max iterations reached, report failure |
-| `CANCELLED` | Exit cleanly |
+| Phase               | Action                                 |
+| ------------------- | -------------------------------------- |
+| `PLANNING_COMPLETE` | Ready to execute                       |
+| `EXECUTION`         | Resume execution (check task states)   |
+| `VERIFICATION`      | Resume verification                    |
+| `COMPLETE`          | Already done, report success           |
+| `FAILED`            | Max iterations reached, report failure |
+| `CANCELLED`         | Exit cleanly                           |
 
 ---
 
@@ -164,7 +164,7 @@ Starting workers...
 ```python
 while iteration <= max_iterations:
     # Update phase and iteration
-    Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase EXECUTION --iteration {iteration}')
+    Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase EXECUTION --iteration {iteration}')
 
     print(f"## Iteration {iteration}/{max_iterations}")
 
@@ -176,7 +176,7 @@ while iteration <= max_iterations:
 
     # Skip verify if requested
     if skip_verify:
-        Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase COMPLETE')
+        Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase COMPLETE')
         print("## Execution Complete (verification skipped)")
         return
 
@@ -186,7 +186,7 @@ while iteration <= max_iterations:
     if verification_result == "CANCELLED":
         return
     elif verification_result == "PASS":
-        Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase COMPLETE')
+        Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase COMPLETE')
         print("## Execution Complete - All criteria verified")
         return
     else:
@@ -196,7 +196,7 @@ while iteration <= max_iterations:
             reset_failed_tasks(SESSION_ID)
             iteration += 1
         else:
-            Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase FAILED')
+            Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase FAILED')
             print("## Execution Failed - Max iterations reached")
             return
 ```
@@ -207,11 +207,11 @@ while iteration <= max_iterations:
 
 ```python
 def run_execution_phase(SESSION_ID, max_workers):
-    # Get session_dir via: Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
+    # Get session_dir via: Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
 
     while True:
         # Get current task states
-        tasks_output = Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID} --format json')
+        tasks_output = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID} --format json')
         tasks = json.loads(tasks_output.output)
 
         # Categorize tasks (exclude verify task for now)
@@ -227,7 +227,7 @@ def run_execution_phase(SESSION_ID, max_workers):
         batch = unblocked[:max_workers] if max_workers > 0 else unblocked
         for task in batch:
             # Mark task as in_progress
-            Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --status in_progress')
+            Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --status in_progress')
 
             model = "opus" if task["complexity"] == "complex" else "sonnet"
             Task(
@@ -254,10 +254,10 @@ SUCCESS CRITERIA:
 
 ```python
 def run_verification_phase(SESSION_ID):
-    # Get session_dir via: Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
+    # Get session_dir via: Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
 
     # Update phase
-    Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase VERIFICATION')
+    Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase VERIFICATION')
 
     print("## Running Verification...")
 
@@ -291,22 +291,22 @@ Return: PASS or FAIL with details
 def reset_failed_tasks(SESSION_ID):
     """Reset failed tasks for retry iteration"""
 
-    tasks_output = Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID} --format json')
+    tasks_output = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID} --format json')
     tasks = json.loads(tasks_output.output)
 
     for task in tasks:
         if task["status"] == "failed":
             # Reset to pending
-            Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --status pending')
+            Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --status pending')
 
             # Increment retry count
             retry_count = task.get("retry_count", 0) + 1
-            Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --retry-count {retry_count}')
+            Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --retry-count {retry_count}')
 
             print(f"↻ Reset for retry: {task['id']} (attempt {retry_count + 1})")
 
     # Also reset verify task
-    Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id verify --status pending')
+    Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id verify --status pending')
 ```
 
 ---
@@ -321,10 +321,10 @@ Between poll iterations, report progress:
 **Iteration:** 2/5
 **Phase:** EXECUTION
 
-| Task   | Status      | Model  |
-| ------ | ----------- | ------ |
-| 1      | ✓ resolved  | sonnet |
-| 2      | → running   | opus   |
+| Task   | Status     | Model  |
+| ------ | ---------- | ------ |
+| 1      | ✓ resolved | sonnet |
+| 2      | → running  | opus   |
 | 3      | ⏳ blocked  | sonnet |
 | verify | ⏳ pending  | opus   |
 
@@ -365,9 +365,9 @@ Session ID: {session_id}
 **Result:** ✗ FAIL
 
 ### Failed Tasks
-| ID | Task | Reason |
-|----|------|--------|
-| 2  | Build API | Tests failing |
+| ID  | Task      | Reason        |
+| --- | --------- | ------------- |
+| 2   | Build API | Tests failing |
 
 ### Verification Issues
 {details from last verifier run}
@@ -392,11 +392,11 @@ Session ID: {session_id}
 
 ### Retry Strategy
 
-| Attempt | Model Escalation | Notes |
-|---------|------------------|-------|
-| 1 | sonnet/opus (default) | Normal execution |
-| 2 | Same model | Retry with same model |
-| 3+ | Consider opus | Escalate if standard task keeps failing |
+| Attempt | Model Escalation      | Notes                                   |
+| ------- | --------------------- | --------------------------------------- |
+| 1       | sonnet/opus (default) | Normal execution                        |
+| 2       | Same model            | Retry with same model                   |
+| 3+      | Consider opus         | Escalate if standard task keeps failing |
 
 ### Graceful Degradation
 
@@ -407,17 +407,17 @@ Session ID: {session_id}
 
 ## Options Reference
 
-| Option | Description |
-|--------|-------------|
-| `--session <id>` | Session ID to execute |
+| Option               | Description                                |
+| -------------------- | ------------------------------------------ |
+| `--session <id>`     | Session ID to execute                      |
 | `--max-iterations N` | Override max retry iterations (default: 5) |
-| `--skip-verify` | Skip verification phase |
+| `--skip-verify`      | Skip verification phase                    |
 
 ---
 
 ## Directory Structure
 
-Get session directory: `node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir`
+Get session directory: `bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir`
 
 ```
 $SESSION_DIR/

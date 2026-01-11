@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * session-get.js - Get session info
  * Usage: session-get.js --session <ID> [--field phase|goal|options] [--dir] [--file]

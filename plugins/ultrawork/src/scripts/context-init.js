@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * context-init.js - Initialize context.json with expected explorers
  * Usage: context-init.js --session <ID> --expected "overview,exp-1,exp-2,exp-3"

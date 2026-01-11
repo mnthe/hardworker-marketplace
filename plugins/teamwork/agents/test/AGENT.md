@@ -1,7 +1,7 @@
 ---
 name: test
 description: "Test specialist worker for teamwork. Tests, fixtures, mocks."
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
 ---
 
 # Test Worker Agent

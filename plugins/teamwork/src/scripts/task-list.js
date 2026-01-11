@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * task-list.js - List tasks with filtering
  * CLI to list and filter tasks in a teamwork project

@@ -44,12 +44,12 @@ The skill saves these to `.claude/knowledge-extraction/sessions/{session-id}.md`
 
 ### Commands
 
-| Command | Description |
-|---------|-------------|
-| `/insights` | View current session's insights |
+| Command             | Description                             |
+| ------------------- | --------------------------------------- |
+| `/insights`         | View current session's insights         |
 | `/insights extract` | Extract insights to reusable components |
-| `/insights clear` | Clear current session's insights |
-| `/insights all` | View all sessions' insights |
+| `/insights clear`   | Clear current session's insights        |
+| `/insights all`     | View all sessions' insights             |
 
 ### Extraction Workflow
 
@@ -105,11 +105,11 @@ Customize insight collection and extraction behavior.
 
 ### Options
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `threshold` | 5 | Insights before recommending extraction |
-| `auto_recommend` | true | Show extraction recommendations |
-| `output_dir` | ".claude" | Where to create extracted components |
+| Option           | Default   | Description                             |
+| ---------------- | --------- | --------------------------------------- |
+| `threshold`      | 5         | Insights before recommending extraction |
+| `auto_recommend` | true      | Show extraction recommendations         |
+| `output_dir`     | ".claude" | Where to create extracted components    |
 
 ## Storage
 
@@ -135,18 +135,18 @@ Insights are stored at:
 
 ## Extraction Targets
 
-| Insight Type | Primary Target | Criteria |
-|--------------|----------------|----------|
-| `code-pattern` | Skill | Reusable patterns across projects |
-| `workflow` | Command | Automatable step-by-step procedures |
-| `debugging` | Skill | Troubleshooting techniques |
-| `architecture` | CLAUDE.md | Project-specific decisions |
-| `tool-usage` | Skill | Effective tool combinations |
+| Insight Type   | Primary Target | Criteria                            |
+| -------------- | -------------- | ----------------------------------- |
+| `code-pattern` | Skill          | Reusable patterns across projects   |
+| `workflow`     | Command        | Automatable step-by-step procedures |
+| `debugging`    | Skill          | Troubleshooting techniques          |
+| `architecture` | CLAUDE.md      | Project-specific decisions          |
+| `tool-usage`   | Skill          | Effective tool combinations         |
 
 ## Requirements
 
 - Claude Code CLI
-- Node.js (for hooks)
+- Bun (for hooks)
 
 ## License
 

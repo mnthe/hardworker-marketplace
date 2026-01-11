@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * task-get.js - Get single task details
  * CLI to retrieve task file contents

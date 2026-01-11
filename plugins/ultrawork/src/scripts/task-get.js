@@ -1,7 +1,8 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * task-get.js - Get single task details
- * Usage: task-get.js --session <ID> --id <task_id> [--field <field>]
+ * Usage: task-get.js --session <ID> --task-id <id> [--field <field>]
+ * Aliases: --task-id, --task, --id (all accepted for task identification)
  */
 
 const fs = require('fs');
@@ -40,6 +41,8 @@ function parseArgs(argv) {
       case '--session':
         args.session = argv[++i];
         break;
+      case '--task-id':
+      case '--task':
       case '--id':
         args.id = argv[++i];
         break;
@@ -106,24 +109,25 @@ function main() {
 
   // Handle help
   if (args.help) {
-    console.log('Usage: task-get.js --session <ID> --id <task_id> [--field <field>]');
+    console.log('Usage: task-get.js --session <ID> --task-id <id> [--field <field>]');
+    console.log('  Aliases: --task-id, --task, --id (all accepted)');
     console.log('');
     console.log('Options:');
     console.log('  --session <ID>     Session ID (required)');
-    console.log('  --id <task_id>     Task ID (required)');
+    console.log('  --task-id <id>     Task ID (required, aliases: --task, --id)');
     console.log('  --field <field>    Extract specific field (optional)');
     console.log('  -h, --help         Show this help');
     console.log('');
     console.log('Examples:');
-    console.log('  task-get.js --session abc123 --id 1');
-    console.log('  task-get.js --session abc123 --id 1 --field status');
+    console.log('  task-get.js --session abc123 --task-id 1');
+    console.log('  task-get.js --session abc123 --task 1 --field status');
     console.log('  task-get.js --session abc123 --id 1 --field evidence[0].type');
     process.exit(0);
   }
 
   // Validate required args
   if (!args.session || !args.id) {
-    console.error('Error: --session and --id required');
+    console.error('Error: --session and --task-id required (aliases: --task, --id)');
     process.exit(1);
   }
 

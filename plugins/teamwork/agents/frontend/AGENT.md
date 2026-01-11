@@ -1,7 +1,7 @@
 ---
 name: frontend
 description: "Frontend specialist worker for teamwork. UI, components, styling, user interactions."
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
 ---
 
 # Frontend Worker Agent

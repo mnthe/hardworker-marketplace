@@ -1,102 +1,302 @@
 # teamwork
 
-Cross-platform JavaScript/Node.js version of the teamwork plugin for Claude Code. Uses JavaScript with JSDoc type annotations (no TypeScript build step required).
+Multi-session collaboration plugin with role-based workers, file-per-task storage, and parallel execution support.
+
+## Overview
+
+Teamwork enables distributed collaboration across multiple Claude sessions. A coordinator breaks down project goals into tasks, and specialized workers claim and execute them in parallel. Each worker runs in its own terminal session, coordinating through shared task files.
+
+**Key capabilities:**
+- Role-based task assignment (frontend, backend, test, devops, etc.)
+- File-per-task storage with atomic operations
+- Continuous loop mode for unattended execution
+- Dashboard status view with progress tracking
+- Cross-platform support (Windows, MacOS, Linux)
 
 ## Features
 
-- Role-based worker agents (frontend, backend, devops, etc.)
-- File-per-task storage
-- Continuous loop mode (hook-based auto-continue)
-- Dashboard status overview
-- **Cross-platform**: Works on Windows, MacOS, and Linux
+- **Parallel Execution**: Multiple workers run simultaneously in separate terminals
+- **Role Specialization**: Workers filter tasks by role (frontend, backend, test, etc.)
+- **Atomic Operations**: File-based locking prevents race conditions
+- **Loop Mode**: Workers automatically claim next task until project complete
+- **Progress Dashboard**: Real-time status view with completion metrics
+- **Zero Build Step**: Pure JavaScript with JSDoc types (no TypeScript compilation)
 
 ## Installation
+
+### From Marketplace
 
 ```bash
 claude plugin marketplace add mnthe/hardworker-marketplace
 claude plugin install teamwork@hardworker-marketplace
 ```
 
-## Usage
+### Local Development
 
 ```bash
-# Start teamwork session (planning)
-/teamwork "build REST API with tests"
+claude --plugin-dir /path/to/teamwork
+```
 
-# Check status
-/teamwork-status
+## Usage
 
-# One-shot worker
-/teamwork-worker
+### Basic Workflow
 
-# Continuous worker (keeps working until no tasks left)
-/teamwork-worker --loop
+```bash
+# Terminal 1: Start project (coordination)
+/teamwork "build REST API with authentication and tests"
 
-# Role-specific continuous worker
+# Terminal 2: Start backend worker
 /teamwork-worker --role backend --loop
 
-# Specific project/team
-/teamwork-worker --project myapp --team feature-x --loop
+# Terminal 3: Start frontend worker
+/teamwork-worker --role frontend --loop
+
+# Terminal 4: Check progress
+/teamwork-status
+```
+
+### One-Shot Worker
+
+```bash
+# Complete one task then exit
+/teamwork-worker
+```
+
+### Continuous Worker
+
+```bash
+# Keep claiming tasks until project complete
+/teamwork-worker --loop
+
+# Specialized continuous worker
+/teamwork-worker --role backend --loop
+```
+
+### Status Dashboard
+
+```bash
+# Basic status
+/teamwork-status
+
+# Detailed task list
+/teamwork-status --verbose
 ```
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `/teamwork "goal"` | Start coordination session |
-| `/teamwork-status` | View dashboard |
-| `/teamwork-worker` | Claim and complete one task |
+| Command            | Description                                             |
+| ------------------ | ------------------------------------------------------- |
+| `/teamwork <goal>` | Start coordination session, create task breakdown       |
+| `/teamwork-status` | View dashboard with progress metrics and active workers |
+| `/teamwork-worker` | Claim and complete one task (one-shot mode)             |
 
-## Worker Options
+### Command Options
 
-| Option | Description |
-|--------|-------------|
-| `--loop` | Continuous mode - keep working until done |
-| `--role ROLE` | Only claim tasks with this role |
-| `--project NAME` | Override project name |
-| `--team NAME` | Override team name |
+#### /teamwork
+
+| Option           | Description                                    |
+| ---------------- | ---------------------------------------------- |
+| `--project NAME` | Override project name (default: git repo name) |
+| `--team NAME`    | Override team name (default: git branch name)  |
+
+#### /teamwork-worker
+
+| Option           | Description                                             |
+| ---------------- | ------------------------------------------------------- |
+| `--loop`         | Continuous mode - keep working until all tasks complete |
+| `--role ROLE`    | Only claim tasks assigned to this role                  |
+| `--project NAME` | Override project name detection                         |
+| `--team NAME`    | Override team name detection                            |
+
+#### /teamwork-status
+
+| Option           | Description                                       |
+| ---------------- | ------------------------------------------------- |
+| `--project NAME` | Override project name detection                   |
+| `--team NAME`    | Override team name detection                      |
+| `--verbose`      | Show detailed task list with status and ownership |
 
 ## Agents
 
-| Agent | Role |
-|-------|------|
-| **coordinator** | Orchestrates overall workflow |
-| **frontend** | UI/UX implementation |
-| **backend** | API and business logic |
-| **devops** | CI/CD, deployment |
-| **test** | Test implementation |
-| **docs** | Documentation |
-| **security** | Security review |
-| **review** | Code review |
-| **worker** | General purpose |
+| Agent           | Role               | Description                                                     |
+| --------------- | ------------------ | --------------------------------------------------------------- |
+| **coordinator** | Planning           | Breaks down goals into tasks, assigns roles, creates task files |
+| **frontend**    | UI Implementation  | UI components, styling, user interactions                       |
+| **backend**     | API Implementation | API endpoints, services, database, business logic               |
+| **test**        | Testing            | Unit tests, integration tests, fixtures, mocks                  |
+| **devops**      | Infrastructure     | CI/CD pipelines, deployment, infrastructure                     |
+| **docs**        | Documentation      | README files, API documentation, examples                       |
+| **security**    | Security           | Authentication, authorization, input validation                 |
+| **review**      | Code Review        | Code review, refactoring suggestions                            |
+| **worker**      | General Purpose    | Claims tasks for any role (fallback agent)                      |
 
 ## How It Works
 
+### Phase 1: Coordination
+
 ```
-/teamwork "goal"              # Terminal 1: Planning
+/teamwork "build REST API"
     ↓
-Coordinator creates tasks
+Coordinator agent spawned (uses Opus model)
     ↓
-/teamwork-worker --loop       # Terminal 2: Backend worker
-/teamwork-worker --loop       # Terminal 3: Frontend worker
+Analyzes codebase and requirements
     ↓
-Tasks completed in parallel
+Creates task breakdown with roles
+    ↓
+Writes task files to shared directory
+```
+
+### Phase 2: Parallel Execution
+
+```
+Terminal 1: /teamwork-worker --role backend --loop
+    ↓ (claims task #1: "Setup database schema")
+    ↓ (completes task, marks resolved)
+    ↓ (claims task #2: "Build API endpoints")
+
+Terminal 2: /teamwork-worker --role frontend --loop
+    ↓ (claims task #3: "Create login form")
+    ↓ (completes task, marks resolved)
+    ↓ (claims task #4: "Build dashboard")
+```
+
+### Phase 3: Monitoring
+
+```
+Terminal 3: /teamwork-status --verbose
+    ↓
+Shows progress dashboard:
+- Overall completion percentage
+- Per-role completion metrics
+- Active workers and claimed tasks
+- Blocked tasks waiting on dependencies
 ```
 
 ## Loop Mode
 
-`--loop` mode uses hook-based continuation:
-1. Worker claims and completes a task
-2. If more tasks available → outputs `__TEAMWORK_CONTINUE__`
-3. Stop hook detects marker and re-triggers worker
-4. Loop continues until no more tasks
+Loop mode uses hook-based continuation for unattended execution:
 
-State is tracked per-terminal in `~/.claude/teamwork/.loop-state/`
+1. Worker completes a task
+2. Outputs special marker: `__TEAMWORK_CONTINUE__`
+3. Stop hook detects marker and checks for more tasks
+4. Hook re-triggers `/teamwork-worker` with same context
+5. Loop continues until no open tasks remain
+
+**Loop state tracking:**
+- State stored per-terminal in `~/.claude/teamwork/.loop-state/{pid}.json`
+- Preserves project, team, and role filter across iterations
+- Automatically cleaned up when loop exits
+
+## Storage
+
+### Directory Structure
+
+```
+~/.claude/teamwork/{project}/{team}/
+├── project.json              # Project metadata and statistics
+└── tasks/
+    ├── 1.json                # Individual task files
+    ├── 2.json
+    └── ...
+```
+
+### Task File Format
+
+```json
+{
+  "id": "1",
+  "title": "Setup database schema",
+  "description": "Create user and post tables with migrations",
+  "role": "backend",
+  "status": "open",
+  "created_at": "2026-01-12T10:30:00Z",
+  "updated_at": "2026-01-12T10:30:00Z",
+  "claimed_by": null,
+  "evidence": []
+}
+```
+
+**Task statuses:**
+- `open`: Available for claiming
+- `in_progress`: Claimed by a worker
+- `resolved`: Completed with evidence
+
+### Project File Format
+
+```json
+{
+  "project": "my-app",
+  "team": "feature-auth",
+  "goal": "Build REST API with authentication",
+  "created_at": "2026-01-12T10:30:00Z",
+  "updated_at": "2026-01-12T10:35:00Z",
+  "stats": {
+    "total": 10,
+    "open": 3,
+    "in_progress": 2,
+    "resolved": 5
+  }
+}
+```
+
+## Concurrency Safety
+
+Teamwork handles multiple workers accessing shared state:
+
+- **File-based locking**: Prevents race conditions during task claiming
+- **Atomic operations**: Task status updates are transactional
+- **Retry logic**: Workers retry on lock contention
+- **Stale detection**: Workers detect when tasks are claimed by others
+
+## Examples
+
+### Example 1: Full-Stack Application
+
+```bash
+# Terminal 1: Coordinator
+/teamwork "build todo app with React frontend and Express backend"
+
+# Terminal 2: Backend specialist
+/teamwork-worker --role backend --loop
+
+# Terminal 3: Frontend specialist
+/teamwork-worker --role frontend --loop
+
+# Terminal 4: Test specialist
+/teamwork-worker --role test --loop
+
+# Terminal 5: Monitor progress
+/teamwork-status
+```
+
+### Example 2: Single Developer Mode
+
+```bash
+# Start project
+/teamwork "implement user authentication"
+
+# Work on one task at a time
+/teamwork-worker
+
+# Check what's left
+/teamwork-status
+
+# Continue with next task
+/teamwork-worker
+```
+
+### Example 3: Specific Project Override
+
+```bash
+# Work on specific project/team combination
+/teamwork-worker --project myapp --team bugfix-123 --loop
+```
 
 ## Requirements
 
-- Node.js 18+ (bundled with Claude Code)
+- Bun installed
 - No external dependencies
+- File system with atomic write operations
 
 ## License
 

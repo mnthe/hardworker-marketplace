@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * loop-state.js - Teamwork loop state management
  * Tracks active loop sessions per terminal/project

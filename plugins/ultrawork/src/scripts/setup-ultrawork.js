@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Ultrawork Setup Script
  * v5.1: Added working_dir to session.json for project deliverables
@@ -90,7 +90,7 @@ function parseArgs(argv) {
 
   /** @type {string[]} */
   const goalParts = [];
-  let i = 2; // Skip node and script path
+  let i = 2; // Skip 'bun' and script path
 
   while (i < argv.length) {
     const arg = argv[i];

@@ -2,7 +2,7 @@
 name: ultrawork-plan
 description: "Interactive planning phase - explore, clarify, design, then produce task breakdown"
 argument-hint: "[--auto] <goal> | --help"
-allowed-tools: ["Task", "TaskOutput", "Read", "Write", "Edit", "AskUserQuestion", "Glob", "Grep", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/*.js:*)"]
+allowed-tools: ["Task", "TaskOutput", "Read", "Write", "Edit", "AskUserQuestion", "Glob", "Grep", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/*.js:*)"]
 ---
 
 # Ultrawork Plan Command
@@ -29,12 +29,12 @@ Output: design.md + tasks/ (ready for /ultrawork-exec)
 
 The orchestrator MUST delegate exploration to sub-agents. Direct execution is prohibited except for Overview.
 
-| Phase | Delegation | Direct Execution |
-|-------|------------|------------------|
-| Overview Exploration | N/A | ALWAYS via `Skill(skill="ultrawork:overview-exploration")` |
-| Targeted Exploration | ALWAYS via `Task(subagent_type="ultrawork:explorer")` | NEVER |
-| Planning (non-auto) | N/A | ALWAYS (interactive by design) |
-| Planning (auto) | ALWAYS via `Task(subagent_type="ultrawork:planner")` | NEVER |
+| Phase                | Delegation                                            | Direct Execution                                           |
+| -------------------- | ----------------------------------------------------- | ---------------------------------------------------------- |
+| Overview Exploration | N/A                                                   | ALWAYS via `Skill(skill="ultrawork:overview-exploration")` |
+| Targeted Exploration | ALWAYS via `Task(subagent_type="ultrawork:explorer")` | NEVER                                                      |
+| Planning (non-auto)  | N/A                                                   | ALWAYS (interactive by design)                             |
+| Planning (auto)      | ALWAYS via `Task(subagent_type="ultrawork:planner")`  | NEVER                                                      |
 
 **Exception**: User explicitly requests direct execution (e.g., "run this directly", "execute without agent").
 
@@ -48,7 +48,7 @@ To allow user interruption during exploration, use **background execution with p
 # Poll pattern for all Task waits
 while True:
     # Check if session was cancelled
-    phase = Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field phase')
+    phase = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field phase')
     if phase.output.strip() == "CANCELLED":
         return  # Exit cleanly
 
@@ -80,10 +80,10 @@ If the hook says `CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then
 
 ```bash
 # ✅ CORRECT - use the actual value
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --plan-only "goal"
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --plan-only "goal"
 
 # ❌ WRONG - do not use placeholders
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session {SESSION_ID} --plan-only "goal"
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session {SESSION_ID} --plan-only "goal"
 ```
 
 ### Session Directory
@@ -91,13 +91,13 @@ node "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session {SESSION_I
 Get session directory via script:
 
 ```bash
-SESSION_DIR=$(node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
 ```
 
 For example, if `SESSION_ID` is `37b6a60f-8e3e-4631-8f62-8eaf3d235642`:
 
 ```bash
-SESSION_DIR=$(node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --dir)
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --dir)
 # Returns: ~/.claude/ultrawork/sessions/37b6a60f-8e3e-4631-8f62-8eaf3d235642
 ```
 
@@ -108,7 +108,7 @@ SESSION_DIR=$(node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session 
 **First, extract SESSION_ID from the system-reminder hook output, then execute:**
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session <YOUR_SESSION_ID_HERE> --plan-only $ARGUMENTS
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session <YOUR_SESSION_ID_HERE> --plan-only $ARGUMENTS
 ```
 
 Replace `<YOUR_SESSION_ID_HERE>` with the actual UUID from `CLAUDE_SESSION_ID` in system-reminder.
@@ -117,7 +117,7 @@ Replace `<YOUR_SESSION_ID_HERE>` with the actual UUID from `CLAUDE_SESSION_ID` i
 
 ```bash
 # SESSION_ID from hook output
-SESSION_DIR=$(node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --dir)
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --dir)
 ```
 
 Parse the setup output to get:
@@ -132,11 +132,11 @@ Parse the setup output to get:
 
 ```bash
 # Get session directory via script
-SESSION_DIR=$(node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
 
 # Get session data via script
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID}                      # Full JSON
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field exploration_stage
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID}                      # Full JSON
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field exploration_stage
 
 # Read context.json (using Read tool with session_dir)
 context = Read(f"{SESSION_DIR}/context.json")
@@ -144,13 +144,13 @@ context = Read(f"{SESSION_DIR}/context.json")
 
 **Resume logic by exploration_stage:**
 
-| Stage | Status | Action |
-|-------|--------|--------|
-| `not_started` | Fresh start | Begin from Stage 2a (Overview) |
-| `overview` | Overview running/done | Check overview.md exists → proceed to 2b |
-| `analyzing` | Hints generated, no targeted yet | Re-run hint analysis, set expected_explorers |
-| `targeted` | Targeted explorers running | Check expected vs actual, wait or re-spawn missing |
-| `complete` | Exploration done | Skip to Step 3 (Planning) |
+| Stage         | Status                           | Action                                             |
+| ------------- | -------------------------------- | -------------------------------------------------- |
+| `not_started` | Fresh start                      | Begin from Stage 2a (Overview)                     |
+| `overview`    | Overview running/done            | Check overview.md exists → proceed to 2b           |
+| `analyzing`   | Hints generated, no targeted yet | Re-run hint analysis, set expected_explorers       |
+| `targeted`    | Targeted explorers running       | Check expected vs actual, wait or re-spawn missing |
+| `complete`    | Exploration done                 | Skip to Step 3 (Planning)                          |
 
 ```python
 if exploration_stage == "not_started":
@@ -218,23 +218,23 @@ This is synchronous - no polling needed. Proceed to Stage 2b after skill complet
 **Update exploration_stage to "analyzing":**
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage analyzing
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage analyzing
 ```
 
 Based on **Overview + Goal**, decide what areas need detailed exploration.
 
 **Decision Matrix:**
 
-| Goal Keywords | Detected Stack | Explore Areas |
-|---------------|----------------|---------------|
-| auth, login, user | Next.js | middleware, api/auth, existing user model |
-| auth, login, user | Express | routes, passport config, session |
-| api, endpoint | Any | existing routes, controllers, schemas |
-| database, model | Prisma | schema.prisma, migrations, existing models |
-| database, model | TypeORM | entities, migrations |
-| test, coverage | Any | existing tests, test config, mocks |
-| ui, component | React/Next | components/, design system, styles |
-| bug, fix, error | Any | related files from error context |
+| Goal Keywords     | Detected Stack | Explore Areas                              |
+| ----------------- | -------------- | ------------------------------------------ |
+| auth, login, user | Next.js        | middleware, api/auth, existing user model  |
+| auth, login, user | Express        | routes, passport config, session           |
+| api, endpoint     | Any            | existing routes, controllers, schemas      |
+| database, model   | Prisma         | schema.prisma, migrations, existing models |
+| database, model   | TypeORM        | entities, migrations                       |
+| test, coverage    | Any            | existing tests, test config, mocks         |
+| ui, component     | React/Next     | components/, design system, styles         |
+| bug, fix, error   | Any            | related files from error context           |
 
 **Generate exploration hints dynamically:**
 
@@ -261,7 +261,7 @@ for i, hint in enumerate(hints):
     expected_ids += f",exp-{i+1}"
 
 # Initialize context.json with expected explorers
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-init.js" --session {SESSION_ID} --expected "{expected_ids}"
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-init.js" --session {SESSION_ID} --expected "{expected_ids}"
 ```
 
 This ensures:
@@ -273,13 +273,13 @@ This ensures:
 **Update exploration_stage to "targeted":**
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage targeted
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage targeted
 ```
 
 Spawn explorers for each identified area (parallel, in single message):
 
 ```python
-# Get session_dir via: Bash('"node ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
+# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
 
 # Call multiple Tasks in single message = automatic parallel execution
 for i, hint in enumerate(hints):
@@ -301,7 +301,7 @@ CONTEXT: {overview_summary}
 **After all explorers complete, update exploration_stage to "complete":**
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage complete
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage complete
 ```
 
 ### Exploration Output
@@ -320,7 +320,7 @@ Explorers will create:
 Spawn Planner sub-agent:
 
 ```python
-# Get session_dir via: Bash('"node ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
+# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
 
 Task(
   subagent_type="ultrawork:planner:planner",
@@ -352,7 +352,7 @@ Reference: `skills/planning/SKILL.md`
 
 ```bash
 # Get session directory
-SESSION_DIR=$(node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
 
 # Read lightweight summary
 Read("$SESSION_DIR/context.json")
@@ -425,7 +425,7 @@ AskUserQuestion(questions=[{
 
 ```bash
 # Get working directory from session
-WORKING_DIR=$(node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field working_dir)
+WORKING_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field working_dir)
 
 # Create docs/plans directory if needed
 mkdir -p "$WORKING_DIR/docs/plans"
@@ -448,7 +448,7 @@ See `skills/planning/SKILL.md` Phase 4 for template.
 Decompose design into tasks. Write each task:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-create.js" --session {SESSION_ID} \
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-create.js" --session {SESSION_ID} \
   --id "1" \
   --subject "Setup NextAuth provider" \
   --description "Configure NextAuth with credentials" \
@@ -461,7 +461,7 @@ Always include verify task at end.
 #### 3g. Update Session Phase
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase PLANNING_COMPLETE
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase PLANNING_COMPLETE
 ```
 
 ---
@@ -472,11 +472,11 @@ node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID
 
 ```bash
 # Get working directory and session directory
-WORKING_DIR=$(node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field working_dir)
-SESSION_DIR=$(node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
+WORKING_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field working_dir)
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
 
 # List tasks
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID}
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID}
 
 # Read design (from PROJECT directory)
 Read("$WORKING_DIR/docs/plans/YYYY-MM-DD-{goal-slug}-design.md")
@@ -541,7 +541,7 @@ Run `/ultrawork-exec` to execute the plan.
 ## Directory Structure
 
 **Session Directory** (internal metadata):
-`node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir`
+`bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir`
 
 ```
 $SESSION_DIR/
@@ -559,7 +559,7 @@ $SESSION_DIR/
 ```
 
 **Project Directory** (user deliverables):
-`node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field working_dir`
+`bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field working_dir`
 
 ```
 $WORKING_DIR/
@@ -572,10 +572,10 @@ $WORKING_DIR/
 
 ## Mode Comparison
 
-| Aspect | Interactive (default) | Auto (--auto) |
-|--------|----------------------|---------------|
-| Exploration | Orchestrator spawns explorers | Same |
-| Planning | Orchestrator runs planning skill | Planner sub-agent |
-| User Questions | AskUserQuestion for decisions | Auto-decide |
-| Confirmation | User approves plan | No confirmation |
-| Best For | Important features, unclear requirements | Well-defined tasks, CI/CD |
+| Aspect         | Interactive (default)                    | Auto (--auto)             |
+| -------------- | ---------------------------------------- | ------------------------- |
+| Exploration    | Orchestrator spawns explorers            | Same                      |
+| Planning       | Orchestrator runs planning skill         | Planner sub-agent         |
+| User Questions | AskUserQuestion for decisions            | Auto-decide               |
+| Confirmation   | User approves plan                       | No confirmation           |
+| Best For       | Important features, unclear requirements | Well-defined tasks, CI/CD |

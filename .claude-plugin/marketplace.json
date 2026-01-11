@@ -7,8 +7,8 @@
     {
       "name": "ultrawork",
       "source": "./plugins/ultrawork",
-      "description": "Node.js cross-platform version of ultrawork - strict verification-first development with TDD support",
-      "version": "0.10.1",
+      "description": "Bun cross-platform version of ultrawork - strict verification-first development with TDD support",
+      "version": "0.11.1",
       "author": {
         "name": "mnthe"
       },
@@ -25,8 +25,8 @@
     {
       "name": "teamwork",
       "source": "./plugins/teamwork",
-      "description": "Node.js cross-platform version of teamwork - multi-session collaboration with role-based workers and task management",
-      "version": "0.1.0",
+      "description": "Bun cross-platform version of teamwork - multi-session collaboration with role-based workers and task management",
+      "version": "0.11.0",
       "author": {
         "name": "mnthe"
       },
@@ -47,7 +47,7 @@
       "name": "knowledge-extraction",
       "source": "./plugins/knowledge-extraction",
       "description": "Collect insights from Claude sessions and extract them into reusable components (Skills, Commands, Agents, CLAUDE.md)",
-      "version": "0.1.0",
+      "version": "0.3.0",
       "author": {
         "name": "mnthe"
       },

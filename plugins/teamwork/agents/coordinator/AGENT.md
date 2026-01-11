@@ -2,7 +2,7 @@
 name: coordinator
 description: "Use when setting up teamwork projects and creating tasks for multi-session collaboration."
 model: opus
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/project-*.js:*)"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/project-*.js:*)"]
 ---
 
 # Coordinator Agent
@@ -37,15 +37,15 @@ Options:
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Create project
-node $SCRIPTS/project-create.js --dir {TEAMWORK_DIR} \
+bun $SCRIPTS/project-create.js --dir {TEAMWORK_DIR} \
   --project {PROJECT} --team {SUB_TEAM} --goal "..."
 
 # Create task
-node $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
+bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
   --id "1" --subject "..." --role backend --blocked-by "2,3"
 
 # List tasks
-node $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --format json
+bun $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --format json
 ```
 
 ## Process
@@ -74,23 +74,23 @@ Use Glob/Grep/Read to understand:
 - Prefer more granular tasks over fewer large ones
 
 **Role Assignment:**
-| Role | When to Use |
-|------|-------------|
+| Role       | When to Use                                |
+| ---------- | ------------------------------------------ |
 | `frontend` | UI, components, styling, user interactions |
-| `backend` | API, services, database, business logic |
-| `test` | Tests, fixtures, mocks |
-| `devops` | CI/CD, deployment, infrastructure |
-| `docs` | Documentation, README, examples |
-| `security` | Auth, permissions, input validation |
-| `review` | Code review, refactoring |
-| `general` | Miscellaneous, cross-cutting |
+| `backend`  | API, services, database, business logic    |
+| `test`     | Tests, fixtures, mocks                     |
+| `devops`   | CI/CD, deployment, infrastructure          |
+| `docs`     | Documentation, README, examples            |
+| `security` | Auth, permissions, input validation        |
+| `review`   | Code review, refactoring                   |
+| `general`  | Miscellaneous, cross-cutting               |
 
 ### Phase 4: Create Tasks
 
 **Step 1: Create project**
 
 ```bash
-node $SCRIPTS/project-create.js --dir {TEAMWORK_DIR} \
+bun $SCRIPTS/project-create.js --dir {TEAMWORK_DIR} \
   --project {PROJECT} --team {SUB_TEAM} \
   --goal "{goal}"
 ```
@@ -100,7 +100,7 @@ node $SCRIPTS/project-create.js --dir {TEAMWORK_DIR} \
 For EACH task:
 
 ```bash
-node $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
+bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
   --id "1" \
   --subject "Clear, actionable title" \
   --description "Specific deliverable with context" \
@@ -111,7 +111,7 @@ node $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
 With dependencies:
 
 ```bash
-node $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
+bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
   --id "3" \
   --subject "Build API endpoints" \
   --role backend \
@@ -140,13 +140,13 @@ Update task files with `blockedBy` arrays:
 
 ## Tasks Created
 
-| ID | Task | Role | Blocked By |
-|----|------|------|------------|
-| 1 | Setup database schema | backend | - |
-| 2 | Build API endpoints | backend | 1 |
-| 3 | Create React components | frontend | 2 |
-| 4 | Write unit tests | test | 1, 2 |
-| 5 | Update documentation | docs | 3 |
+| ID  | Task                    | Role     | Blocked By |
+| --- | ----------------------- | -------- | ---------- |
+| 1   | Setup database schema   | backend  | -          |
+| 2   | Build API endpoints     | backend  | 1          |
+| 3   | Create React components | frontend | 2          |
+| 4   | Write unit tests        | test     | 1, 2       |
+| 5   | Update documentation    | docs     | 3          |
 
 ## Parallel Groups
 1. **Wave 1**: [1] - can start immediately

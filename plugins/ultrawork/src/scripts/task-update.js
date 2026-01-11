@@ -1,8 +1,9 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * task-update.js - Update task status and evidence
  *
- * Usage: task-update.js --session <ID> --id <task_id> [--status open|resolved] [--add-evidence "..."]
+ * Usage: task-update.js --session <ID> --task-id <id> [--status open|resolved] [--add-evidence "..."]
+ * Aliases: --task-id, --task, --id (all accepted for task identification)
  */
 
 const fs = require('fs');
@@ -46,6 +47,8 @@ function parseArgs(argv) {
         args.session = next;
         i++;
         break;
+      case '--task-id':
+      case '--task':
       case '--id':
         args.id = next;
         i++;
@@ -81,13 +84,14 @@ async function main() {
 
   // Handle help
   if (args.help) {
-    console.log('Usage: task-update.js --session <ID> --id <task_id> [--status open|resolved] [--add-evidence "..."]');
+    console.log('Usage: task-update.js --session <ID> --task-id <id> [--status open|resolved] [--add-evidence "..."]');
+    console.log('  Aliases: --task-id, --task, --id (all accepted)');
     process.exit(0);
   }
 
   // Validate required arguments
   if (!args.session || !args.id) {
-    console.error('Error: --session and --id required');
+    console.error('Error: --session and --task-id required (aliases: --task, --id)');
     process.exit(1);
   }
 

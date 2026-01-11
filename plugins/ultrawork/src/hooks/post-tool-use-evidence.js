@@ -1,8 +1,7 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Ultrawork PostToolUse Evidence Hook
  * Automatically captures evidence from tool executions
- * JavaScript/Node.js version with JSDoc types
  */
 
 const fs = require('fs');

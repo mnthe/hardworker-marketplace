@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Teamwork Setup Script
  * Creates project structure for multi-session collaboration
@@ -127,7 +127,7 @@ function parseArgs(argv) {
 
   /** @type {string[]} */
   const goalParts = [];
-  let i = 2; // Skip node and script path
+  let i = 2; // Skip 'bun' and script path
 
   while (i < argv.length) {
     const arg = argv[i];

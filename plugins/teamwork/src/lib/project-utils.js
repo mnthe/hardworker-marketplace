@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 /**
  * Teamwork Project Utilities
  * Common functions for teamwork project path management

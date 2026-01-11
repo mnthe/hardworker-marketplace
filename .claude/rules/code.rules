@@ -15,9 +15,11 @@
 
 ## Implementation Standards
 
-### Node.js Scripts
+**Use Bun instead of Node.js for all scripts.**
 
-All Node.js scripts MUST follow:
+### Bun Scripts
+
+All Bun scripts MUST follow:
 - Flag-based parameters (no positional args)
 - Error messages to stderr
 - JSON output for structured data
@@ -25,7 +27,7 @@ All Node.js scripts MUST follow:
 - JSDoc type annotations for clarity
 
 ```javascript
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 const args = process.argv.slice(2);
 const params = {};

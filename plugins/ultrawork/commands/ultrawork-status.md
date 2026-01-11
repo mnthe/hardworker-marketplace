@@ -2,7 +2,7 @@
 name: ultrawork-status
 description: "Check current ultrawork session status"
 argument-hint: "[--all] [--help]"
-allowed-tools: ["Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-status.js:*)"]
+allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-status.js:*)"]
 ---
 
 # Ultrawork Status Command
@@ -17,13 +17,13 @@ You MUST pass it to the script via `--session` flag.
 Execute the status script with `--session`:
 
 ```!
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-status.js" --session {SESSION_ID}
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-status.js" --session {SESSION_ID}
 ```
 
 Or list all sessions:
 
 ```!
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-status.js" --all
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-status.js" --all
 ```
 
 If additional context is needed, read the session file from the output path.

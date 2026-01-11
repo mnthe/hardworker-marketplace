@@ -1,7 +1,7 @@
 ---
 name: backend
 description: "Backend specialist worker for teamwork. API, services, database, business logic."
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
 ---
 
 # Backend Worker Agent

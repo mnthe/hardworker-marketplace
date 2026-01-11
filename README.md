@@ -19,7 +19,7 @@ Strict verification-first development mode with session isolation and mandatory 
 - Pure JavaScript with JSDoc type annotations
 - No build step required
 
-**Requirements:** Node.js 18+ (bundled with Claude Code)
+**Requirements:** Bun installed
 
 [Full Documentation →](plugins/ultrawork/)
 
@@ -35,7 +35,7 @@ Role-based worker agents for parallel development across multiple terminal sessi
 - Project and team isolation
 - Works with vanilla Claude Code
 
-**Requirements:** Node.js 18+ (bundled with Claude Code)
+**Requirements:** Bun installed
 
 [Full Documentation →](plugins/teamwork/)
 
@@ -49,7 +49,7 @@ Extract and manage knowledge from codebases for AI agent context.
 - Context management for AI agents
 - Integration with ultrawork and teamwork
 
-**Requirements:** Node.js 18+ (bundled with Claude Code)
+**Requirements:** Bun installed
 
 [Full Documentation →](plugins/knowledge-extraction/)
 
@@ -123,11 +123,11 @@ claude plugin install knowledge-extraction@hardworker-marketplace
 
 ### State Management
 
-| Plugin | Storage Pattern | Location |
-|--------|-----------------|----------|
-| ultrawork | Session-based isolation | `~/.claude/ultrawork/sessions/{session-id}/` |
-| teamwork | Project-based collaboration | `~/.claude/teamwork/{project}/{team}/` |
-| knowledge-extraction | Cache-based storage | `~/.claude/knowledge-extraction/cache/` |
+| Plugin               | Storage Pattern             | Location                                     |
+| -------------------- | --------------------------- | -------------------------------------------- |
+| ultrawork            | Session-based isolation     | `~/.claude/ultrawork/sessions/{session-id}/` |
+| teamwork             | Project-based collaboration | `~/.claude/teamwork/{project}/{team}/`       |
+| knowledge-extraction | Cache-based storage         | `~/.claude/knowledge-extraction/cache/`      |
 
 ### Component Architecture
 
@@ -145,9 +145,9 @@ State (JSON files)
 ```
 /ultrawork "goal"
     ↓
-Planner Agent → Creates task graph with dependencies
-    ↓
 Explorer Agent → Gathers codebase context
+    ↓
+Planner Agent → Creates task graph with dependencies
     ↓
 Worker Agents (parallel) → Execute tasks with evidence collection
     ↓
@@ -177,12 +177,12 @@ Complete (all tasks done)
 
 All plugins use lifecycle hooks for automation:
 
-| Hook Type | Purpose |
-|-----------|---------|
-| session-start | Initialize session context |
+| Hook Type       | Purpose                                     |
+| --------------- | ------------------------------------------- |
+| session-start   | Initialize session context                  |
 | session-context | Inject session variables into agent prompts |
-| post-tool-use | Evidence collection after tool execution |
-| agent-lifecycle | Track agent execution state |
+| post-tool-use   | Evidence collection after tool execution    |
+| agent-lifecycle | Track agent execution state                 |
 
 Hooks enable continuous mode without modifying Claude Code core.
 
@@ -196,8 +196,8 @@ Hooks enable continuous mode without modifying Claude Code core.
 2. Update `.claude-plugin/marketplace.json` (MUST match!)
 
 ```bash
-# Verify version sync using Node.js
-node -e "
+# Verify version sync using Bun
+bun -e "
   const pluginVersion = require('./plugins/ultrawork/.claude-plugin/plugin.json').version;
   const marketplaceVersion = require('./.claude-plugin/marketplace.json').plugins
     .find(p => p.name === 'ultrawork').version;
@@ -212,7 +212,7 @@ node -e "
 ### Development Guidelines
 
 **Script Requirements:**
-- Node.js scripts with JSDoc type annotations
+- Bun scripts with JSDoc type annotations
 - Flag-based parameters (no positional args)
 - JSON output for structured data
 - Error messages to stderr
@@ -220,16 +220,16 @@ node -e "
 
 **Testing:**
 - Manual testing (no automated test framework)
-- Syntax validation: `node --check src/scripts/*.js`
+- Syntax validation: run scripts directly with `bun src/scripts/*.js`
 - Functional verification: create session, verify JSON structure
 
 **Version Bumps:**
 
-| Change Type | Version Bump | Examples |
-|-------------|--------------|----------|
-| Bug fix, typo fix | Patch (0.0.x) | Script error fix, docs typo |
-| New command/agent | Minor (0.x.0) | Add new agent, new command |
-| Breaking change | Major (x.0.0) | Change state format, remove command |
+| Change Type       | Version Bump  | Examples                            |
+| ----------------- | ------------- | ----------------------------------- |
+| Bug fix, typo fix | Patch (0.0.x) | Script error fix, docs typo         |
+| New command/agent | Minor (0.x.0) | Add new agent, new command          |
+| Breaking change   | Major (x.0.0) | Change state format, remove command |
 
 **Commit Convention:**
 ```
@@ -241,7 +241,7 @@ refactor(plugin): Refactor code
 
 ### Code Review Checklist
 
-- [ ] Flag-based parameter parsing in Node.js scripts
+- [ ] Flag-based parameter parsing in Bun scripts
 - [ ] Error handling with meaningful messages
 - [ ] No hardcoded paths (use environment variables)
 - [ ] JSON validation before writes
@@ -258,7 +258,7 @@ plugins/{plugin-name}/
 ├── commands/            # Command definitions (.md)
 ├── agents/              # Agent definitions (AGENT.md)
 ├── src/
-│   ├── scripts/         # Node.js script implementations (.js)
+│   ├── scripts/         # Bun script implementations (.js)
 │   ├── hooks/           # Hook implementations (.js)
 │   └── lib/             # Shared libraries
 ├── hooks/

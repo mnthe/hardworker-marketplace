@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * task-list.js - List tasks with filtering
  * Usage: task-list.js --session <ID> [--status open|resolved] [--format json|table]

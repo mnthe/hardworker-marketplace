@@ -163,7 +163,7 @@ Glob(pattern="**/__tests__/**/*")
 ### Update exploration stage
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" \
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" \
   --session {SESSION_ID} \
   --exploration-stage overview
 ```
@@ -172,7 +172,7 @@ node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" \
 
 ```bash
 # Get session directory
-SESSION_DIR=$(node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
 
 # Write overview.md
 Write(
@@ -184,7 +184,7 @@ Write(
 ### Add to context.json
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-add.js" \
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-add.js" \
   --session {SESSION_ID} \
   --explorer-id "overview" \
   --file "exploration/overview.md" \
@@ -196,7 +196,7 @@ node "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-add.js" \
 ### Advance to analyzing stage
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" \
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" \
   --session {SESSION_ID} \
   --exploration-stage analyzing
 ```

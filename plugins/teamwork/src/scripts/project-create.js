@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Project Create Script
  * Creates teamwork project.json file
@@ -52,7 +52,7 @@ function parseArgs(argv) {
     help: false,
   };
 
-  let i = 2; // Skip node and script path
+  let i = 2; // Skip 'bun' and script path
 
   while (i < argv.length) {
     const arg = argv[i];

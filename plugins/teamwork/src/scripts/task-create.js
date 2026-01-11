@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * task-create.js - Create new task JSON file
  * CLI to create task files with validation for teamwork projects

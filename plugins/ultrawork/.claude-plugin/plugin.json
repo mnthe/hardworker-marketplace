@@ -1,7 +1,7 @@
 {
   "name": "ultrawork",
-  "version": "0.10.1",
-  "description": "Strict verification-first development mode with Session ID-based isolation (TypeScript/Node.js cross-platform version).",
+  "version": "0.11.1",
+  "description": "Strict verification-first development mode with Session ID-based isolation (Bun cross-platform version).",
   "author": {
     "name": "mnthe"
   },

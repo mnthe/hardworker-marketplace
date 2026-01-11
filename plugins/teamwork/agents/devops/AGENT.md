@@ -1,7 +1,7 @@
 ---
 name: devops
 description: "DevOps specialist worker for teamwork. CI/CD, deployment, infrastructure."
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
 ---
 
 # DevOps Worker Agent

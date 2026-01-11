@@ -22,11 +22,14 @@ plugins/{plugin-name}/
 │   │   └── AGENT.md
 │   └── worker/
 │       └── AGENT.md
-├── scripts/             # Implementation scripts
-│   └── session-get.js   # Node.js implementation
-├── hooks/               # Lifecycle hooks
-│   ├── hooks.json       # Hook configuration
-│   └── post-tool.js     # Hook implementation
+├── src/
+│   ├── scripts/         # Implementation scripts
+│   │   └── session-get.js
+│   ├── hooks/           # Hook implementations
+│   │   └── post-tool-use-evidence.js
+│   └── lib/             # Shared libraries
+├── hooks/
+│   └── hooks.json       # Hook configuration
 ├── skills/              # Skill definitions (optional)
 │   └── skill.md
 ├── CLAUDE.md            # Plugin context (REQUIRED)
@@ -176,10 +179,10 @@ Agent files must include:
 
 Scripts handle state management and coordination.
 
-File: `plugins/myplugin/scripts/session-create.js`
+File: `plugins/myplugin/src/scripts/session-create.js`
 
 ```javascript
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 const fs = require('fs');
 const path = require('path');
@@ -231,7 +234,7 @@ console.log(sessionDir);
 ```
 
 Script requirements:
-- Shebang line (`#!/usr/bin/env node`)
+- Shebang line (`#!/usr/bin/env bun`)
 - Flag-based parameter parsing
 - Input validation with error messages to stderr
 - JSON output for structured data
@@ -247,31 +250,42 @@ File: `plugins/myplugin/hooks/hooks.json`
 
 ```json
 {
-  "hooks": [
-    {
-      "matcher": {
-        "tool_name": "Bash",
-        "event": "after"
-      },
-      "hooks": [
-        {
-          "type": "command",
-          "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/collect-evidence.js"
-        }
-      ]
-    }
-  ]
+  "description": "Myplugin hooks for automation",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/session-start-hook.js"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/collect-evidence.js"
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
 
-This hook runs after every Bash tool invocation.
+This configuration runs `session-start-hook.js` at session start and `collect-evidence.js` after every Bash tool invocation.
 
 ### Hook Implementation
 
-File: `plugins/myplugin/hooks/collect-evidence.js`
+File: `plugins/myplugin/src/hooks/collect-evidence.js`
 
 ```javascript
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 const fs = require('fs');
 const path = require('path');
@@ -314,12 +328,16 @@ Hook requirements:
 
 ### Available Hook Events
 
-| Tool  | Event | When                    |
-| ----- | ----- | ----------------------- |
-| Bash  | after | After command execution |
-| Read  | after | After file read         |
-| Write | after | After file write        |
-| Edit  | after | After file edit         |
+| Event            | When                                  | Matcher          |
+| ---------------- | ------------------------------------- | ---------------- |
+| SessionStart     | At the start of a Claude Code session | `*`              |
+| UserPromptSubmit | When user submits a prompt            | `*`              |
+| PreToolUse       | Before any tool is invoked            | Tool name or `*` |
+| PostToolUse      | After any tool is invoked             | Tool name or `*` |
+| SubagentStop     | When a sub-agent completes            | `*`              |
+| Stop             | At session end                        | `*`              |
+
+Common tool matchers: `Bash`, `Read`, `Write`, `Edit`, `Glob`, `Grep`, `Task`
 
 ## State Management
 
@@ -381,8 +399,8 @@ This project uses manual testing procedures (no automated test framework).
 ### Script Validation
 
 ```bash
-# Node.js syntax check
-node --check plugins/myplugin/scripts/*.js
+# Bun syntax check
+bun plugins/myplugin/src/scripts/*.js
 ```
 
 ### Functional Testing Steps
@@ -525,8 +543,8 @@ watch -n 1 jq '.' ~/.claude/myplugin/sessions/{id}/session.json
 ### Trace Script Execution
 
 ```bash
-# Node.js: Use --inspect flag for debugging
-node --inspect plugins/myplugin/scripts/session-create.js --session-id test --goal "test"
+# Bun: Use --inspect flag for debugging
+bun --inspect plugins/myplugin/src/scripts/session-create.js --session-id test --goal "test"
 ```
 
 ## Publishing Plugins
@@ -551,4 +569,4 @@ node --inspect plugins/myplugin/scripts/session-create.js --session-id test --go
 
 - Repository: https://github.com/mnthe/hardworker-marketplace
 - Plugin specification: See `/CLAUDE.md` in repository root
-- Example plugins: ultrawork, ultrawork, teamwork
+- Example plugins: ultrawork, teamwork, knowledge-extraction

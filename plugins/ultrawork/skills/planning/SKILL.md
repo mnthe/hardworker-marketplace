@@ -39,22 +39,22 @@ Define how to analyze context, make design decisions, and decompose work into ta
 
 Analyze the goal against context to find decision points.
 
-| Category | Examples | Priority |
-|----------|----------|----------|
-| **Ambiguous Requirements** | "auth" → OAuth? Email? Both? | High |
-| **Architecture Choices** | DB type, framework, patterns | High |
-| **Library Selection** | Which packages to use | Medium |
-| **Scope Boundaries** | What's in/out of scope | Medium |
-| **Development Approach** | TDD vs standard for testable tasks | Medium |
+| Category                   | Examples                           | Priority |
+| -------------------------- | ---------------------------------- | -------- |
+| **Ambiguous Requirements** | "auth" → OAuth? Email? Both?       | High     |
+| **Architecture Choices**   | DB type, framework, patterns       | High     |
+| **Library Selection**      | Which packages to use              | Medium   |
+| **Scope Boundaries**       | What's in/out of scope             | Medium   |
+| **Development Approach**   | TDD vs standard for testable tasks | Medium   |
 
 ### TDD Decision Point
 
 For tasks involving testable logic (new functions, classes, bug fixes), decide on development approach:
 
-| Approach | When to Use |
-|----------|-------------|
-| **TDD** | New business logic, bug fixes, algorithms, validation |
-| **Standard** | Config changes, documentation, refactoring, UI-only |
+| Approach     | When to Use                                           |
+| ------------ | ----------------------------------------------------- |
+| **TDD**      | New business logic, bug fixes, algorithms, validation |
+| **Standard** | Config changes, documentation, refactoring, UI-only   |
 
 **TDD Benefits:**
 - Tests define expected behavior BEFORE implementation
@@ -123,7 +123,7 @@ Make decisions automatically based on:
 **IMPORTANT: Design documents go to PROJECT directory.**
 
 ```bash
-WORKING_DIR=$(node $SCRIPTS/session-get.js --session {SESSION_ID} --field working_dir)
+WORKING_DIR=$(bun $SCRIPTS/session-get.js --session {SESSION_ID} --field working_dir)
 DESIGN_PATH="$WORKING_DIR/docs/plans/$(date +%Y-%m-%d)-{goal-slug}-design.md"
 ```
 
@@ -143,18 +143,18 @@ See `references/design-template.md` for complete template.
 
 ### Task Granularity
 
-| Rule | Guideline |
-|------|-----------|
-| One task = one deliverable | Single focused outcome |
-| Max time | ~30 minutes of work |
-| Testable | Has clear success criteria |
+| Rule                       | Guideline                  |
+| -------------------------- | -------------------------- |
+| One task = one deliverable | Single focused outcome     |
+| Max time                   | ~30 minutes of work        |
+| Testable                   | Has clear success criteria |
 
 ### Complexity Guidelines
 
-| Complexity | Model | When |
-|------------|-------|------|
-| `standard` | sonnet | CRUD, simple features, tests |
-| `complex` | opus | Architecture, security, 5+ files |
+| Complexity | Model  | When                             |
+| ---------- | ------ | -------------------------------- |
+| `standard` | sonnet | CRUD, simple features, tests     |
+| `complex`  | opus   | Architecture, security, 5+ files |
 
 ### Dependency Patterns
 
@@ -171,7 +171,7 @@ Verify task      → blockedBy: [all]
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Standard task (default approach)
-node $SCRIPTS/task-create.js --session {SESSION_ID} \
+bun $SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "1" \
   --subject "Task title" \
   --description "Detailed description" \
@@ -179,7 +179,7 @@ node $SCRIPTS/task-create.js --session {SESSION_ID} \
   --criteria "criterion1|criterion2"
 
 # TDD task - requires test-first evidence
-node $SCRIPTS/task-create.js --session {SESSION_ID} \
+bun $SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "2" \
   --subject "Add validateUser function" \
   --description "Create validation function with TDD approach" \
@@ -189,7 +189,7 @@ node $SCRIPTS/task-create.js --session {SESSION_ID} \
   --criteria "TDD-RED: Test fails initially|TDD-GREEN: Test passes after implementation"
 
 # Always include verify task
-node $SCRIPTS/task-create.js --session {SESSION_ID} \
+bun $SCRIPTS/task-create.js --session {SESSION_ID} \
   --id "verify" \
   --subject "[VERIFY] Integration verification" \
   --description "Verify all flows work end-to-end" \
@@ -219,16 +219,16 @@ Return planning summary:
 # Planning Complete
 
 ## Design Decisions
-| Topic | Choice | User Asked |
-|-------|--------|------------|
-| Auth method | OAuth + Credentials | Yes |
+| Topic       | Choice              | User Asked |
+| ----------- | ------------------- | ---------- |
+| Auth method | OAuth + Credentials | Yes        |
 
 ## Task Graph
-| ID | Subject | Blocked By | Complexity | Approach |
-|----|---------|------------|------------|----------|
-| 1 | Setup auth | - | standard | standard |
-| 2 | User model | 1 | standard | tdd |
-| verify | Verification | 1,2 | complex | standard |
+| ID     | Subject      | Blocked By | Complexity | Approach |
+| ------ | ------------ | ---------- | ---------- | -------- |
+| 1      | Setup auth   | -          | standard   | standard |
+| 2      | User model   | 1          | standard   | tdd      |
+| verify | Verification | 1,2        | complex    | standard |
 
 ## Files Created
 - {WORKING_DIR}/docs/plans/YYYY-MM-DD-design.md

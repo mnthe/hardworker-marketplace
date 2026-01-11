@@ -2,7 +2,7 @@
 name: teamwork
 description: "Start a teamwork project with multi-session collaboration support"
 argument-hint: "[--project NAME] [--team NAME] <goal> | --help"
-allowed-tools: ["Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-teamwork.js:*)", "Task", "TaskOutput", "Read", "Edit", "AskUserQuestion"]
+allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-teamwork.js:*)", "Task", "TaskOutput", "Read", "Edit", "AskUserQuestion"]
 ---
 
 # Teamwork Command
@@ -18,7 +18,7 @@ Teamwork enables multi-session collaboration with role-based workers and file-pe
 Execute the setup script:
 
 ```!
-node "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-teamwork.js" $ARGUMENTS
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-teamwork.js" $ARGUMENTS
 ```
 
 This creates project at: `~/.claude/teamwork/{project}/{sub-team}/`

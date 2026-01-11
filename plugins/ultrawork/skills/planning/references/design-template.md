@@ -6,7 +6,7 @@
 
 ```bash
 # Get working directory from session
-WORKING_DIR=$(node $SCRIPTS/session-get.js --session {SESSION_ID} --field working_dir)
+WORKING_DIR=$(bun $SCRIPTS/session-get.js --session {SESSION_ID} --field working_dir)
 
 # Design document path
 # Format: {working_dir}/docs/plans/YYYY-MM-DD-{goal-slug}-design.md
@@ -29,11 +29,11 @@ mkdir -p "$WORKING_DIR/docs/plans"
 ## Approach Selection
 
 ### Considered Options
-| Option | Pros | Cons | Fit |
-|--------|------|------|-----|
-| Option A (Selected) | ... | ... | Best for our case |
-| Option B | ... | ... | ... |
-| Option C | ... | ... | ... |
+| Option              | Pros | Cons | Fit               |
+| ------------------- | ---- | ---- | ----------------- |
+| Option A (Selected) | ...  | ...  | Best for our case |
+| Option B            | ...  | ...  | ...               |
+| Option C            | ...  | ...  | ...               |
 
 ### Selected: Option A
 **Rationale**: [Why this approach was chosen]
@@ -63,12 +63,12 @@ mkdir -p "$WORKING_DIR/docs/plans"
 ## Error Handling
 
 ### Error Categories
-| Category | Example | Handling Strategy |
-|----------|---------|-------------------|
-| Validation | Invalid input | Return 400 with details |
-| Auth | Invalid token | Return 401, redirect to login |
-| Not Found | Resource missing | Return 404 |
-| Server | DB connection fail | Return 500, log, alert |
+| Category   | Example            | Handling Strategy             |
+| ---------- | ------------------ | ----------------------------- |
+| Validation | Invalid input      | Return 400 with details       |
+| Auth       | Invalid token      | Return 401, redirect to login |
+| Not Found  | Resource missing   | Return 404                    |
+| Server     | DB connection fail | Return 500, log, alert        |
 
 ### Error Response Format
 ```json
@@ -89,11 +89,11 @@ mkdir -p "$WORKING_DIR/docs/plans"
 ## Testing Strategy
 
 ### Test Levels
-| Level | Coverage | Tools |
-|-------|----------|-------|
-| Unit | Business logic, utils | Jest/Vitest |
-| Integration | API endpoints, DB | Supertest |
-| E2E | Critical user flows | Playwright/Cypress |
+| Level       | Coverage              | Tools              |
+| ----------- | --------------------- | ------------------ |
+| Unit        | Business logic, utils | Jest/Vitest        |
+| Integration | API endpoints, DB     | Supertest          |
+| E2E         | Critical user flows   | Playwright/Cypress |
 
 ### Key Test Cases
 - [ ] Happy path: [describe]
@@ -136,8 +136,8 @@ mkdir -p "$WORKING_DIR/docs/plans"
 2. [Assumption 2]
 
 ## Risks & Mitigations
-| Risk | Impact | Mitigation |
-|------|--------|------------|
+| Risk     | Impact       | Mitigation        |
+| -------- | ------------ | ----------------- |
 | [Risk 1] | High/Med/Low | [How to mitigate] |
 | [Risk 2] | High/Med/Low | [How to mitigate] |
 ```
