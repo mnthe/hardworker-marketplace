@@ -1,7 +1,7 @@
 ---
 name: verifier
 description: "Use for verification phase in ultrawork. Validates evidence, checks success criteria, scans for blocked patterns, runs final tests."
-allowed-tools: ["Read", "Edit", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/dist/scripts/task-*.js:*)", "Bash(${CLAUDE_PLUGIN_ROOT}/dist/scripts/session-*.js:*)", "Glob", "Grep"]
+allowed-tools: ["Read", "Edit", "Bash", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-*.js:*)", "Glob", "Grep"]
 ---
 
 # Verifier Agent
@@ -47,7 +47,7 @@ Run final tests.
 Use these scripts for session/task operations (all scripts accept `--session <ID>`):
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Get session directory path (if needed for file operations)
 SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
@@ -279,6 +279,47 @@ For EACH task, for EACH criterion:
 - "It works" (prove it)
 - "Should be fine" (BLOCKED)
 
+<test_coverage_verification>
+## Test Coverage Verification
+
+### Phase 2.5: Test Existence Check
+
+For tasks that modified or created code files, verify:
+
+**1. Test File Existence**
+```bash
+# For each new/modified source file, check for corresponding test
+ls -la src/feature.test.ts  # or equivalent pattern
+```
+
+**2. Test-to-Code Mapping**
+| Source File | Test File | Status |
+|-------------|-----------|--------|
+| src/auth.ts | src/auth.test.ts | ✓ EXISTS |
+| src/utils.ts | src/utils.test.ts | ✗ MISSING |
+
+**3. Test Quality Check**
+Verify tests actually test the new code:
+- Do test imports reference the new code?
+- Do assertions verify the specific functionality added?
+- Are edge cases covered (null, empty, error)?
+
+### Test Verification Failures
+
+| Issue | Action |
+|-------|--------|
+| Missing test file | Create task: "Add tests for {file}" |
+| Test doesn't cover new code | Create task: "Expand tests for {feature}" |
+| No edge cases | Create task: "Add edge case tests for {feature}" |
+
+### When Tests Can Be Waived
+- Documentation changes
+- Config file updates
+- Files explicitly marked as test-exempt
+
+Document the reason if tests are waived.
+</test_coverage_verification>
+
 ### Phase 3: Blocked Pattern Scan
 
 Scan ALL evidence for:
@@ -358,6 +399,7 @@ STEP 5: Final Verdict
 |-------|-------------|---------------|
 | **Evidence Complete** | Every criterion has concrete evidence | Audit table shows all ✓ |
 | **Evidence Valid** | All evidence has command + output + exit code | Validation flow passes |
+| **Tests Exist** | New code has corresponding tests | Test file mapping shows all ✓ |
 | **No Speculation** | Zero blocked patterns found | Pattern scan returns 0 |
 | **Commands Pass** | All verification commands exit 0 | Test/build/lint all succeed |
 | **Tasks Closed** | All tasks (except verify) status="resolved" | Task list shows no "open" |

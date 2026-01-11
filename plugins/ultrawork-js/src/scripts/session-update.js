@@ -8,6 +8,46 @@
 const { updateSession, resolveSessionId, readSession } = require('../lib/session-utils.js');
 
 // ============================================================================
+// Phase Validation
+// ============================================================================
+
+/** @type {import('../lib/types.js').Phase[]} */
+const VALID_PHASES = ['PLANNING', 'EXECUTION', 'VERIFICATION', 'COMPLETE', 'CANCELLED', 'FAILED', 'unknown'];
+
+/**
+ * Normalize phase value to canonical form
+ * @param {string} phase - Raw phase input
+ * @returns {import('../lib/types.js').Phase} Normalized phase
+ * @throws {Error} If phase is invalid
+ */
+function normalizePhase(phase) {
+  const upper = phase.toUpperCase();
+
+  // Map variations to canonical forms
+  const phaseMap = {
+    'COMPLETED': 'COMPLETE',
+    'COMPLETE': 'COMPLETE',
+    'CANCELED': 'CANCELLED',
+    'CANCELLED': 'CANCELLED',
+    'PLANNING': 'PLANNING',
+    'EXECUTION': 'EXECUTION',
+    'VERIFICATION': 'VERIFICATION',
+    'FAILED': 'FAILED',
+    'UNKNOWN': 'unknown'
+  };
+
+  const normalized = phaseMap[upper];
+
+  if (!normalized || !VALID_PHASES.includes(normalized)) {
+    throw new Error(
+      `Invalid phase: ${phase}. Valid phases: ${VALID_PHASES.filter(p => p !== 'unknown').join(', ')}`
+    );
+  }
+
+  return normalized;
+}
+
+// ============================================================================
 // CLI Argument Parsing
 // ============================================================================
 
@@ -92,6 +132,11 @@ async function main() {
   try {
     // Validate session exists
     resolveSessionId(args.sessionId);
+
+    // Normalize and validate phase if provided
+    if (args.phase) {
+      args.phase = normalizePhase(args.phase);
+    }
 
     // Update session with file locking
     await updateSession(args.sessionId, (session) => {

@@ -2,7 +2,7 @@
 name: explorer
 description: "Use for fast codebase exploration in ultrawork. Gathers context, writes detailed findings to exploration/*.md, updates context.json summary."
 model: haiku
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/dist/scripts/context-*.js:*)", "Bash(${CLAUDE_PLUGIN_ROOT}/dist/scripts/exploration-*.js:*)"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/context-*.js:*)", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/exploration-*.js:*)"]
 ---
 
 # Explorer Agent
@@ -51,7 +51,7 @@ CONTEXT: {summary from overview, optional}
 Use these scripts for session operations (all scripts accept `--session <ID>`):
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Get session directory path (if needed for file operations)
 SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
@@ -294,7 +294,7 @@ project/
 **Append summary to context.json:**
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 $SCRIPTS/context-add.sh --session {SESSION_ID} \
   --explorer-id "{EXPLORER_ID}" \

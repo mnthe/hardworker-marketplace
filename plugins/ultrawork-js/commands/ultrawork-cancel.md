@@ -2,7 +2,7 @@
 name: ultrawork-cancel
 description: "Cancel current ultrawork session"
 argument-hint: "[--help]"
-allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/dist/scripts/ultrawork-cancel.js:*)"]
+allowed-tools: ["Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-cancel.js:*)"]
 ---
 
 # Ultrawork Cancel Command
@@ -31,7 +31,7 @@ AskUserQuestion(questions=[{
 If confirmed, execute the cancel script with `--session`:
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}/dist/scripts/ultrawork-cancel.js" --session {SESSION_ID}
+node "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-cancel.js" --session {SESSION_ID}
 ```
 
 The script will:

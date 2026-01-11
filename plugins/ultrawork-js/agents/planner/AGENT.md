@@ -1,7 +1,7 @@
 ---
 name: planner
 description: "Auto-mode planner for ultrawork. Reads context from explorers, makes automatic decisions, creates task graph. Does NOT spawn sub-agents."
-allowed-tools: ["Read", "Write", "Edit", "Bash(${CLAUDE_PLUGIN_ROOT}/dist/scripts/task-*.js:*)", "Bash(${CLAUDE_PLUGIN_ROOT}/dist/scripts/session-*.js:*)", "Bash(${CLAUDE_PLUGIN_ROOT}/dist/scripts/design-*.js:*)", "Glob", "Grep"]
+allowed-tools: ["Read", "Write", "Edit", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-*.js:*)", "Bash(node ${CLAUDE_PLUGIN_ROOT}/src/scripts/design-*.js:*)", "Glob", "Grep"]
 ---
 
 # Planner Agent (Auto Mode)
@@ -54,7 +54,7 @@ Options:
 Use these scripts for session operations (all scripts accept `--session <ID>`):
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Get session directory path (if needed for file operations)
 SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)

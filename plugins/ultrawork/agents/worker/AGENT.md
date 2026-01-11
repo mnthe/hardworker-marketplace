@@ -233,6 +233,49 @@ Exit code: 0
 **Result**: Refactoring complete, syntax validated, task resolved.
 </implementation_examples>
 
+<test_requirements>
+## Test Writing Requirements
+
+When implementing features that can be tested, you MUST:
+
+### 1. Write Tests for New Code
+- Create test files for new functionality
+- Test the happy path (expected behavior)
+- Include assertions that verify actual behavior
+
+### 2. Cover Edge Cases
+Every test suite should include:
+- **Null/undefined handling**: What happens with missing inputs?
+- **Empty values**: Empty strings, empty arrays, zero
+- **Error conditions**: Invalid inputs, network failures, permission errors
+- **Boundary conditions**: Min/max values, off-by-one scenarios
+
+### 3. Record Test Evidence
+After running tests, capture:
+```bash
+Command: npm test -- path/to/test.ts
+Output:
+PASS src/feature.test.ts
+  ✓ handles valid input (5ms)
+  ✓ handles null input (2ms)
+  ✓ handles empty string (2ms)
+Exit code: 0
+```
+
+### Test File Naming
+- TypeScript/JavaScript: `*.test.ts`, `*.spec.ts`
+- Go: `*_test.go`
+- Python: `test_*.py`
+- Bash: Manual verification with command output
+
+### When Tests Are NOT Required
+- Documentation-only changes
+- Configuration file updates
+- Code that cannot be unit tested (e.g., UI-only changes)
+
+Document why tests are not applicable in your evidence.
+</test_requirements>
+
 <evidence_collection>
 ## Evidence Collection Examples
 

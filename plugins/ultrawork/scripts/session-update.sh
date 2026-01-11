@@ -8,6 +8,34 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/session-utils.sh"
 
+# Valid phase values
+VALID_PHASES=("PLANNING" "EXECUTION" "VERIFICATION" "COMPLETE" "CANCELLED" "FAILED")
+
+# Normalize phase value to canonical form
+normalize_phase() {
+  local phase="$1"
+
+  # Convert to uppercase for comparison (bash 3.2 compatible)
+  local upper_phase=$(echo "$phase" | tr '[:lower:]' '[:upper:]')
+
+  # Normalize variations
+  case "$upper_phase" in
+    COMPLETED|COMPLETE)
+      echo "COMPLETE"
+      ;;
+    CANCELLED|CANCELED)
+      echo "CANCELLED"
+      ;;
+    PLANNING|EXECUTION|VERIFICATION|FAILED)
+      echo "$upper_phase"
+      ;;
+    *)
+      echo "Error: Invalid phase '$phase'. Valid phases: ${VALID_PHASES[*]}" >&2
+      exit 1
+      ;;
+  esac
+}
+
 SESSION_ID=""
 NEW_PHASE=""
 PLAN_APPROVED=false
@@ -32,6 +60,11 @@ while [[ $# -gt 0 ]]; do
     *) shift ;;
   esac
 done
+
+# Normalize phase if provided
+if [[ -n "$NEW_PHASE" ]]; then
+  NEW_PHASE=$(normalize_phase "$NEW_PHASE")
+fi
 
 # Resolve session ID to file path
 SESSION_FILE=$(resolve_session_id "$SESSION_ID") || exit 1

@@ -258,7 +258,7 @@ When using within an ultrawork session:
 ### 1. Update exploration_stage
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/dist/scripts/session-update.js" \
+node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" \
   --session {SESSION_ID} \
   --exploration-stage overview
 ```
@@ -267,7 +267,7 @@ When using within an ultrawork session:
 
 ```bash
 # Get session directory
-SESSION_DIR=$("${CLAUDE_PLUGIN_ROOT}/dist/scripts/session-get.js" --session {SESSION_ID} --dir)
+SESSION_DIR=$(node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
 
 # Write overview.md
 Write(
@@ -279,7 +279,7 @@ Write(
 ### 3. Add overview to context.json
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/dist/scripts/context-add.js" \
+node "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-add.js" \
   --session {SESSION_ID} \
   --explorer-id "overview" \
   --file "exploration/overview.md" \
@@ -291,7 +291,7 @@ Write(
 ### 4. Update exploration stage
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/dist/scripts/session-update.js" \
+node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" \
   --session {SESSION_ID} \
   --exploration-stage analyzing
 ```

@@ -463,7 +463,7 @@ Wave 3 (Verification):
 
 **Script Commands**:
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/dist/scripts"
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Wave 1 - Independent
 $SCRIPTS/task-create.js --session {SESSION_ID} \
@@ -564,7 +564,7 @@ Wave 4 (Verification):
 
 ### Create Tasks
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/dist/scripts"
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Create each task (see examples above for realistic scenarios)
 $SCRIPTS/task-create.js --session {SESSION_ID} \
