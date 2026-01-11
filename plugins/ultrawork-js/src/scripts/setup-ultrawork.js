@@ -297,7 +297,7 @@ function createSession(args) {
   // Create session.json
   /** @type {Session} */
   const session = {
-    version: '5.1',
+    version: '6.0',
     session_id: sessionId,
     working_dir: workingDir,
     goal: goal,

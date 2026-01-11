@@ -52,12 +52,12 @@ TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 # Function to truncate large outputs
 truncate_output() {
   local text="$1"
-  local max_len="${2:-10000}"
+  local max_len="${2:-2000}"
 
   if [[ ${#text} -gt $max_len ]]; then
-    echo "${text:0:5000}
-... [truncated $(( ${#text} - 10000 )) bytes] ...
-${text: -5000}"
+    echo "${text:0:1000}
+... [truncated $(( ${#text} - 2000 )) bytes] ...
+${text: -1000}"
   else
     echo "$text"
   fi
@@ -113,7 +113,7 @@ case "$TOOL_NAME" in
   bash|Bash)
     # Extract command and output
     COMMAND=$(echo "$HOOK_INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || echo "")
-    OUTPUT=$(echo "$HOOK_INPUT" | jq -r '.tool_response // empty' 2>/dev/null || echo "")
+    OUTPUT=$(echo "$HOOK_INPUT" | jq -r '.tool_response.stdout // empty' 2>/dev/null || echo "")
     EXIT_CODE=$(echo "$HOOK_INPUT" | jq -r '.tool_response.exit_code // 0' 2>/dev/null || echo "0")
 
     # Skip if no command
@@ -127,7 +127,7 @@ case "$TOOL_NAME" in
       SUMMARY=$(parse_test_output "$OUTPUT")
       SUCCESS=$([[ $EXIT_CODE -eq 0 ]] && echo "true" || echo "false")
     else
-      TYPE="command_output"
+      TYPE="command_execution"
       SUMMARY=$(truncate_output "$OUTPUT" 1000)
       SUCCESS=$([[ $EXIT_CODE -eq 0 ]] && echo "true" || echo "false")
     fi
@@ -150,7 +150,7 @@ case "$TOOL_NAME" in
           exit_code: $code,
           success: $success
         },
-        output: $out
+        output_preview: $out
       }')
 
     # Append to evidence_log with locking
@@ -158,45 +158,6 @@ case "$TOOL_NAME" in
       trap 'release_session_lock "$SESSION_FILE"' EXIT
 
       # Append evidence
-      TMP_FILE="${SESSION_FILE}.tmp"
-      jq --argjson entry "$EVIDENCE_ENTRY" '.evidence_log += [$entry]' "$SESSION_FILE" > "$TMP_FILE"
-      mv "$TMP_FILE" "$SESSION_FILE"
-
-      release_session_lock "$SESSION_FILE"
-      trap - EXIT
-    fi
-    ;;
-
-  read|Read)
-    # Extract file path
-    FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || echo "")
-
-    # Skip if no file path
-    if [[ -z "$FILE_PATH" ]]; then
-      exit 0
-    fi
-
-    # Build evidence entry
-    EVIDENCE_ENTRY=$(jq -n \
-      --arg ts "$TIMESTAMP" \
-      --arg type "file_operation" \
-      --arg tool "read" \
-      --arg file "$FILE_PATH" \
-      '{
-        timestamp: $ts,
-        type: $type,
-        tool: $tool,
-        context: {
-          file: $file,
-          operation: "read",
-          success: true
-        }
-      }')
-
-    # Append to evidence_log with locking
-    if acquire_session_lock "$SESSION_FILE"; then
-      trap 'release_session_lock "$SESSION_FILE"' EXIT
-
       TMP_FILE="${SESSION_FILE}.tmp"
       jq --argjson entry "$EVIDENCE_ENTRY" '.evidence_log += [$entry]' "$SESSION_FILE" > "$TMP_FILE"
       mv "$TMP_FILE" "$SESSION_FILE"

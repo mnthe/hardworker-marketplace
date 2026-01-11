@@ -101,22 +101,26 @@ See `references/templates.md` for complete template.
 When running within an ultrawork session:
 
 1. **Update exploration stage** to `overview`
-2. **Write** findings to `exploration/overview.md`
+2. **Write** findings to `$SESSION_DIR/exploration/overview.md`
 3. **Add** summary to `context.json`
 4. **Advance** stage to `analyzing`
 
+**Note**: `SESSION_DIR` is the session metadata directory (e.g., `~/.claude/ultrawork/sessions/{SESSION_ID}`), not the project working directory. All exploration artifacts are stored in the session directory to maintain session isolation.
+
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
+# For ultrawork-js, use Node.js scripts
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Update stage
-$SCRIPTS/session-update.sh --session {SESSION_ID} --exploration-stage overview
+node $SCRIPTS/session-update.js --session {SESSION_ID} --exploration-stage overview
 
 # Get session directory and write findings
-SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
-# Write overview.md...
+SESSION_DIR=$(node $SCRIPTS/session-get.js --session {SESSION_ID} --dir)
+mkdir -p "$SESSION_DIR/exploration"
+# Write findings to $SESSION_DIR/exploration/overview.md using Write tool
 
-# Add to context
-$SCRIPTS/context-add.sh --session {SESSION_ID} \
+# Add to context (file path is relative to SESSION_DIR)
+node $SCRIPTS/context-add.js --session {SESSION_ID} \
   --explorer-id "overview" \
   --file "exploration/overview.md" \
   --summary "{summary}" \
@@ -124,7 +128,7 @@ $SCRIPTS/context-add.sh --session {SESSION_ID} \
   --patterns "{patterns}"
 
 # Advance stage
-$SCRIPTS/session-update.sh --session {SESSION_ID} --exploration-stage analyzing
+node $SCRIPTS/session-update.js --session {SESSION_ID} --exploration-stage analyzing
 ```
 
 ---
@@ -144,7 +148,7 @@ No excessive exploration - overview aims for quick understanding. Targeted explo
 After overview completion:
 
 1. Analyze Goal + Overview → Generate targeted exploration hints
-2. Detailed exploration via `Task(subagent_type="ultrawork:explorer")`
+2. Detailed exploration via `Task(subagent_type="ultrawork-js:explorer")`
 3. All exploration complete → Proceed to Planning phase
 
 ---

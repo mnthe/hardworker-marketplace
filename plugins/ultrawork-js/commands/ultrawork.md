@@ -23,12 +23,12 @@ The orchestrator MUST delegate work to sub-agents. Direct execution is prohibite
 
 | Phase | Delegation | Direct Execution |
 |-------|------------|------------------|
-| Overview Exploration | N/A | ALWAYS via `Skill(skill="ultrawork:overview-exploration")` |
-| Targeted Exploration | ALWAYS via `Task(subagent_type="ultrawork:explorer")` | NEVER |
+| Overview Exploration | N/A | ALWAYS via `Skill(skill="ultrawork-js:overview-exploration")` |
+| Targeted Exploration | ALWAYS via `Task(subagent_type="ultrawork-js:explorer")` | NEVER |
 | Planning (non-auto) | N/A | ALWAYS (by design) |
-| Planning (auto) | ALWAYS via `Task(subagent_type="ultrawork:planner")` | NEVER |
-| Execution | ALWAYS via `Task(subagent_type="ultrawork:worker")` | NEVER |
-| Verification | ALWAYS via `Task(subagent_type="ultrawork:verifier")` | NEVER |
+| Planning (auto) | ALWAYS via `Task(subagent_type="ultrawork-js:planner")` | NEVER |
+| Execution | ALWAYS via `Task(subagent_type="ultrawork-js:worker")` | NEVER |
+| Verification | ALWAYS via `Task(subagent_type="ultrawork-js:verifier")` | NEVER |
 
 **Why**: Sub-agents are optimized for their specific tasks with proper tool access and context. Direct execution bypasses these optimizations and may produce incomplete results.
 
@@ -47,10 +47,10 @@ Sub-agents can be run in **foreground** (default) or **background** mode. Choose
 
 ```python
 # Foreground (default) - simple, blocking
-result = Task(subagent_type="ultrawork:explorer", prompt="...")
+result = Task(subagent_type="ultrawork-js:explorer", prompt="...")
 
 # Background - for parallel execution with limits
-task_id = Task(subagent_type="ultrawork:worker", run_in_background=True, prompt="...")
+task_id = Task(subagent_type="ultrawork-js:worker", run_in_background=True, prompt="...")
 result = TaskOutput(task_id=task_id, block=True)
 ```
 
@@ -202,7 +202,7 @@ Exploration happens in two stages: Overview first, then targeted exploration.
 **Invoke the overview-exploration skill directly (no agent spawn):**
 
 ```python
-Skill(skill="ultrawork:overview-exploration")
+Skill(skill="ultrawork-js:overview-exploration")
 ```
 
 The skill will:
@@ -286,7 +286,7 @@ Spawn explorers for each identified area (parallel, in single message):
 # Call multiple Tasks in single message = automatic parallel execution
 for i, hint in enumerate(hints):
     Task(
-      subagent_type="ultrawork:explorer:explorer",
+      subagent_type="ultrawork-js:explorer:explorer",
       model="haiku",  # or sonnet for complex areas
       prompt=f"""
 SESSION_ID: {SESSION_ID}
@@ -326,7 +326,7 @@ Spawn Planner sub-agent:
 
 # Foreground execution - waits for completion
 Task(
-  subagent_type="ultrawork:planner:planner",
+  subagent_type="ultrawork-js:planner:planner",
   model="opus",
   prompt=f"""
 SESSION_ID: {SESSION_ID}
@@ -536,7 +536,7 @@ while True:
     for task in unblocked[:max_workers] if max_workers > 0 else unblocked:
         model = "opus" if task["complexity"] == "complex" else "sonnet"
         Task(
-            subagent_type="ultrawork:worker:worker",
+            subagent_type="ultrawork-js:worker:worker",
             model=model,
             prompt=f"""
 SESSION_ID: {SESSION_ID}
@@ -564,7 +564,7 @@ Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESS
 
 # Spawn verifier (foreground - waits for completion)
 Task(
-    subagent_type="ultrawork:verifier:verifier",
+    subagent_type="ultrawork-js:verifier:verifier",
     model="opus",
     prompt=f"""
 SESSION_ID: {SESSION_ID}

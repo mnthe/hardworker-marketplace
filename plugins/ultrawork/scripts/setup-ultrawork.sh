@@ -210,7 +210,7 @@ jq -n \
   --argjson plan_only "$PLAN_ONLY" \
   --argjson auto_mode "$AUTO_MODE" \
   '{
-    version: "5.1",
+    version: "6.0",
     session_id: $session_id,
     working_dir: $working_dir,
     goal: $goal,

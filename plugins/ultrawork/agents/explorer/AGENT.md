@@ -87,6 +87,29 @@ $SCRIPTS/context-add.sh --session {SESSION_ID} \
 
 ---
 
+## Important Paths
+
+**CRITICAL: Understand the distinction between directories.**
+
+| Path | Location | Purpose |
+|------|----------|---------|
+| `$SESSION_DIR` | `~/.claude/ultrawork/sessions/{SESSION_ID}/` | Session metadata (exploration, context, tasks) |
+| `$WORKING_DIR` | Project directory (from session.working_dir) | Project deliverables (code, docs) |
+
+**Exploration files MUST go to SESSION_DIR:**
+
+```bash
+SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
+
+# ✅ CORRECT: Write to session directory
+Write(file_path="$SESSION_DIR/exploration/{EXPLORER_ID}.md")
+
+# ❌ WRONG: Writing to project directory creates confusion
+Write(file_path="exploration/{EXPLORER_ID}.md")  # Ambiguous - could be WORKING_DIR!
+```
+
+---
+
 ## Exploration Modes
 
 ### Mode: Overview
@@ -144,7 +167,12 @@ Read(file_path="src/index.ts")
 
 ### Phase 3: Write Detailed Findings
 
-Write markdown to `exploration/{EXPLORER_ID}.md`:
+**Write markdown to `$SESSION_DIR/exploration/{EXPLORER_ID}.md`:**
+
+```bash
+# First, get session directory
+SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
+```
 
 **Overview Template:**
 ```markdown

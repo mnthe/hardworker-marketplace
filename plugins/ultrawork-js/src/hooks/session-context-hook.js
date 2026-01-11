@@ -99,13 +99,13 @@ function buildNextAction(phase, explorationStage, autoMode, maxWorkers) {
             return `⛔ GATE SYSTEM - Skill-based Exploration
 
 [GATE 1: OVERVIEW] → CURRENT
-  ACTION: Skill(skill="ultrawork:overview-exploration")
+  ACTION: Skill(skill="ultrawork-js:overview-exploration")
   PROCESS: Glob/Read/Grep to understand project → Write overview.md
   ALLOWED: Glob, Read, Grep, Write overview.md
   BLOCKED: Edit, Write (except overview.md), agent spawns
 
 [GATE 2: TARGETED] → LOCKED (requires: overview.md)
-  Agent: Task(subagent_type="ultrawork:explorer")
+  Agent: Task(subagent_type="ultrawork-js:explorer")
 
 [GATE 3: PLANNING] → LOCKED (requires: exploration_stage=complete)
 [GATE 4: EXECUTION] → LOCKED (requires: design.md + tasks/*.json)`;

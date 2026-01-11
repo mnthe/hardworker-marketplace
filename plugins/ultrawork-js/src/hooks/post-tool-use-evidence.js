@@ -48,19 +48,19 @@ const {
 // ============================================================================
 
 /**
- * Truncate large outputs to first 5K + last 5K if > 10K chars
+ * Truncate large outputs to first 1K + last 1K if > 2K chars
  * @param {string} text
- * @param {number} [maxLen=10000]
+ * @param {number} [maxLen=2000]
  * @returns {string}
  */
-function truncateOutput(text, maxLen = 10000) {
+function truncateOutput(text, maxLen = 2000) {
   if (text.length <= maxLen) {
     return text;
   }
 
-  const firstChunk = text.slice(0, 5000);
-  const lastChunk = text.slice(-5000);
-  const truncated = text.length - 10000;
+  const firstChunk = text.slice(0, 1000);
+  const lastChunk = text.slice(-1000);
+  const truncated = text.length - 2000;
 
   return `${firstChunk}\n... [truncated ${truncated} bytes] ...\n${lastChunk}`;
 }
@@ -117,7 +117,7 @@ function parseTestOutput(output) {
   }
 
   // No pattern matched - return truncated output
-  return truncateOutput(output, 1000);
+  return truncateOutput(output, 500);
 }
 
 /**
@@ -130,7 +130,7 @@ function toolResponseToString(response) {
     return response;
   }
   if (typeof response === 'object' && response !== null) {
-    return JSON.stringify(response);
+    return response.stdout || '';
   }
   return '';
 }
@@ -174,7 +174,7 @@ function buildBashEvidence(command, output, exitCode) {
     return evidence;
   } else {
     // Command execution evidence
-    const preview = truncateOutput(output, 1000);
+    const preview = truncateOutput(output, 500);
 
     /** @type {CommandEvidence} */
     const evidence = {
@@ -291,15 +291,6 @@ async function main() {
           : 0;
 
         evidence = buildBashEvidence(command, response, exitCode);
-        break;
-      }
-
-      case 'read': {
-        // Extract file path
-        const filePath = hookInput.tool_input?.file_path;
-        if (!filePath) break;
-
-        evidence = buildFileEvidence('read', filePath);
         break;
       }
 

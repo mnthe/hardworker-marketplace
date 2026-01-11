@@ -101,9 +101,11 @@ See `references/templates.md` for complete template.
 When running within an ultrawork session:
 
 1. **Update exploration stage** to `overview`
-2. **Write** findings to `exploration/overview.md`
+2. **Write** findings to `$SESSION_DIR/exploration/overview.md`
 3. **Add** summary to `context.json`
 4. **Advance** stage to `analyzing`
+
+**Note**: `SESSION_DIR` is the session metadata directory (e.g., `~/.claude/ultrawork/sessions/{SESSION_ID}`), not the project working directory. All exploration artifacts are stored in the session directory to maintain session isolation.
 
 ```bash
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
@@ -113,9 +115,10 @@ $SCRIPTS/session-update.sh --session {SESSION_ID} --exploration-stage overview
 
 # Get session directory and write findings
 SESSION_DIR=$($SCRIPTS/session-get.sh --session {SESSION_ID} --dir)
-# Write overview.md...
+mkdir -p "$SESSION_DIR/exploration"
+# Write findings to $SESSION_DIR/exploration/overview.md using Write tool
 
-# Add to context
+# Add to context (file path is relative to SESSION_DIR)
 $SCRIPTS/context-add.sh --session {SESSION_ID} \
   --explorer-id "overview" \
   --file "exploration/overview.md" \

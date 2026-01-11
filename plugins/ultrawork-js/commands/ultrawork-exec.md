@@ -29,8 +29,8 @@ The orchestrator MUST delegate work to sub-agents. Direct execution is prohibite
 
 | Phase | Delegation | Direct Execution |
 |-------|------------|------------------|
-| Execution | ALWAYS via `Task(subagent_type="ultrawork:worker")` | NEVER |
-| Verification | ALWAYS via `Task(subagent_type="ultrawork:verifier")` | NEVER |
+| Execution | ALWAYS via `Task(subagent_type="ultrawork-js:worker")` | NEVER |
+| Verification | ALWAYS via `Task(subagent_type="ultrawork-js:verifier")` | NEVER |
 
 **Exception**: User explicitly requests direct execution (e.g., "run this directly", "execute without agent").
 
@@ -231,7 +231,7 @@ def run_execution_phase(SESSION_ID, max_workers):
 
             model = "opus" if task["complexity"] == "complex" else "sonnet"
             Task(
-                subagent_type="ultrawork:worker:worker",
+                subagent_type="ultrawork-js:worker:worker",
                 model=model,
                 prompt=f"""
 SESSION_ID: {SESSION_ID}
@@ -263,7 +263,7 @@ def run_verification_phase(SESSION_ID):
 
     # Spawn verifier (foreground - waits for completion)
     result = Task(
-        subagent_type="ultrawork:verifier:verifier",
+        subagent_type="ultrawork-js:verifier:verifier",
         model="opus",
         prompt=f"""
 SESSION_ID: {SESSION_ID}

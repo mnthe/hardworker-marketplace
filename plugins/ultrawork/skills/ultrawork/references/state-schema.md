@@ -172,16 +172,66 @@ Each task is stored as a separate JSON file in the `tasks/` directory.
 | `resolved` | Completed with evidence |
 | `failed` | Could not complete |
 
-## Evidence Types
+## Evidence Types (v6.0)
 
-| Type | Description |
-|------|-------------|
-| `command_output` | Shell command result |
-| `test_result` | Test suite output |
-| `api_response` | HTTP response |
-| `file_content` | File diff or content |
-| `screenshot` | Visual verification |
-| `manual` | User-provided evidence |
+Evidence entries in `evidence_log` follow these type schemas:
+
+### command_execution
+
+Shell command execution with exit code and output preview (max 2KB).
+
+```json
+{
+  "type": "command_execution",
+  "timestamp": "2026-01-08T12:15:00Z",
+  "command": "npm test",
+  "exit_code": 0,
+  "output_preview": "Tests: 15 passed, 15 total..."
+}
+```
+
+### file_operation
+
+File write or edit operations. **Note:** File read operations are NOT tracked.
+
+```json
+{
+  "type": "file_operation",
+  "timestamp": "2026-01-08T12:15:00Z",
+  "operation": "write",
+  "path": "src/index.ts"
+}
+```
+
+**Tracked operations:** `write`, `edit`
+**Not tracked:** `read` (read operations are no longer included in evidence log)
+
+### test_result
+
+Test suite execution results with pass/fail status.
+
+```json
+{
+  "type": "test_result",
+  "timestamp": "2026-01-08T12:15:00Z",
+  "passed": true,
+  "framework": "jest",
+  "output_preview": "15 passed, 0 failed"
+}
+```
+
+### agent_completed
+
+Agent completion tracking.
+
+```json
+{
+  "type": "agent_completed",
+  "timestamp": "2026-01-08T12:15:00Z",
+  "agent_id": "task-abc123",
+  "task_id": "1"
+}
+```
 
 ## State Transitions
 

@@ -120,14 +120,14 @@
  * @property {string} timestamp
  * @property {string} command
  * @property {number} exit_code
- * @property {string} output_preview
+ * @property {string} output_preview - Command output (max 2KB)
  */
 
 /**
  * @typedef {Object} FileEvidence
  * @property {'file_operation'} type
  * @property {string} timestamp
- * @property {string} operation
+ * @property {string} operation - Operation type: 'write' or 'edit' (read operations not tracked)
  * @property {string} path
  */
 
@@ -145,7 +145,7 @@
  * @property {string} timestamp
  * @property {boolean} passed
  * @property {string} framework
- * @property {string} output_preview
+ * @property {string} output_preview - Test output (max 2KB)
  */
 
 // Export types (for JSDoc references in other files)

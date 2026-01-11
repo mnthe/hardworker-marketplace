@@ -31,10 +31,10 @@ The orchestrator MUST delegate exploration to sub-agents. Direct execution is pr
 
 | Phase | Delegation | Direct Execution |
 |-------|------------|------------------|
-| Overview Exploration | N/A | ALWAYS via `Skill(skill="ultrawork:overview-exploration")` |
-| Targeted Exploration | ALWAYS via `Task(subagent_type="ultrawork:explorer")` | NEVER |
+| Overview Exploration | N/A | ALWAYS via `Skill(skill="ultrawork-js:overview-exploration")` |
+| Targeted Exploration | ALWAYS via `Task(subagent_type="ultrawork-js:explorer")` | NEVER |
 | Planning (non-auto) | N/A | ALWAYS (interactive by design) |
-| Planning (auto) | ALWAYS via `Task(subagent_type="ultrawork:planner")` | NEVER |
+| Planning (auto) | ALWAYS via `Task(subagent_type="ultrawork-js:planner")` | NEVER |
 
 **Exception**: User explicitly requests direct execution (e.g., "run this directly", "execute without agent").
 
@@ -200,7 +200,7 @@ Exploration happens in two stages: Overview first, then targeted based on analys
 **Invoke the overview-exploration skill directly (no agent spawn):**
 
 ```python
-Skill(skill="ultrawork:overview-exploration")
+Skill(skill="ultrawork-js:overview-exploration")
 ```
 
 The skill will:
@@ -284,7 +284,7 @@ Spawn explorers for each identified area (parallel, in single message):
 # Call multiple Tasks in single message = automatic parallel execution
 for i, hint in enumerate(hints):
     Task(
-      subagent_type="ultrawork:explorer:explorer",
+      subagent_type="ultrawork-js:explorer:explorer",
       model="haiku",  # or sonnet for complex areas
       prompt=f"""
 SESSION_ID: {SESSION_ID}
@@ -323,7 +323,7 @@ Spawn Planner sub-agent:
 # Get session_dir via: Bash('"node ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
 
 Task(
-  subagent_type="ultrawork:planner:planner",
+  subagent_type="ultrawork-js:planner:planner",
   model="opus",
   prompt=f"""
 SESSION_ID: {SESSION_ID}
