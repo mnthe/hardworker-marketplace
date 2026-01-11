@@ -17,6 +17,7 @@ const { getSessionDir } = require('../lib/session-utils.js');
 /**
  * @typedef {import('../lib/types.js').Task} Task
  * @typedef {import('../lib/types.js').Complexity} Complexity
+ * @typedef {import('../lib/types.js').TaskApproach} TaskApproach
  */
 
 /**
@@ -28,6 +29,8 @@ const { getSessionDir } = require('../lib/session-utils.js');
  * @property {Complexity} [complexity]
  * @property {string} [criteria]
  * @property {string} [blockedBy]
+ * @property {TaskApproach} [approach]
+ * @property {string} [testFile]
  */
 
 /**
@@ -64,6 +67,12 @@ function parseArgs(argv) {
       case '--blocked-by':
         args.blockedBy = argv[++i];
         break;
+      case '--approach':
+        args.approach = /** @type {TaskApproach} */ (argv[++i]);
+        break;
+      case '--test-file':
+        args.testFile = argv[++i];
+        break;
       case '-h':
       case '--help':
         console.log('Usage: task-create.js --session <ID> --id <id> --subject "..." [options]');
@@ -72,6 +81,8 @@ function parseArgs(argv) {
         console.log('  --complexity simple|standard|complex  (default: standard)');
         console.log('  --criteria "..."          Pipe-separated criteria');
         console.log('  --blocked-by "1,2"        Comma-separated task IDs');
+        console.log('  --approach standard|tdd   Development approach (default: standard)');
+        console.log('  --test-file "..."         Expected test file path (for TDD tasks)');
         process.exit(0);
         break;
     }
@@ -113,6 +124,22 @@ function validateArgs(args) {
       console.error(`Error: Invalid complexity "${args.complexity}". Must be: simple, standard, or complex`);
       process.exit(1);
     }
+  }
+
+  // Validate approach if provided
+  if (args.approach) {
+    /** @type {TaskApproach[]} */
+    const validApproaches = ['standard', 'tdd'];
+    if (!validApproaches.includes(args.approach)) {
+      console.error(`Error: Invalid approach "${args.approach}". Must be: standard or tdd`);
+      process.exit(1);
+    }
+  }
+
+  // Validate test-file requires tdd approach
+  if (args.testFile && args.approach !== 'tdd') {
+    console.error('Error: --test-file requires --approach tdd');
+    process.exit(1);
   }
 }
 
@@ -188,6 +215,14 @@ function createTask(args) {
     created_at: now,
     updated_at: now
   };
+
+  // Add TDD fields if specified
+  if (args.approach) {
+    task.approach = args.approach;
+  }
+  if (args.testFile) {
+    task.test_file = args.testFile;
+  }
 
   // Write task JSON
   fs.writeFileSync(taskFile, JSON.stringify(task, null, 2), 'utf-8');

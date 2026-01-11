@@ -50,6 +50,76 @@ Before marking any task complete:
 [ ] Evidence is concrete (not "it works")
 [ ] Commands show exit code 0 where relevant
 [ ] No blocked phrases in output
+[ ] TDD tasks have complete RED→GREEN evidence chain
+```
+
+---
+
+## TDD Verification
+
+### TDD Evidence Requirements
+
+For tasks with `approach: "tdd"`, verify the evidence chain:
+
+```
+Required Evidence Sequence:
+1. TDD-RED: Test file created
+2. TDD-RED: Test execution failed (exit code 1)
+3. TDD-GREEN: Implementation created
+4. TDD-GREEN: Test execution passed (exit code 0)
+5. (Optional) TDD-REFACTOR: Improvements made, tests still pass
+```
+
+### TDD Verification Checklist
+
+```
+[ ] TDD-RED evidence present (test written first)
+[ ] Test failure recorded (exit code 1)
+[ ] TDD-GREEN evidence present (implementation done)
+[ ] Test pass recorded (exit code 0)
+[ ] Evidence timestamps show RED before GREEN
+```
+
+### TDD Verification Fails If
+
+| Condition | Problem |
+|-----------|---------|
+| Missing TDD-RED evidence | Test not written before implementation |
+| Missing TDD-GREEN evidence | Implementation not verified |
+| GREEN evidence before RED | Wrong order - code before test |
+| No test failure recorded | Test may have been written after code |
+| Implementation timestamp < Test timestamp | Code written before test |
+
+### TDD Good Evidence
+
+```
+Evidence:
+- TDD-RED: Created tests/validateUser.test.ts
+  Command: npm test tests/validateUser.test.ts
+  Output: "FAIL - validateUser is not defined"
+  Exit code: 1
+
+- TDD-GREEN: Implemented src/validateUser.ts
+  Command: npm test tests/validateUser.test.ts
+  Output: "PASS - 3/3 tests passed"
+  Exit code: 0
+
+- TDD-REFACTOR: Extracted helper function
+  Command: npm test tests/validateUser.test.ts
+  Output: "PASS - 3/3 tests passed"
+  Exit code: 0
+```
+
+### TDD Bad Evidence
+
+```
+# Missing RED phase
+"Wrote validateUser function and tests"
+"Tests pass now"
+
+# Wrong order indication
+"Fixed the tests to match implementation"
+"Updated test expectations"
 ```
 
 ## Blocked Phrases
@@ -97,6 +167,12 @@ The verification task (created by planner) runs last:
 
 5. No blocked phrases?
    → Scan all task outputs
+
+6. TDD tasks have valid evidence chain?
+   → For each task with `approach: "tdd"`:
+     - Has TDD-RED evidence
+     - Has TDD-GREEN evidence
+     - RED timestamp < GREEN timestamp
 
 Only mark COMPLETE if ALL pass.
 ```

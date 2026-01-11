@@ -1,6 +1,6 @@
 #!/bin/bash
 # task-create.sh - Create new task
-# Usage: task-create.sh --session <ID> --id <id> --subject "..." --description "..." [--blocked-by "1,2"] [--complexity standard|complex] [--criteria "..."]
+# Usage: task-create.sh --session <ID> --id <id> --subject "..." --description "..." [--blocked-by "1,2"] [--complexity standard|complex] [--criteria "..."] [--approach standard|tdd] [--test-file "..."]
 
 set -euo pipefail
 
@@ -15,6 +15,8 @@ DESCRIPTION=""
 BLOCKED_BY=""
 COMPLEXITY="standard"
 CRITERIA=""
+APPROACH=""
+TEST_FILE=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -25,12 +27,16 @@ while [[ $# -gt 0 ]]; do
     --blocked-by) BLOCKED_BY="$2"; shift 2 ;;
     --complexity) COMPLEXITY="$2"; shift 2 ;;
     --criteria) CRITERIA="$2"; shift 2 ;;
+    --approach) APPROACH="$2"; shift 2 ;;
+    --test-file) TEST_FILE="$2"; shift 2 ;;
     -h|--help)
       echo "Usage: task-create.sh --session <ID> --id <id> --subject \"...\" --description \"...\" [options]"
       echo "Options:"
       echo "  --blocked-by \"1,2\"     Comma-separated task IDs"
       echo "  --complexity standard|complex"
       echo "  --criteria \"...\"       Pipe-separated criteria"
+      echo "  --approach standard|tdd Development approach (default: standard)"
+      echo "  --test-file \"...\"      Expected test file path (for TDD tasks)"
       exit 0
       ;;
     *) shift ;;
@@ -39,6 +45,18 @@ done
 
 if [[ -z "$SESSION_ID" || -z "$TASK_ID" || -z "$SUBJECT" ]]; then
   echo "Error: --session, --id, and --subject required" >&2
+  exit 1
+fi
+
+# Validate approach if provided
+if [[ -n "$APPROACH" && "$APPROACH" != "standard" && "$APPROACH" != "tdd" ]]; then
+  echo "Error: Invalid approach \"$APPROACH\". Must be: standard or tdd" >&2
+  exit 1
+fi
+
+# Validate test-file requires tdd approach
+if [[ -n "$TEST_FILE" && "$APPROACH" != "tdd" ]]; then
+  echo "Error: --test-file requires --approach tdd" >&2
   exit 1
 fi
 
@@ -72,6 +90,20 @@ fi
 SUBJECT_ESCAPED=$(echo "$SUBJECT" | jq -R .)
 DESCRIPTION_ESCAPED=$(echo "${DESCRIPTION:-$SUBJECT}" | jq -R .)
 
+# Build TDD fields
+APPROACH_JSON=""
+if [[ -n "$APPROACH" ]]; then
+  APPROACH_JSON=",
+  \"approach\": \"$APPROACH\""
+fi
+
+TEST_FILE_JSON=""
+if [[ -n "$TEST_FILE" ]]; then
+  TEST_FILE_ESCAPED=$(echo "$TEST_FILE" | jq -R .)
+  TEST_FILE_JSON=",
+  \"test_file\": $TEST_FILE_ESCAPED"
+fi
+
 # Create task JSON
 cat > "$TASK_FILE" << EOF
 {
@@ -82,7 +114,7 @@ cat > "$TASK_FILE" << EOF
   "blockedBy": $BLOCKED_BY_JSON,
   "complexity": "$COMPLEXITY",
   "criteria": $CRITERIA_JSON,
-  "evidence": []
+  "evidence": []$APPROACH_JSON$TEST_FILE_JSON
 }
 EOF
 

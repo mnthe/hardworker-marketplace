@@ -177,6 +177,96 @@ Document why tests are not applicable in your evidence.
 
 ---
 
+## TDD Process (when task.approach === 'tdd')
+
+**CRITICAL: TDD tasks MUST follow this exact sequence. Gate hooks will block out-of-order operations.**
+
+### TDD Phase 1: RED - Write Failing Test
+
+1. **Create test file FIRST** (before any implementation code)
+2. Write test for expected behavior
+3. Run test and **VERIFY IT FAILS**
+
+```bash
+# Record test creation
+$SCRIPTS/task-update.sh --session {SESSION_ID} --id {TASK_ID} \
+  --add-evidence "TDD-RED: Created test file tests/validateUser.test.ts"
+
+# Run test - MUST FAIL
+npm test -- tests/validateUser.test.ts
+
+# Record failure (expected)
+$SCRIPTS/task-update.sh --session {SESSION_ID} --id {TASK_ID} \
+  --add-evidence "TDD-RED: Test fails as expected (exit code 1)"
+```
+
+**Evidence Required:**
+- Test file path created
+- Test execution output showing failure
+- Exit code 1 (expected)
+
+### TDD Phase 2: GREEN - Minimal Implementation
+
+1. Write **MINIMAL** code to make the test pass
+2. Do NOT add extra functionality beyond what test requires
+3. Run test and **VERIFY IT PASSES**
+
+```bash
+# Record implementation
+$SCRIPTS/task-update.sh --session {SESSION_ID} --id {TASK_ID} \
+  --add-evidence "TDD-GREEN: Implemented src/validateUser.ts"
+
+# Run test - MUST PASS
+npm test -- tests/validateUser.test.ts
+
+# Record success
+$SCRIPTS/task-update.sh --session {SESSION_ID} --id {TASK_ID} \
+  --add-evidence "TDD-GREEN: Test passes (exit code 0)"
+```
+
+**Evidence Required:**
+- Implementation file path
+- Test execution output showing pass
+- Exit code 0
+
+### TDD Phase 3: REFACTOR (Optional)
+
+1. Improve code quality (naming, structure, performance)
+2. Run tests again to ensure they still pass
+3. Record any refactoring done
+
+```bash
+$SCRIPTS/task-update.sh --session {SESSION_ID} --id {TASK_ID} \
+  --add-evidence "TDD-REFACTOR: Renamed variables for clarity, tests still pass"
+```
+
+### TDD Evidence Chain
+
+A complete TDD task MUST have this evidence sequence:
+
+```
+1. TDD-RED: Test file created
+2. TDD-RED: Test execution failed (exit code 1)
+3. TDD-GREEN: Implementation created
+4. TDD-GREEN: Test execution passed (exit code 0)
+5. (Optional) TDD-REFACTOR: Improvements made, tests still pass
+```
+
+**Verification will FAIL if:**
+- Implementation evidence appears before TDD-RED evidence
+- Missing TDD-RED or TDD-GREEN evidence
+- Test never failed (suggests code-first, not test-first)
+
+### TDD Task Completion
+
+```bash
+$SCRIPTS/task-update.sh --session {SESSION_ID} --id {TASK_ID} \
+  --status resolved \
+  --add-evidence "TDD complete: RED→GREEN→REFACTOR cycle finished"
+```
+
+---
+
 ## Error Handling
 
 ### Common Failure Patterns

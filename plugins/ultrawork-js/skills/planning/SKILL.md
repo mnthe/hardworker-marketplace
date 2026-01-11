@@ -45,6 +45,22 @@ Analyze the goal against context to find decision points.
 | **Architecture Choices** | DB type, framework, patterns | High |
 | **Library Selection** | Which packages to use | Medium |
 | **Scope Boundaries** | What's in/out of scope | Medium |
+| **Development Approach** | TDD vs standard for testable tasks | Medium |
+
+### TDD Decision Point
+
+For tasks involving testable logic (new functions, classes, bug fixes), decide on development approach:
+
+| Approach | When to Use |
+|----------|-------------|
+| **TDD** | New business logic, bug fixes, algorithms, validation |
+| **Standard** | Config changes, documentation, refactoring, UI-only |
+
+**TDD Benefits:**
+- Tests define expected behavior BEFORE implementation
+- Forces clear interface design
+- Catches regressions immediately
+- Evidence trail proves test-first discipline
 
 ---
 
@@ -73,6 +89,20 @@ AskUserQuestion(questions=[{
 - Add "(Recommended)" to suggested option
 - Present 2-3 approaches before asking
 
+**TDD Question Example:**
+
+```python
+AskUserQuestion(questions=[{
+  "question": "This task involves testable logic. Use TDD approach?",
+  "header": "TDD",
+  "options": [
+    {"label": "TDD (Recommended)", "description": "Write test first → implement → verify"},
+    {"label": "Standard", "description": "Implement first, add tests after"}
+  ],
+  "multiSelect": False
+}])
+```
+
 See `references/brainstorm-protocol.md` for detailed question flow.
 
 ### Auto Mode
@@ -81,6 +111,10 @@ Make decisions automatically based on:
 - Existing patterns in codebase
 - Dependencies already present
 - Common best practices
+
+**Auto TDD Defaults:**
+- Default to TDD for: new functions, new classes, bug fixes, validators
+- Default to Standard for: config changes, documentation, refactoring, UI scaffolding
 
 ---
 
@@ -136,12 +170,23 @@ Verify task      → blockedBy: [all]
 ```bash
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
 
+# Standard task (default approach)
 $SCRIPTS/task-create.sh --session {SESSION_ID} \
   --id "1" \
   --subject "Task title" \
   --description "Detailed description" \
   --complexity standard \
   --criteria "criterion1|criterion2"
+
+# TDD task - requires test-first evidence
+$SCRIPTS/task-create.sh --session {SESSION_ID} \
+  --id "2" \
+  --subject "Add validateUser function" \
+  --description "Create validation function with TDD approach" \
+  --complexity standard \
+  --approach tdd \
+  --test-file "tests/validateUser.test.ts" \
+  --criteria "TDD-RED: Test fails initially|TDD-GREEN: Test passes after implementation"
 
 # Always include verify task
 $SCRIPTS/task-create.sh --session {SESSION_ID} \
@@ -152,6 +197,15 @@ $SCRIPTS/task-create.sh --session {SESSION_ID} \
   --complexity complex \
   --criteria "All tests pass|Manual verification works"
 ```
+
+### TDD Task Requirements
+
+When creating TDD tasks:
+1. Set `--approach tdd` flag
+2. Optionally specify `--test-file` for expected test location
+3. Include TDD-specific criteria:
+   - `TDD-RED: Test fails initially`
+   - `TDD-GREEN: Test passes after implementation`
 
 See `references/task-examples.md` for complete examples.
 
@@ -170,11 +224,11 @@ Return planning summary:
 | Auth method | OAuth + Credentials | Yes |
 
 ## Task Graph
-| ID | Subject | Blocked By | Complexity |
-|----|---------|------------|------------|
-| 1 | Setup auth | - | standard |
-| 2 | User model | 1 | standard |
-| verify | Verification | 1,2 | complex |
+| ID | Subject | Blocked By | Complexity | Approach |
+|----|---------|------------|------------|----------|
+| 1 | Setup auth | - | standard | standard |
+| 2 | User model | 1 | standard | tdd |
+| verify | Verification | 1,2 | complex | standard |
 
 ## Files Created
 - {WORKING_DIR}/docs/plans/YYYY-MM-DD-design.md

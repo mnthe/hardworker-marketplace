@@ -54,6 +54,12 @@
  */
 
 /**
+ * @typedef {'standard' | 'tdd'} TaskApproach
+ * - standard: Implement first, then add tests (default)
+ * - tdd: Test-Driven Development - write test first, then implement
+ */
+
+/**
  * @typedef {Object} TaskEvidence
  * @property {string} type
  * @property {string} description
@@ -75,6 +81,8 @@
  * @property {string} updated_at
  * @property {string} [started_at]
  * @property {string} [resolved_at]
+ * @property {TaskApproach} [approach] - 'tdd' requires test-first evidence
+ * @property {string} [test_file] - Expected test file path (for TDD tasks)
  */
 
 // ============================================================================
