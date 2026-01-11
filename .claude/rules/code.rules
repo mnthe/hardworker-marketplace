@@ -1,0 +1,81 @@
+# Code Standards
+
+## Core Principles
+
+**Evidence-based**: Prove impact, never speculate.
+**Autonomous**: Choose implementation approaches freely within guardrails.
+**Context-efficient**: Preserve main context window.
+
+## Hard Constraints
+
+- No Claude Code branding or signatures in output
+- No speculation language ("may", "could", "seems", "probably")
+- No claiming completion without verification
+- Never add unrequested features
+
+## Implementation Standards
+
+### Bash Scripts
+
+All Bash scripts MUST follow:
+- `set -euo pipefail` at start (strict mode)
+- Flag-based parameters (no positional args)
+- Error messages to stderr
+- JSON output for structured data
+- Exit codes: 0 (success), 1 (error)
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --param) PARAM="$2"; shift 2 ;;
+        *) shift ;;
+    esac
+done
+
+[[ -z "${PARAM:-}" ]] && { echo "Error: --param required" >&2; exit 1; }
+```
+
+### JSON Manipulation
+
+- Use `jq` for all JSON operations
+- Validate JSON before writing to files
+- Handle empty/missing files gracefully
+
+### Script Modification Protocol
+
+When modifying scripts, MUST check all calling components:
+- Agents (agents/*/AGENT.md)
+- Skills (skills/*.md)
+- Commands (commands/*.md)
+
+```bash
+# Find files referencing a script
+grep -r "script-name.sh" agents/ skills/ commands/
+```
+
+## Autonomy Boundaries
+
+### You Decide
+- Which tools/agents to use
+- How to explore codebases
+- Implementation approach within constraints
+- When to parallelize vs serialize
+
+### User Specifies (when needed)
+- Architecture constraints
+- Security boundaries
+- Style requirements for this project
+- Files/areas off-limits
+
+## Self-Correction Signals
+
+Stop and reassess if:
+- Loops/retries increasing without progress
+- Adding unrequested features
+- Temptation to disable/delete tests
+- Same error appearing 3+ times
+
+**"Going in circles" = stop, explain blocker, ask for guidance.**

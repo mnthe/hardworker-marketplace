@@ -1,6 +1,6 @@
-# ultrawork-ts
+# ultrawork-js
 
-Cross-platform TypeScript/Node.js version of the ultrawork plugin for Claude Code.
+Cross-platform JavaScript/Node.js version of the ultrawork plugin for Claude Code. Uses JavaScript with JSDoc type annotations (no TypeScript build step required).
 
 ## Features
 
@@ -15,7 +15,7 @@ Cross-platform TypeScript/Node.js version of the ultrawork plugin for Claude Cod
 
 ```bash
 claude plugin marketplace add mnthe/hardworker-marketplace
-claude plugin install ultrawork-ts@hardworker-marketplace
+claude plugin install ultrawork-js@hardworker-marketplace
 ```
 
 ## Usage

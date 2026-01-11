@@ -1,0 +1,131 @@
+# Documentation Standards
+
+## Documentation Discipline
+
+**Goal**: High-value, verifiable documentation. Avoid low-ROI documentation.
+
+## Documentation Categories
+
+### Mandatory (auto-generated, verifiable)
+
+- API contracts, type signatures
+- CHANGELOG from commits
+
+### Conditional (high-value, needs review)
+
+- README structure updates
+- Architecture decisions (ADR)
+
+### Prohibited (negative ROI)
+
+- Inline comments restating code
+- Duplicate explanations
+- Unrequested documentation files
+
+### Autonomous (agent decides)
+
+- Tone, format, examples
+- Level of detail
+
+## Evidence-Based Language
+
+### Forbidden Phrases
+
+Never use speculation in output:
+- "may"
+- "could"
+- "seems"
+- "probably"
+- "should work"
+- "basic implementation"
+- "you can extend this"
+- "TODO" / "FIXME" (in final output)
+
+### Required Evidence
+
+Claims must be backed by proof:
+- "Fixed" → Show test passes, error gone
+- "Works" → Demonstrate execution
+- "Complete" → All acceptance criteria met
+
+## Command Specification
+
+Command files (`commands/*.md`) must include:
+
+```markdown
+---
+name: command-name
+description: One-line description
+args: "optional arguments spec"
+---
+
+# Command Title
+
+## Overview
+What this command does.
+
+## Usage
+\`\`\`
+/command-name [options]
+\`\`\`
+
+## Options
+- `--option`: Description
+
+## Workflow
+Step-by-step execution flow.
+```
+
+## Agent Specification
+
+Agent files (`agents/*/AGENT.md`) must include:
+
+```markdown
+---
+name: agent-name
+description: Agent role description
+tools: [list, of, allowed, tools]
+---
+
+# Agent Role
+
+## Purpose
+Why this agent exists.
+
+## Responsibilities
+- What this agent does
+- What it should NOT do
+
+## Input/Output
+Expected inputs and outputs.
+
+## Workflow
+Step-by-step agent behavior.
+```
+
+## CLAUDE.md Usage
+
+CLAUDE.md files provide context to AI agents.
+
+| Level   | Location                           | Purpose                      |
+| ------- | ---------------------------------- | ---------------------------- |
+| Root    | `/CLAUDE.md`                       | Project overview, guidelines |
+| Plugin  | `/plugins/*/CLAUDE.md`             | Plugin-specific context      |
+| Agent   | `/plugins/*/agents/*/CLAUDE.md`    | Agent role context           |
+| Session | `~/.claude/*/sessions/*/CLAUDE.md` | Session activity             |
+
+### When to Update CLAUDE.md
+
+- After architectural decisions
+- When adding new patterns
+- After significant refactoring
+- When changing conventions
+
+## Changelog Tracking
+
+Changes tracked in git commit history. Follow conventional commits:
+
+- `feat(plugin):` New features
+- `fix(plugin):` Bug fixes
+- `docs(plugin):` Documentation updates
+- `refactor(plugin):` Code refactoring

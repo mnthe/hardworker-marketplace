@@ -1,0 +1,92 @@
+# Testing Standards
+
+## Test Discipline
+
+Tests must verify actual behavior, not just pass.
+
+### Core Requirements
+
+- Cover edge cases and error paths
+- Never delete/disable tests to make code "work"
+- Test coverage = confidence to refactor
+- Separate commits: structural changes vs behavioral changes
+
+### Edge Cases to Cover
+
+Every test suite should include:
+- **Null/undefined handling**: What happens with missing inputs?
+- **Empty values**: Empty strings, empty arrays, zero
+- **Error conditions**: Invalid inputs, network failures, permission errors
+- **Boundary conditions**: Min/max values, off-by-one scenarios
+
+### Test File Naming
+
+- TypeScript/JavaScript: `*.test.ts`, `*.spec.ts`
+- Go: `*_test.go`
+- Python: `test_*.py`
+- Bash: Manual verification with command output
+
+### Verification Triggers
+
+Verify before claiming completion:
+- After implementation: run tests
+- After refactoring: confirm behavior unchanged
+- After fixing: reproduce original issue, confirm resolved
+
+## Evidence Requirements
+
+| Claim | Required Proof |
+|-------|----------------|
+| "Fixed" | Test passes, error gone |
+| "Works" | Demonstrated execution |
+| "Complete" | All acceptance criteria met |
+
+### Evidence Format
+
+```markdown
+### Criterion: Tests pass
+
+**Command**:
+```bash
+npm test
+```
+
+**Output**:
+```
+PASS src/auth.test.ts
+Tests: 15 passed, 15 total
+```
+
+**Exit Code**: 0
+
+**Conclusion**: All tests passing, criterion met.
+```
+
+## Manual Testing for Bash
+
+Since this project lacks automated test framework:
+
+### Script Validation
+
+```bash
+# Syntax check
+bash -n scripts/*.sh
+
+# shellcheck (if available)
+shellcheck scripts/*.sh
+```
+
+### Functional Testing
+
+1. **Session State**: Create session, verify JSON structure
+2. **Task Operations**: Create/update/list tasks
+3. **Hook Execution**: Verify hooks trigger correctly
+4. **Edge Cases**: Empty inputs, missing files, concurrent access
+
+## When Tests Are NOT Required
+
+- Documentation-only changes
+- Configuration file updates
+- Code that cannot be unit tested (e.g., UI-only changes)
+
+Document why tests are not applicable in your evidence.
