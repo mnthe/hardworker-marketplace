@@ -164,7 +164,7 @@ Starting workers...
 ```python
 while iteration <= max_iterations:
     # Update phase and iteration
-    Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase EXECUTION --iteration {iteration}')
+    Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase EXECUTION --iteration {iteration}')
 
     print(f"## Iteration {iteration}/{max_iterations}")
 
@@ -176,7 +176,7 @@ while iteration <= max_iterations:
 
     # Skip verify if requested
     if skip_verify:
-        Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase COMPLETE')
+        Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase COMPLETE')
         print("## Execution Complete (verification skipped)")
         return
 
@@ -186,7 +186,7 @@ while iteration <= max_iterations:
     if verification_result == "CANCELLED":
         return
     elif verification_result == "PASS":
-        Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase COMPLETE')
+        Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase COMPLETE')
         print("## Execution Complete - All criteria verified")
         return
     else:
@@ -196,7 +196,7 @@ while iteration <= max_iterations:
             reset_failed_tasks(SESSION_ID)
             iteration += 1
         else:
-            Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase FAILED')
+            Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase FAILED')
             print("## Execution Failed - Max iterations reached")
             return
 ```
@@ -207,11 +207,11 @@ while iteration <= max_iterations:
 
 ```python
 def run_execution_phase(SESSION_ID, max_workers):
-    # Get session_dir via: Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
+    # Get session_dir via: Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
 
     while True:
         # Get current task states
-        tasks_output = Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID} --format json')
+        tasks_output = Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID} --format json')
         tasks = json.loads(tasks_output.output)
 
         # Categorize tasks (exclude verify task for now)
@@ -227,7 +227,7 @@ def run_execution_phase(SESSION_ID, max_workers):
         batch = unblocked[:max_workers] if max_workers > 0 else unblocked
         for task in batch:
             # Mark task as in_progress
-            Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --status in_progress')
+            Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --status in_progress')
 
             model = "opus" if task["complexity"] == "complex" else "sonnet"
             Task(
@@ -254,10 +254,10 @@ SUCCESS CRITERIA:
 
 ```python
 def run_verification_phase(SESSION_ID):
-    # Get session_dir via: Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
+    # Get session_dir via: Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
 
     # Update phase
-    Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase VERIFICATION')
+    Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase VERIFICATION')
 
     print("## Running Verification...")
 
@@ -291,22 +291,22 @@ Return: PASS or FAIL with details
 def reset_failed_tasks(SESSION_ID):
     """Reset failed tasks for retry iteration"""
 
-    tasks_output = Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID} --format json')
+    tasks_output = Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID} --format json')
     tasks = json.loads(tasks_output.output)
 
     for task in tasks:
         if task["status"] == "failed":
             # Reset to pending
-            Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --status pending')
+            Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --status pending')
 
             # Increment retry count
             retry_count = task.get("retry_count", 0) + 1
-            Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --retry-count {retry_count}')
+            Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --retry-count {retry_count}')
 
             print(f"↻ Reset for retry: {task['id']} (attempt {retry_count + 1})")
 
     # Also reset verify task
-    Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id verify --status pending')
+    Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id verify --status pending')
 ```
 
 ---

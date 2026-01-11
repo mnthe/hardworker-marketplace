@@ -522,7 +522,7 @@ node "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID
 
 while True:
     # Find unblocked pending tasks
-    tasks_output = Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID} --format json')
+    tasks_output = Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID} --format json')
     tasks = json.loads(tasks_output.output)
 
     unblocked = [t for t in tasks if t["status"] == "pending" and all_deps_complete(t, tasks)]
@@ -560,7 +560,7 @@ When all tasks complete, spawn verifier:
 # Get session_dir via: Bash('"node ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
 
 # Update phase
-Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase VERIFICATION')
+Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase VERIFICATION')
 
 # Spawn verifier (foreground - waits for completion)
 Task(

@@ -48,7 +48,7 @@ To allow user interruption during exploration, use **background execution with p
 # Poll pattern for all Task waits
 while True:
     # Check if session was cancelled
-    phase = Bash(f'"{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field phase')
+    phase = Bash(f'node "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field phase')
     if phase.output.strip() == "CANCELLED":
         return  # Exit cleanly
 
