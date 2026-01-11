@@ -77,8 +77,12 @@ Classify each insight based on its characteristics:
 ### Step 1: Read Session Insights
 
 1. Get session ID from task context or environment
-2. Read the session file at `.claude/knowledge-extraction/sessions/{session-id}.md`
+2. Read the insights file at `.claude/knowledge-extraction/{session-id}/insights.md`
 3. Parse each insight block (sections starting with `## ` timestamp)
+4. For each insight, extract:
+   - **User Question** (### User Question): The prompt that led to the insight
+   - **Context** (### Context): Text immediately before the insight marker
+   - **Content** (### Content): The actual insight content
 
 ### Step 2: Analyze Each Insight
 
@@ -95,7 +99,9 @@ Create a proposal for each insight:
 ```markdown
 ### Insight #{n}: {brief title}
 
-**Original Content:**
+**User Question:** {what prompted the insight}
+**Context:** {surrounding context}
+**Content:**
 > {insight content}
 
 **Proposed Target:** {Skill | Command | Agent | CLAUDE.md}
@@ -152,7 +158,7 @@ For each approved proposal:
 
 After all approved extractions complete:
 1. Report what was created and where
-2. Delete the processed session file
+2. Delete the session directory at `.claude/knowledge-extraction/{session-id}/` (includes insights.md and state.json)
 3. Summarize results
 
 ## Output Format
@@ -175,7 +181,7 @@ Provide a structured report:
 - {reason for each skipped}
 
 ### Session Cleanup
-- Deleted: .claude/knowledge-extraction/sessions/{session-id}.md
+- Deleted: .claude/knowledge-extraction/{session-id}/ (directory)
 ```
 
 ## Quality Standards
@@ -188,9 +194,10 @@ Provide a structured report:
 
 ## Edge Cases
 
-- **Empty session file**: Report no insights found
+- **Empty/missing insights file**: Report no insights found
 - **Single insight**: Process normally, no minimum required
 - **Duplicate insights**: Identify and merge similar insights
 - **Unclear classification**: Ask user for guidance
 - **Target conflict**: Present options with tradeoffs
 - **Missing session ID**: Request session ID or search for recent sessions
+- **Insights without context**: Use content alone for classification

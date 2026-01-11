@@ -8,6 +8,7 @@ allowed-tools:
   - Edit
   - Glob
   - Task
+  - Bash
 ---
 
 Manage insights collected from the current session.
@@ -30,7 +31,7 @@ Argument provided: `$ARGUMENTS`
 If no argument provided or argument is empty:
 
 1. Get current session ID from `CLAUDE_SESSION_ID` environment variable
-2. Check if session file exists at `.claude/knowledge-extraction/sessions/{session-id}.md`
+2. Check if insights file exists at `.claude/knowledge-extraction/{session-id}/insights.md`
 3. If exists, read and display the contents
 4. If not exists, inform that no insights have been collected this session
 
@@ -38,7 +39,7 @@ If no argument provided or argument is empty:
 ```
 📝 Insights for session {session-id}
 
-{content of session file}
+{content of insights file}
 
 Total: {count} insight(s)
 
@@ -49,24 +50,24 @@ Tip: Run `/insights extract` to convert these into reusable components.
 
 If argument is "extract":
 
-1. Check if session file exists
+1. Check if insights file exists at `.claude/knowledge-extraction/{session-id}/insights.md`
 2. If no insights, inform user
 3. If insights exist, launch the `insight-extractor` agent using Task tool:
    - Agent analyzes collected insights
    - Proposes extraction targets (Skill, Command, Agent, CLAUDE.md)
    - Presents proposals for user approval
    - Creates approved components
-   - Cleans up session file after successful extraction
+   - Cleans up session directory after successful extraction
 
 ## Action: Clear (`/insights clear`)
 
 If argument is "clear":
 
 1. Get current session ID
-2. Check if session file exists
+2. Check if session directory exists at `.claude/knowledge-extraction/{session-id}/`
 3. If exists:
-   - Show how many insights will be deleted
-   - Delete the session file
+   - Count insights in insights.md
+   - Delete the entire session directory (insights.md + state.json)
    - Confirm deletion
 4. If not exists, inform no insights to clear
 
@@ -79,9 +80,9 @@ If argument is "clear":
 
 If argument is "all":
 
-1. List all files in `.claude/knowledge-extraction/sessions/`
-2. For each session file:
-   - Extract session ID from filename
+1. List all directories in `.claude/knowledge-extraction/` (excluding config.local.md)
+2. For each session directory:
+   - Check if insights.md exists
    - Count insights (lines starting with `## `)
    - Show summary
 3. Display aggregated view
@@ -99,11 +100,14 @@ Total: {total} insight(s) across {n} session(s)
 Tip: Use `/insights` to view current session, `/insights extract` to convert.
 ```
 
-## Session File Location
+## Storage Structure
 
-All session files are stored at:
 ```
-.claude/knowledge-extraction/sessions/{session-id}.md
+.claude/knowledge-extraction/
+├── config.local.md              # Configuration (optional)
+└── {session-id}/
+    ├── state.json               # Processing state
+    └── insights.md              # Collected insights with context
 ```
 
 ## Error Handling

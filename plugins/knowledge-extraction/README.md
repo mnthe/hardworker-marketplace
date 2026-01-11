@@ -32,7 +32,7 @@ claude --plugin-dir /path/to/knowledge-extraction
 
 ### Automatic Collection
 
-When using Claude in explanatory mode, insights are automatically saved:
+Insights are **automatically extracted by hooks** - no manual action required. When Claude generates `★ Insight` markers:
 
 ```
 ★ Insight ─────────────────────────────────────
@@ -40,7 +40,9 @@ JWT tokens should include minimal claims. Store sensitive data server-side.
 ─────────────────────────────────────────────────
 ```
 
-The skill saves these to `.claude/knowledge-extraction/sessions/{session-id}.md`.
+The **Stop/SubagentStop hooks** parse Claude's transcript and extract these patterns to `.claude/knowledge-extraction/sessions/{session-id}.md`.
+
+**Efficiency**: State tracking (`state/{session-id}.json`) ensures already-processed messages are skipped on subsequent hook calls.
 
 ### Commands
 
@@ -84,8 +86,8 @@ Autonomous agent that:
 
 ### Hooks
 
-- **Stop Hook**: Reminds about insights at session end
-- **PostToolUse Hook**: Notifies when threshold reached
+- **Stop Hook**: Automatically extracts `★ Insight` patterns from Claude's responses and saves to session file. Also recommends extraction when threshold reached.
+- **SubagentStop Hook**: Extracts insights from subagent responses (extraction only, no recommendations)
 
 ## Configuration
 
@@ -113,24 +115,36 @@ Customize insight collection and extraction behavior.
 
 ## Storage
 
-Insights are stored at:
+Insights and state are stored per-session:
 
 ```
 .claude/knowledge-extraction/
 ├── config.local.md              # Configuration (optional)
-└── sessions/
-    └── {session-id}.md          # Per-session insights
+└── {session-id}/
+    ├── state.json               # Processing state (last processed uuid)
+    └── insights.md              # Collected insights with context
 ```
 
 ### Insight Format
 
+Each insight includes context for better understanding:
+
 ```markdown
 ## 2026-01-11T22:10:30+09:00
 
-- **Type**: code-pattern
-- **Context**: TypeScript, React hooks
-- **Content**:
-  When managing complex form state, prefer useReducer over multiple useState.
+### User Question
+
+> How should I manage complex form state in React?
+
+### Context
+
+I've been looking at different approaches for form state management.
+
+### Content
+
+When managing complex form state with multiple interdependent fields, prefer useReducer over multiple useState calls.
+
+---
 ```
 
 ## Extraction Targets
