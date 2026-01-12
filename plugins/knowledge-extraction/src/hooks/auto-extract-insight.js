@@ -372,11 +372,11 @@ async function main() {
 
         if (insightCount >= threshold) {
           const output = {
-            additionalContext: [
-              '---',
+            decision: "block",
+            reason: [
               `📝 You have ${insightCount} insight(s) collected (threshold: ${threshold}).`,
               "Consider running '/insights extract' to convert them into reusable components.",
-              '---'
+              "Or continue your current work if you prefer to extract later."
             ].join('\n')
           };
           console.log(JSON.stringify(output));
@@ -403,11 +403,11 @@ async function main() {
 
         if (insightCount >= threshold) {
           const output = {
-            additionalContext: [
-              '---',
+            decision: "block",
+            reason: [
               `📝 You have ${insightCount} insight(s) collected (threshold: ${threshold}).`,
               "Consider running '/insights extract' to convert them into reusable components.",
-              '---'
+              "Or continue your current work if you prefer to extract later."
             ].join('\n')
           };
           console.log(JSON.stringify(output));
@@ -437,11 +437,11 @@ async function main() {
 
       if (insightCount >= threshold) {
         const output = {
-          additionalContext: [
-            '---',
+          decision: "block",
+          reason: [
             `📝 You have ${insightCount} insight(s) collected (threshold: ${threshold}).`,
             "Consider running '/insights extract' to convert them into reusable components.",
-            '---'
+            "Or continue your current work if you prefer to extract later."
           ].join('\n')
         };
         console.log(JSON.stringify(output));
