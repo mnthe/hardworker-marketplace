@@ -53,6 +53,19 @@ Extract and manage knowledge from codebases for AI agent context.
 
 [Full Documentation →](plugins/knowledge-extraction/)
 
+## Prerequisites
+
+Before using plugins from this marketplace, ensure you have:
+
+- **Claude Code CLI** (latest version with plugin support)
+  - Download: https://claude.ai/download
+- **Bun 1.3+** (runtime for all plugins)
+  - Installation: https://bun.sh/
+- **Git** (version control)
+  - Required for repository operations
+- **Platform**: Windows, MacOS, or Linux
+  - All plugins are cross-platform compatible
+
 ## Quick Start
 
 ### Installation

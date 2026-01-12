@@ -84,13 +84,13 @@ claude --plugin-dir /path/to/teamwork
 
 ## Commands
 
-| Command            | Description                                             |
-| ------------------ | ------------------------------------------------------- |
-| `/teamwork <goal>` | Start coordination session, create task breakdown       |
-| `/teamwork-status` | View dashboard with progress metrics and active workers |
-| `/teamwork-worker` | Claim and complete one task (one-shot mode)             |
+| Command            | Description                                             | Options                                                                   |
+| ------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `/teamwork <goal>` | Start coordination session, create task breakdown       | `--project NAME`, `--team NAME`                                           |
+| `/teamwork-status` | View dashboard with progress metrics and active workers | `--project NAME`, `--team NAME`, `--verbose`                              |
+| `/teamwork-worker` | Claim and complete one task (one-shot mode)             | `--loop`, `--role ROLE`, `--project NAME`, `--team NAME`                  |
 
-### Command Options
+### Options
 
 #### /teamwork
 
@@ -118,17 +118,17 @@ claude --plugin-dir /path/to/teamwork
 
 ## Agents
 
-| Agent           | Role               | Description                                                     |
-| --------------- | ------------------ | --------------------------------------------------------------- |
-| **coordinator** | Planning           | Breaks down goals into tasks, assigns roles, creates task files |
-| **frontend**    | UI Implementation  | UI components, styling, user interactions                       |
-| **backend**     | API Implementation | API endpoints, services, database, business logic               |
-| **test**        | Testing            | Unit tests, integration tests, fixtures, mocks                  |
-| **devops**      | Infrastructure     | CI/CD pipelines, deployment, infrastructure                     |
-| **docs**        | Documentation      | README files, API documentation, examples                       |
-| **security**    | Security           | Authentication, authorization, input validation                 |
-| **review**      | Code Review        | Code review, refactoring suggestions                            |
-| **worker**      | General Purpose    | Claims tasks for any role (fallback agent)                      |
+| Agent           | Model   | Purpose            | Key Responsibilities                                            |
+| --------------- | ------- | ------------------ | --------------------------------------------------------------- |
+| **coordinator** | opus    | Planning           | Breaks down goals into tasks, assigns roles, creates task files |
+| **frontend**    | inherit | UI Implementation  | UI components, styling, user interactions                       |
+| **backend**     | inherit | API Implementation | API endpoints, services, database, business logic               |
+| **test**        | inherit | Testing            | Unit tests, integration tests, fixtures, mocks                  |
+| **devops**      | inherit | Infrastructure     | CI/CD pipelines, deployment, infrastructure                     |
+| **docs**        | inherit | Documentation      | README files, API documentation, examples                       |
+| **security**    | inherit | Security           | Authentication, authorization, input validation                 |
+| **review**      | inherit | Code Review        | Code review, refactoring suggestions                            |
+| **worker**      | inherit | General Purpose    | Claims tasks for any role (fallback agent)                      |
 
 ## How It Works
 
@@ -172,20 +172,43 @@ Shows progress dashboard:
 - Blocked tasks waiting on dependencies
 ```
 
-## Loop Mode
+### Concurrency Safety
 
-Loop mode uses hook-based continuation for unattended execution:
+Teamwork handles multiple workers accessing shared state:
 
-1. Worker completes a task
-2. Outputs special marker: `__TEAMWORK_CONTINUE__`
-3. Stop hook detects marker and checks for more tasks
-4. Hook re-triggers `/teamwork-worker` with same context
-5. Loop continues until no open tasks remain
+- **File-based locking**: Prevents race conditions during task claiming
+- **Atomic operations**: Task status updates are transactional
+- **Retry logic**: Workers retry on lock contention
+- **Stale detection**: Workers detect when tasks are claimed by others
 
-**Loop state tracking:**
-- State stored per-terminal in `~/.claude/teamwork/.loop-state/{pid}.json`
-- Preserves project, team, and role filter across iterations
-- Automatically cleaned up when loop exits
+## Configuration
+
+### Command Options
+
+Teamwork is configured via command-line flags:
+
+| Option           | Default             | Description                              |
+| ---------------- | ------------------- | ---------------------------------------- |
+| `--project`      | Git repo name       | Override project name                    |
+| `--team`         | Git branch name     | Override team name                       |
+| `--role`         | none (all roles)    | Filter tasks by role                     |
+| `--loop`         | false               | Continuous mode (claim tasks until done) |
+| `--verbose`      | false               | Show detailed task information           |
+
+### Role Assignment
+
+Tasks are assigned roles during coordination phase:
+
+| Role         | Use Cases                                      |
+| ------------ | ---------------------------------------------- |
+| `frontend`   | UI components, styling, user interactions      |
+| `backend`    | API endpoints, services, database              |
+| `test`       | Unit tests, integration tests                  |
+| `devops`     | CI/CD, deployment, infrastructure              |
+| `docs`       | Documentation, README, examples                |
+| `security`   | Authentication, authorization, validation      |
+| `review`     | Code review, refactoring suggestions           |
+| `worker`     | General purpose (claims any role)              |
 
 ## Storage
 
@@ -239,21 +262,12 @@ Loop mode uses hook-based continuation for unattended execution:
 }
 ```
 
-## Concurrency Safety
+## Workflows
 
-Teamwork handles multiple workers accessing shared state:
-
-- **File-based locking**: Prevents race conditions during task claiming
-- **Atomic operations**: Task status updates are transactional
-- **Retry logic**: Workers retry on lock contention
-- **Stale detection**: Workers detect when tasks are claimed by others
-
-## Examples
-
-### Example 1: Full-Stack Application
+### Interactive Workflow
 
 ```bash
-# Terminal 1: Coordinator
+# Terminal 1: Start project coordination
 /teamwork "build todo app with React frontend and Express backend"
 
 # Terminal 2: Backend specialist
@@ -269,7 +283,7 @@ Teamwork handles multiple workers accessing shared state:
 /teamwork-status
 ```
 
-### Example 2: Single Developer Mode
+### Single Developer Workflow
 
 ```bash
 # Start project
@@ -285,18 +299,93 @@ Teamwork handles multiple workers accessing shared state:
 /teamwork-worker
 ```
 
-### Example 3: Specific Project Override
+### Loop Mode Workflow
+
+Loop mode uses hook-based continuation for unattended execution:
+
+1. Worker completes a task
+2. Outputs special marker: `__TEAMWORK_CONTINUE__`
+3. Stop hook detects marker and checks for more tasks
+4. Hook re-triggers `/teamwork-worker` with same context
+5. Loop continues until no open tasks remain
+
+**Loop state tracking:**
+- State stored per-terminal in `~/.claude/teamwork/.loop-state/{pid}.json`
+- Preserves project, team, and role filter across iterations
+- Automatically cleaned up when loop exits
+
+```bash
+# Start continuous worker
+/teamwork-worker --loop
+
+# Or with role specialization
+/teamwork-worker --role backend --loop
+```
+
+### Project Override Workflow
 
 ```bash
 # Work on specific project/team combination
 /teamwork-worker --project myapp --team bugfix-123 --loop
 ```
 
+## Troubleshooting
+
+### Worker Not Finding Tasks
+
+```bash
+# Check if tasks exist
+/teamwork-status --verbose
+
+# Verify project and team names match
+/teamwork-status --project myapp --team feature-123
+```
+
+### Tasks Not Being Claimed
+
+```bash
+# Check role filter - workers with --role only claim matching tasks
+/teamwork-worker --role backend
+
+# Use general worker to claim any role
+/teamwork-worker
+```
+
+### Multiple Workers Claiming Same Task
+
+This should not happen due to file-based locking. If it does:
+- Check filesystem supports atomic operations
+- Verify no NFS or network filesystem issues
+- Check for stale lock files in task directory
+
+### Loop Mode Not Continuing
+
+```bash
+# Check loop state file
+cat ~/.claude/teamwork/.loop-state/{pid}.json
+
+# Verify stop hook is registered
+# Loop mode requires hook system to be active
+```
+
+### Project State Corruption
+
+```bash
+# Task files are individual JSON files
+# If corrupted, manually fix the specific task file
+nano ~/.claude/teamwork/{project}/{team}/tasks/{id}.json
+
+# Or delete corrupted task and recreate
+rm ~/.claude/teamwork/{project}/{team}/tasks/{id}.json
+```
+
 ## Requirements
 
-- Bun installed
-- No external dependencies
-- File system with atomic write operations
+- **Claude Code CLI**: Latest version with plugin support
+- **Bun**: 1.3+ for script execution
+- **Git**: For project/team name detection (optional)
+- **Platform**: Windows, MacOS, or Linux
+- **Filesystem**: Must support atomic file operations
 
 ## License
 

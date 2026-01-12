@@ -2,142 +2,340 @@
 
 Multi-session collaboration plugin with role-based workers.
 
+## Plugin Description
+
+Teamwork enables multi-session collaboration where:
+1. **COORDINATION**: Coordinator agent explores codebase and decomposes work into tasks
+2. **EXECUTION**: Multiple workers claim and complete tasks in parallel sessions
+3. **SYNCHRONIZATION**: Workers coordinate through shared task files with atomic locking
+
+Key features:
+- Project-based task management
+- Role-based worker specialization (frontend, backend, devops, test, docs, security, review)
+- Atomic task claiming with file-based locking
+- Loop detection for continuous worker execution
+- Multi-terminal coordination via shared state
+
 ## File Structure
 
-### Library Files
-- src/lib/types.js - JSDoc type definitions (@typedef)
-- src/lib/file-lock.js - Cross-platform file locking
-- src/lib/project-utils.js - Project and task path utilities
-
-### Scripts (10 total)
-1. src/scripts/project-create.js - Create new teamwork project
-2. src/scripts/project-get.js - Get project metadata
-3. src/scripts/task-create.js - Create new task
-4. src/scripts/task-get.js - Get single task details
-5. src/scripts/task-list.js - List all tasks in project
-6. src/scripts/task-claim.js - Atomically claim a task
-7. src/scripts/task-update.js - Update task status/evidence
-8. src/scripts/loop-state.js - Manage worker loop state
-9. src/scripts/setup-teamwork.js - Initialize teamwork environment
-10. src/scripts/worker-setup.js - Setup worker session context
-
-### Hooks (1 total)
-1. src/hooks/loop-detector.js - Detects __TEAMWORK_CONTINUE__ marker and triggers next worker iteration
-
-### Agents (9 total)
-1. agents/coordinator/AGENT.md - Main orchestration agent (planning phase)
-2. agents/worker/AGENT.md - General purpose worker
-3. agents/frontend/AGENT.md - Frontend development specialist
-4. agents/backend/AGENT.md - Backend development specialist
-5. agents/devops/AGENT.md - DevOps and infrastructure specialist
-6. agents/test/AGENT.md - Testing specialist
-7. agents/docs/AGENT.md - Documentation specialist
-8. agents/security/AGENT.md - Security specialist
-9. agents/review/AGENT.md - Code review specialist
-
-## No Build Step Required
-
-Scripts run directly from source. No compilation needed.
-
-## Hook Configuration
-
-**IMPORTANT**: hooks.json must use explicit `bun` prefix for cross-platform compatibility.
-
-```json
-// WRONG - shebang doesn't work on Windows
-"command": "${CLAUDE_PLUGIN_ROOT}/src/hooks/loop-detector.js"
-
-// CORRECT - explicit bun invocation
-"command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/loop-detector.js"
+```
+plugins/teamwork/
+├── src/
+│   ├── lib/
+│   │   ├── types.js           # JSDoc type definitions (@typedef)
+│   │   ├── file-lock.js       # Cross-platform file locking
+│   │   ├── project-utils.js   # Project and task path utilities
+│   │   └── args.js            # Common argument parsing
+│   ├── scripts/               # CLI scripts (10 files)
+│   │   ├── setup-teamwork.js
+│   │   ├── project-create.js
+│   │   ├── project-get.js
+│   │   ├── task-create.js
+│   │   ├── task-get.js
+│   │   ├── task-list.js
+│   │   ├── task-claim.js
+│   │   ├── task-update.js
+│   │   ├── loop-state.js
+│   │   └── worker-setup.js
+│   └── hooks/                 # Lifecycle hooks (1 file)
+│       └── loop-detector.js
+├── agents/                    # Agent definitions
+│   ├── coordinator/
+│   ├── worker/
+│   ├── frontend/
+│   ├── backend/
+│   ├── devops/
+│   ├── test/
+│   ├── docs/
+│   ├── security/
+│   └── review/
+├── commands/                  # Command definitions
+├── hooks/
+│   └── hooks.json            # Hook configuration
+└── CLAUDE.md                 # This file
 ```
 
-Active hooks:
-- Stop event: loop-detector.js (detects __TEAMWORK_CONTINUE__ marker)
+## Script Inventory
 
-## Multi-Session Coordination
+All scripts use Bun runtime with flag-based parameters.
 
-### Shared State Management
-- Tasks stored in `~/.claude/teamwork/{project}/{team}/tasks/{id}.json`
-- Project state in `~/.claude/teamwork/{project}/{team}/project.json`
-- Loop state per terminal in `~/.claude/teamwork/.loop-state/{terminal_id}.json`
+| Script | Purpose | Key Parameters |
+|--------|---------|----------------|
+| **setup-teamwork.js** | Initialize teamwork environment | (no parameters) |
+| **project-create.js** | Create new project with metadata | `--dir <path>` `--project <name>` `--team <name>` `--goal "..."` |
+| **project-get.js** | Get project metadata | `--dir <path>` `--field <field_name>` |
+| **task-create.js** | Create new task file | `--project <name>` `--team <name>` `--id <id>` `--title "..."` `--description "..."` `--role <role>` |
+| **task-get.js** | Get single task details | `--dir <path>` `--id <id>` `--field <field_name>` |
+| **task-list.js** | List all tasks in project | `--dir <path>` `--available` `--role <role>` `--format json\|table` |
+| **task-claim.js** | Atomically claim a task | `--dir <path>` `--id <id>` `--owner <session_id>` |
+| **task-update.js** | Update task status/evidence | `--dir <path>` `--id <id>` `--status open\|in_progress\|resolved` `--add-evidence "..."` `--release` |
+| **loop-state.js** | Manage worker loop state | `--get` `--set --project <name> --team <name> --role <role>` `--clear` |
+| **worker-setup.js** | Setup worker session context | `--project <name>` `--team <name>` `--role <role>` |
 
-### Concurrency Safety
-- Workers must claim tasks atomically (file-based locking)
-- Task status updates must be atomic operations
-- Multiple workers can run in parallel without conflicts
+## Hook Inventory
 
-### Worker Coordination
-- Each worker runs in separate terminal/session
-- Workers claim tasks based on role matching
-- Workers communicate through shared task files
-- Coordinator monitors progress through task status
+All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
-## Development Rules
+| Hook File | Event | Purpose | Behavior |
+|-----------|-------|---------|----------|
+| **loop-detector.js** | Stop | Detect continuation marker and trigger next worker iteration | Checks for `__TEAMWORK_CONTINUE__` marker in agent output, continues worker loop if found |
 
-### Document Synchronization
+## Agent Inventory
 
-**When modifying teamwork commands or agents, you MUST check and update the following files:**
+| Agent | Model | Role | Key Responsibilities |
+|-------|-------|------|---------------------|
+| **coordinator** | opus | Project setup and task decomposition | Explore codebase, break down work into tasks, assign roles, create task files, maximize parallelism |
+| **worker** | inherit | General purpose task execution | Find available tasks, claim atomically, implement, collect evidence, mark resolved |
+| **frontend** | inherit | Frontend development specialist | UI components, styling, state management, user interactions, responsive design, accessibility |
+| **backend** | inherit | Backend development specialist | API endpoints, services, database, business logic, data validation |
+| **devops** | inherit | DevOps and infrastructure specialist | CI/CD, deployment, infrastructure, containerization, monitoring |
+| **test** | inherit | Testing specialist | Unit tests, integration tests, fixtures, mocks, test coverage |
+| **docs** | inherit | Documentation specialist | README, API docs, examples, architectural documentation |
+| **security** | inherit | Security specialist | Authentication, authorization, input validation, security audits |
+| **review** | inherit | Code review specialist | Code quality, refactoring, best practices, architecture review |
 
-| File                   | Location                      | Role                                                |
-| ---------------------- | ----------------------------- | --------------------------------------------------- |
-| `teamwork.md`          | `commands/teamwork.md`        | Coordination command (planning phase)               |
-| `teamwork-worker.md`   | `commands/teamwork-worker.md` | Worker command (execution phase)                    |
-| `teamwork-status.md`   | `commands/teamwork-status.md` | Status dashboard command                            |
-| `coordinator/AGENT.md` | `agents/coordinator/AGENT.md` | Main orchestration agent                            |
-| `worker/AGENT.md`      | `agents/worker/AGENT.md`      | General purpose worker agent                        |
-| Role agents            | `agents/{role}/AGENT.md`      | Specialized worker agents (frontend, backend, etc.) |
+## State Management
 
-### Task File Format
+### Directory Structure
+
+```
+~/.claude/teamwork/
+├── {project}/
+│   └── {team}/
+│       ├── project.json       # Project metadata
+│       └── tasks/             # Task files (*.json)
+│           ├── 1.json
+│           ├── 2.json
+│           └── 3.json
+└── .loop-state/               # Worker loop state
+    └── {terminal_id}.json
+```
+
+### Task State Format
+
+**File**: `~/.claude/teamwork/{project}/{team}/tasks/{id}.json`
 
 ```json
 {
-  "id": "string",
-  "title": "string",
-  "description": "string",
-  "role": "frontend|backend|devops|test|docs|security|review|worker",
-  "status": "open|in_progress|resolved",
-  "created_at": "ISO8601",
-  "updated_at": "ISO8601",
-  "claimed_by": "session_id or null",
-  "claimed_at": "ISO8601 or null (optional)",
-  "completed_at": "ISO8601 (optional, set when status=resolved)",
-  "evidence": ["string array"]
+  "id": "1",
+  "title": "Implement user authentication",
+  "description": "Add JWT-based authentication middleware",
+  "role": "backend",
+  "status": "open",
+  "created_at": "2026-01-12T10:00:00Z",
+  "updated_at": "2026-01-12T10:05:00Z",
+  "claimed_by": null,
+  "claimed_at": null,
+  "completed_at": null,
+  "evidence": [
+    "Created src/middleware/auth.ts",
+    "npm test: 5/5 passed, exit 0"
+  ]
 }
 ```
 
+**Task status values**: `open` | `in_progress` | `resolved`
+
+**Role values**: `frontend` | `backend` | `devops` | `test` | `docs` | `security` | `review` | `worker`
+
 ### Project State Format
 
-File: `~/.claude/teamwork/{project}/{team}/project.json`
+**File**: `~/.claude/teamwork/{project}/{team}/project.json`
 
 ```json
 {
-  "project": "string",
-  "team": "string",
-  "goal": "string",
-  "created_at": "ISO8601",
-  "updated_at": "ISO8601",
+  "project": "my-app",
+  "team": "auth-team",
+  "goal": "Implement user authentication system",
+  "created_at": "2026-01-12T10:00:00Z",
+  "updated_at": "2026-01-12T10:05:00Z",
   "stats": {
-    "total": 0,
-    "open": 0,
-    "in_progress": 0,
-    "resolved": 0
+    "total": 5,
+    "open": 2,
+    "in_progress": 1,
+    "resolved": 2
   }
 }
 ```
 
 ### Loop State Format
 
-File: `~/.claude/teamwork/.loop-state/{terminal_id}.json`
+**File**: `~/.claude/teamwork/.loop-state/{terminal_id}.json`
 
 ```json
 {
-  "pid": 12345,
-  "project": "string",
-  "team": "string",
-  "role": "string or null",
-  "started_at": "ISO8601",
-  "updated_at": "ISO8601",
-  "iterations": 0,
-  "tasks_completed": 0
+  "active": true,
+  "project": "my-app",
+  "team": "auth-team",
+  "role": "backend",
+  "started_at": "2026-01-12T10:00:00Z",
+  "terminal_id": "abc-123"
 }
+```
+
+## Development Rules
+
+### Script Usage Pattern
+
+```javascript
+#!/usr/bin/env bun
+
+// Flag-based parameters (required)
+const args = process.argv.slice(2);
+const params = {};
+for (let i = 0; i < args.length; i += 2) {
+    const key = args[i].replace(/^--/, '');
+    params[key] = args[i + 1];
+}
+
+// Error messages to stderr
+console.error('Error: --param required');
+
+// JSON output for data
+console.log(JSON.stringify({ status: 'success', data: {...} }));
+
+// Exit codes
+process.exit(0); // success
+process.exit(1); // error
+```
+
+### Document Synchronization
+
+**When modifying teamwork commands or agents, you MUST check and update the following files:**
+
+| File | Location | Role |
+|------|----------|------|
+| `teamwork.md` | `commands/teamwork.md` | Coordination command (planning phase) |
+| `teamwork-worker.md` | `commands/teamwork-worker.md` | Worker command (execution phase) |
+| `teamwork-status.md` | `commands/teamwork-status.md` | Status dashboard command |
+| `coordinator/AGENT.md` | `agents/coordinator/AGENT.md` | Main orchestration agent |
+| `worker/AGENT.md` | `agents/worker/AGENT.md` | General purpose worker agent |
+| Role agents | `agents/{role}/AGENT.md` | Specialized worker agents (frontend, backend, etc.) |
+
+### Concurrency Safety
+
+- Workers must claim tasks atomically (file-based locking)
+- Task status updates must be atomic operations
+- Multiple workers can run in parallel without conflicts
+
+### Worker Coordination
+
+- Each worker runs in separate terminal/session
+- Workers claim tasks based on role matching
+- Workers communicate through shared task files
+- Coordinator monitors progress through task status
+
+## Hook Configuration
+
+**IMPORTANT**: hooks.json must use explicit `bun` prefix for cross-platform compatibility.
+
+```json
+{
+  "hooks": {
+    "Stop": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/loop-detector.js"
+      }]
+    }]
+  }
+}
+```
+
+**Why explicit `bun`?**
+- Shebang (`#!/usr/bin/env bun`) doesn't work on Windows
+- Explicit runtime ensures cross-platform execution
+- All hooks should follow this pattern
+
+## No Build Step Required
+
+Scripts run directly from source. No compilation needed.
+
+## Usage Examples
+
+### Create Project
+
+```bash
+bun src/scripts/project-create.js \
+  --dir ~/.claude/teamwork/my-app/auth-team \
+  --project my-app \
+  --team auth-team \
+  --goal "Implement user authentication"
+```
+
+### Create Task
+
+```bash
+bun src/scripts/task-create.js \
+  --project my-app \
+  --team auth-team \
+  --id "1" \
+  --title "Add auth middleware" \
+  --description "Implement JWT-based authentication middleware" \
+  --role backend
+```
+
+### List Available Tasks
+
+```bash
+# All available tasks
+bun src/scripts/task-list.js \
+  --dir ~/.claude/teamwork/my-app/auth-team \
+  --available \
+  --format json
+
+# Filter by role
+bun src/scripts/task-list.js \
+  --dir ~/.claude/teamwork/my-app/auth-team \
+  --available \
+  --role backend
+```
+
+### Claim Task
+
+```bash
+bun src/scripts/task-claim.js \
+  --dir ~/.claude/teamwork/my-app/auth-team \
+  --id "1" \
+  --owner session-abc-123
+```
+
+### Update Task
+
+```bash
+# Add evidence
+bun src/scripts/task-update.js \
+  --dir ~/.claude/teamwork/my-app/auth-team \
+  --id "1" \
+  --add-evidence "Created src/middleware/auth.ts"
+
+# Mark resolved
+bun src/scripts/task-update.js \
+  --dir ~/.claude/teamwork/my-app/auth-team \
+  --id "1" \
+  --status resolved \
+  --add-evidence "npm test: 5/5 passed, exit 0"
+
+# Release task (on failure)
+bun src/scripts/task-update.js \
+  --dir ~/.claude/teamwork/my-app/auth-team \
+  --id "1" \
+  --release
+```
+
+### Manage Loop State
+
+```bash
+# Get loop state
+bun src/scripts/loop-state.js --get
+
+# Set loop state
+bun src/scripts/loop-state.js --set \
+  --project my-app \
+  --team auth-team \
+  --role backend
+
+# Clear loop state
+bun src/scripts/loop-state.js --clear
 ```

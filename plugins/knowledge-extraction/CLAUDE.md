@@ -2,30 +2,49 @@
 
 Bun-based plugin for automatically collecting and extracting insights from Claude sessions.
 
+## Plugin Description
+
+knowledge-extraction automates the capture and organization of insights during Claude Code sessions.
+
+Key features:
+- Automatic insight extraction via lifecycle hooks (Stop/SubagentStop)
+- Session isolation with separate storage per session
+- Context preservation (user question + surrounding text saved with insight)
+- Duplicate prevention via state tracking and content hashing
+- Threshold-based reminders for extraction when insight count reaches configured threshold
+- Integration with ★ Insight format for consistent markup
+
 ## File Structure
 
-- `commands/insights.md` - `/insights` command for viewing/managing insights
-- `skills/insight-awareness/` - Skill explaining how insights are captured
-- `agents/insight-extractor.md` - Agent for extracting insights to components
-- `src/hooks/auto-extract-insight.js` - Hook for automatic insight extraction
-- `hooks/hooks.json` - Hook configuration
-
-## No Build Step Required
-
-Scripts run directly with Bun. No compilation needed.
-
-## Hook Configuration
-
-**IMPORTANT**: hooks.json must use explicit `bun` prefix for cross-platform compatibility.
-
-```json
-// CORRECT - explicit bun invocation
-"command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/auto-extract-insight.js"
+```
+plugins/knowledge-extraction/
+├── .claude-plugin/
+│   └── plugin.json           # Plugin metadata
+├── commands/
+│   └── insights.md           # /insights command
+├── skills/
+│   └── insight-awareness/
+│       └── SKILL.md          # Insight capture documentation
+├── agents/
+│   └── insight-extractor.md  # Insight extraction agent
+├── src/
+│   └── hooks/
+│       └── auto-extract-insight.js  # Hook implementation
+├── hooks/
+│   └── hooks.json            # Hook configuration
+├── CLAUDE.md                 # This file
+└── README.md                 # User documentation
 ```
 
-## Component Inventory
+## Script Inventory
 
-### Hooks
+All scripts use Bun runtime with flag-based parameters.
+
+| Script | Purpose | Key Parameters |
+|--------|---------|----------------|
+| **auto-extract-insight.js** | Hook for automatic insight extraction from transcript. Parses ★ Insight markers, saves to insights.md with context, tracks state to prevent duplicates, recommends extraction when threshold reached (Stop hook only). | Reads from stdin: `session_id`, `transcript_path`, `hook_event_name`, `stop_hook_active` |
+
+## Hook Inventory
 
 | Hook          | File                     | Trigger      | Purpose                                                    |
 | ------------- | ------------------------ | ------------ | ---------------------------------------------------------- |
@@ -39,11 +58,13 @@ Scripts run directly with Bun. No compilation needed.
 - State tracking prevents duplicate processing
 - Stop hook shows recommendation when threshold reached
 
+## Agent Inventory
+
 ### Agents
 
-| Agent             | Location                      | Purpose                                       |
-| ----------------- | ----------------------------- | --------------------------------------------- |
-| insight-extractor | agents/insight-extractor.md   | Analyzes insights, proposes extraction targets |
+| Agent | Model | Role | Key Responsibilities |
+|-------|-------|------|---------------------|
+| **insight-extractor** | inherit | Insight analysis | Analyzes insights, proposes extraction targets |
 
 ### Skills
 
@@ -63,10 +84,12 @@ Scripts run directly with Bun. No compilation needed.
 - `/insights clear` - Delete current session's insights
 - `/insights all` - Show all sessions' insights
 
-## Runtime Storage
+## State Management
+
+### Directory Structure
 
 ```
-.claude/knowledge-extraction/
+~/.claude/knowledge-extraction/
 ├── config.local.md              # Settings (threshold, auto_recommend)
 └── {session-id}/
     ├── state.json               # Processing state (lastProcessedUuid)
@@ -79,18 +102,11 @@ Scripts run directly with Bun. No compilation needed.
 - `insights.md` contains extracted insights with context
 - Directories deleted after successful extraction via `/insights extract`
 
-## Insight Collection Workflow
+## State Formats
 
-1. **Generation**: Claude produces insight using `★ Insight` format during conversation
-2. **Hook Trigger**: Stop/SubagentStop hook fires when Claude finishes responding
-3. **Transcript Parse**: Hook reads transcript, finds new messages since last processed
-4. **Pattern Match**: Extracts content between `★ Insight ─────` markers
-5. **Context Capture**: Saves user question + text before insight for context
-6. **Storage**: Appends to `{session-id}/insights.md`
-7. **State Update**: Saves last processed uuid to `state.json`
-8. **Threshold Check**: (Stop only) Recommends extraction if count >= threshold
+### Insight Storage Format
 
-## Insight Storage Format
+**File**: `~/.claude/knowledge-extraction/{session-id}/insights.md`
 
 ```markdown
 ## {ISO-8601-timestamp}
@@ -110,9 +126,19 @@ Scripts run directly with Bun. No compilation needed.
 ---
 ```
 
-## Configuration Format
+### Processing State Format
 
-`.claude/knowledge-extraction/config.local.md`:
+**File**: `~/.claude/knowledge-extraction/{session-id}/state.json`
+
+```json
+{
+  "lastProcessedUuid": "abc-123-uuid"
+}
+```
+
+### Configuration Format
+
+**File**: `~/.claude/knowledge-extraction/config.local.md`
 
 ```yaml
 ---
@@ -123,6 +149,67 @@ auto_recommend: true
 
 - **threshold**: Number of insights before recommending extraction (default: 5)
 - **auto_recommend**: Whether to show extraction recommendations (default: true)
+
+## Development Rules
+
+### Hook Development Pattern
+
+```javascript
+#!/usr/bin/env bun
+
+// Read hook input from stdin
+async function readStdin() {
+  const chunks = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk);
+  }
+  return chunks.join('');
+}
+
+// Hook input structure
+const hookInput = JSON.parse(await readStdin());
+const { session_id, transcript_path, hook_event_name, stop_hook_active } = hookInput;
+
+// Prevent infinite loops
+if (stop_hook_active) {
+  process.exit(0);
+}
+
+// Hook output (for Stop hook)
+const output = {
+  additionalContext: "Message to display to user"
+};
+console.log(JSON.stringify(output));
+```
+
+### Hook Safety Rules
+
+- Hooks must be idempotent (safe to run multiple times)
+- Hooks must be non-blocking (< 1 second execution)
+- Fail silently on errors (use try-catch, exit 0)
+- Check `stop_hook_active` to prevent infinite loops
+- Use content hashing to prevent duplicate processing
+
+### State Management Rules
+
+- Always check if state file exists before reading
+- Provide sensible defaults for missing state
+- Use atomic writes (write to temp file, then rename)
+- Track processing progress to enable incremental updates
+- Clean up state after successful extraction
+
+## Hook Configuration
+
+**IMPORTANT**: hooks.json must use explicit `bun` prefix for cross-platform compatibility.
+
+```json
+// CORRECT - explicit bun invocation
+"command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/auto-extract-insight.js"
+```
+
+## No Build Step Required
+
+Scripts run directly with Bun. No compilation needed.
 
 ## Key Concepts
 
@@ -146,6 +233,17 @@ auto_recommend: true
 3. Extracts content between markers
 4. Saves to session file with context
 5. Recommends extraction when threshold reached
+
+## Insight Collection Workflow
+
+1. **Generation**: Claude produces insight using `★ Insight` format during conversation
+2. **Hook Trigger**: Stop/SubagentStop hook fires when Claude finishes responding
+3. **Transcript Parse**: Hook reads transcript, finds new messages since last processed
+4. **Pattern Match**: Extracts content between `★ Insight ─────` markers
+5. **Context Capture**: Saves user question + text before insight for context
+6. **Storage**: Appends to `{session-id}/insights.md`
+7. **State Update**: Saves last processed uuid to `state.json`
+8. **Threshold Check**: (Stop only) Recommends extraction if count >= threshold
 
 ## Development Status
 

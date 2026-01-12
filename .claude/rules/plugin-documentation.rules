@@ -1,0 +1,383 @@
+# Plugin Documentation Standards
+
+## README.md Format
+
+User-facing documentation for plugin installation, usage, and troubleshooting.
+
+### Required Section Order
+
+1. **Plugin Title** (H1) - Plugin name only, no tagline
+2. **Tagline** - One-line description under title
+3. **Overview** - What the plugin does and key workflow
+4. **Features** - Bulleted list of capabilities
+5. **Installation** - From Marketplace and Local Development
+6. **Usage** - Basic commands and examples
+7. **Commands** - Table format (see below)
+8. **Agents** - Table format (see below)
+9. **How It Works** - Workflow diagram with ASCII art
+10. **Workflows** - Concrete usage examples
+11. **Storage** - Directory structure and state formats
+12. **Troubleshooting** - Common issues and solutions
+13. **Requirements** - Dependencies and prerequisites
+14. **License** - License type (MIT)
+
+### Commands Table Format
+
+```markdown
+| Command | Description | Options |
+|---------|-------------|---------|
+| `/command-name <arg>` | Brief description | `--flag`, `--option N` |
+```
+
+**Requirements:**
+- Three columns: Command, Description, Options
+- Command column shows full usage pattern with args
+- Options column lists all flags with comma separation
+- Keep descriptions concise (1-2 lines max)
+
+### Agents Table Format
+
+```markdown
+| Agent | Model | Purpose | Key Responsibilities |
+|-------|-------|---------|---------------------|
+| **agent-name** | opus/sonnet/haiku | Role summary | Detailed responsibilities list |
+```
+
+**Requirements:**
+- Four columns: Agent, Model, Purpose, Key Responsibilities
+- Agent name in bold
+- Model specifies which Claude model (or "inherit")
+- Purpose is 1-line summary
+- Key Responsibilities can be multi-line
+
+### Directory Tree Format
+
+Use ASCII art with proper alignment:
+
+```
+~/.claude/plugin-name/
+├── session.json           # Comment explaining file
+├── subdirectory/
+│   ├── file1.json
+│   └── file2.json
+└── tasks/                 # Comment explaining directory
+```
+
+**Requirements:**
+- Use `├──`, `└──`, and `│` for tree structure
+- Align comments with `#` at column 28+
+- Indent subdirectories with 4 spaces
+- Show representative file structure, not exhaustive list
+
+### State Format Examples
+
+Always include JSON examples with comments:
+
+```markdown
+### Session State Format
+
+**File**: `path/to/file.json`
+
+\`\`\`json
+{
+  "field": "value",           // Comment explaining field
+  "status": "open",           // Enum values: open|resolved
+  "timestamp": "ISO8601"      // Always ISO8601 format
+}
+\`\`\`
+
+**Status values**: `open` | `in_progress` | `resolved`
+```
+
+**Requirements:**
+- Specify file path before JSON block
+- Use inline comments for field explanations
+- Document enum values below JSON
+- Include all required fields
+- Show realistic example values
+
+### Workflow Diagrams
+
+Use ASCII art with consistent formatting:
+
+```markdown
+┌─────────────────────────────────────────────────────┐
+│ 1. PHASE NAME                                       │
+│    ├─ Sub-step description                          │
+│    └─ Output: files created                         │
+└─────────────────┬───────────────────────────────────┘
+                  ▼
+┌─────────────────────────────────────────────────────┐
+│ 2. NEXT PHASE                                       │
+```
+
+### Code Block Language Tags
+
+Always specify language for syntax highlighting:
+- Shell commands: `bash`
+- JSON: `json`
+- JavaScript: `javascript`
+- Generic code: `text`
+- No language for plain output
+
+---
+
+## CLAUDE.md Format
+
+Internal documentation for AI agents working with the plugin.
+
+### Required Section Order
+
+1. **Plugin Title** (H1) - Name and one-line description
+2. **Plugin Description** - Detailed explanation of workflow and features
+3. **File Structure** - Tree view of plugin directory
+4. **Script Inventory** - Table format (see below)
+5. **Hook Inventory** - Table format (see below)
+6. **Agent Inventory** - Table format (see below)
+7. **State Management** - Directory structure and format specifications
+8. **Development Rules** - Coding standards and patterns
+9. **No Build Step Required** - Statement about source execution
+10. **Usage Examples** - Script invocation examples
+
+### Script Inventory Table Format
+
+```markdown
+| Script | Purpose | Key Parameters |
+|--------|---------|----------------|
+| **script-name.js** | What it does | `--param <value>` `--flag` |
+```
+
+**Requirements:**
+- Three columns: Script, Purpose, Key Parameters
+- Script name in bold with .js extension
+- Purpose is concise action description
+- Key Parameters shows all flags with types
+- Use aliases notation: `--task-id` (aliases: --task, --id)
+
+### Hook Inventory Table Format
+
+```markdown
+| Hook File | Event | Purpose | Behavior |
+|-----------|-------|---------|----------|
+| **hook-name.js** | PreToolUse | What it enforces | Detailed behavior description |
+```
+
+**Requirements:**
+- Four columns: Hook File, Event, Purpose, Behavior
+- Hook file in bold with .js extension
+- Event matches lifecycle event name
+- Purpose is 1-line summary
+- Behavior explains detailed logic
+
+### Agent Inventory Table Format
+
+```markdown
+| Agent | Model | Role | Key Responsibilities |
+|-------|-------|------|---------------------|
+| **agent-name** | haiku | Purpose | Detailed task list |
+```
+
+**Requirements:**
+- Four columns: Agent, Model, Role, Key Responsibilities
+- Agent name in bold
+- Model: opus, sonnet, haiku, or "inherit"
+- Role is job title or function
+- Key Responsibilities can span multiple lines
+
+### State Format Documentation
+
+Must include:
+1. **File path** - Absolute path with variable placeholders
+2. **JSON schema** - Complete example with inline comments
+3. **Field documentation** - Enum values and constraints
+4. **Version field** - If state schema has versions
+
+Example:
+
+```markdown
+### Session State Format
+
+**File**: `~/.claude/plugin-name/sessions/{SESSION_ID}/session.json`
+
+\`\`\`json
+{
+  "version": "1.0",
+  "session_id": "uuid",
+  "phase": "PLANNING",
+  "created_at": "ISO8601",
+  "updated_at": "ISO8601"
+}
+\`\`\`
+
+**Phase values**: `PLANNING` | `EXECUTION` | `VERIFICATION` | `COMPLETE`
+```
+
+### Development Rules Section
+
+Must document:
+- **Script usage patterns** - Common invocation patterns
+- **Agent workflow rules** - How agents coordinate
+- **Phase transition rules** - State machine transitions
+- **Synchronization requirements** - File update triggers
+
+---
+
+## Format Standards
+
+### Markdown Conventions
+
+| Element | Standard |
+|---------|----------|
+| Headings | H1 for title, H2 for major sections, H3 for subsections |
+| Code blocks | Always specify language tag |
+| Tables | Use pipe format with header separator |
+| Lists | Use `-` for unordered, `1.` for ordered |
+| Bold | Use `**text**` for emphasis |
+| Inline code | Use backticks for commands, paths, values |
+
+### Table Alignment
+
+- Left-align text columns
+- Right-align numeric columns
+- Use consistent spacing between pipes
+- Keep column widths readable (wrap long content)
+
+### Tree Format Standards
+
+```
+parent/
+├── child1/              # First child with connector
+│   └── grandchild       # Last grandchild no connector below
+└── child2/              # Last child
+    └── file.json        # Always explain file purpose
+```
+
+**Rules:**
+- 4 spaces per indent level
+- `├──` for non-last items
+- `└──` for last item in level
+- `│` for vertical continuation
+- Add inline comments for clarity
+
+### JSON Example Standards
+
+```json
+{
+  "field": "value",        // Explain field purpose
+  "status": "open",        // List enum values
+  "count": 42,             // Numeric example
+  "nested": {              // Explain nested structure
+    "inner": "value"
+  }
+}
+```
+
+**Rules:**
+- Use 2-space indentation
+- Add inline comments for non-obvious fields
+- Show realistic example values
+- Include all required fields
+- Document optional fields separately
+
+---
+
+## When to Update Documentation
+
+### Trigger: README.md Updates
+
+Update README.md when:
+- Adding new command
+- Adding new agent
+- Changing command options
+- Adding new workflow pattern
+- Modifying storage structure
+- Fixing common user issues
+
+### Trigger: CLAUDE.md Updates
+
+Update CLAUDE.md when:
+- Adding/modifying scripts
+- Changing state format (version bump state schema)
+- Adding/modifying hooks
+- Changing agent coordination logic
+- Adding development rules or patterns
+- Modifying file structure
+
+### Version Synchronization
+
+When updating state format in CLAUDE.md:
+1. Increment state schema version field
+2. Document migration path if breaking change
+3. Update all scripts that read/write state
+4. Update relevant agent AGENT.md files
+
+---
+
+## Examples
+
+### Good Command Documentation
+
+```markdown
+| Command | Description | Options |
+|---------|-------------|---------|
+| `/ultrawork <goal>` | Full workflow (plan + execute) | `--auto`, `--max-workers N`, `--skip-verify` |
+| `/ultrawork-status` | Check session status | `--all` |
+```
+
+### Good State Format Documentation
+
+```markdown
+### Task File Format
+
+**File**: `~/.claude/ultrawork/sessions/{SESSION_ID}/tasks/{TASK_ID}.json`
+
+\`\`\`json
+{
+  "id": "1",
+  "subject": "Setup NextAuth provider",
+  "status": "resolved",
+  "complexity": "standard",
+  "criteria": [
+    "Auth routes respond",
+    "Login flow works"
+  ],
+  "evidence": [
+    "Created src/auth/next-auth.ts",
+    "npm test: 15/15 passed, exit 0"
+  ],
+  "created_at": "2026-01-11T12:00:00.000Z",
+  "updated_at": "2026-01-11T12:15:00.000Z"
+}
+\`\`\`
+
+**Status values**: `open` | `in_progress` | `resolved` | `blocked`
+
+**Complexity values**: `simple` | `standard` | `complex`
+```
+
+### Good Agent Inventory
+
+```markdown
+| Agent | Model | Role | Key Responsibilities |
+|-------|-------|------|---------------------|
+| **explorer** | haiku | Codebase discovery | Fast exploration, write findings to `exploration/*.md`, update `context.json` with summary |
+| **planner** | inherit | Task decomposition | Read explorer context, make design decisions, create task graph, write design doc |
+| **worker** | inherit | Task implementation | Execute ONE task, collect evidence, update task file, supports TDD approach |
+```
+
+---
+
+## Checklist
+
+Before finalizing plugin documentation, verify:
+
+- [ ] README.md follows required section order
+- [ ] All commands documented in table format
+- [ ] All agents documented with model and responsibilities
+- [ ] Directory trees use proper ASCII art
+- [ ] State formats include file paths and JSON examples
+- [ ] Code blocks have language tags
+- [ ] CLAUDE.md includes script/hook/agent inventories
+- [ ] State management section complete with formats
+- [ ] Development rules section documents patterns
+- [ ] All tables properly formatted with alignment
