@@ -77,7 +77,8 @@ Classify each insight based on its characteristics:
 ### Step 1: Read Session Insights
 
 1. Get session ID from task context or environment
-2. Read the insights file at `.claude/knowledge-extraction/{session-id}/insights.md`
+2. Read the insights file at `{working-directory}/.claude/knowledge-extraction/{session-id}/insights.md`
+   - **IMPORTANT**: Path is relative to current working directory (project root), NOT home directory (`~/.claude/`)
 3. Parse each insight block (sections starting with `## ` timestamp)
 4. For each insight, extract:
    - **User Question** (### User Question): The prompt that led to the insight
@@ -158,7 +159,8 @@ For each approved proposal:
 
 After all approved extractions complete:
 1. Report what was created and where
-2. Delete the session directory at `.claude/knowledge-extraction/{session-id}/` (includes insights.md and state.json)
+2. Delete the session directory at `{working-directory}/.claude/knowledge-extraction/{session-id}/` (includes insights.md and state.json)
+   - **IMPORTANT**: Path is relative to current working directory (project root), NOT home directory
 3. Summarize results
 
 ## Output Format

@@ -31,7 +31,8 @@ Argument provided: `$ARGUMENTS`
 If no argument provided or argument is empty:
 
 1. Get current session ID from `CLAUDE_SESSION_ID` environment variable
-2. Check if insights file exists at `.claude/knowledge-extraction/{session-id}/insights.md`
+2. Check if insights file exists at `{working-directory}/.claude/knowledge-extraction/{session-id}/insights.md`
+   - **IMPORTANT**: Path is relative to current working directory (project root), NOT home directory
 3. If exists, read and display the contents
 4. If not exists, inform that no insights have been collected this session
 
@@ -64,7 +65,8 @@ If argument is "extract":
 If argument is "clear":
 
 1. Get current session ID
-2. Check if session directory exists at `.claude/knowledge-extraction/{session-id}/`
+2. Check if session directory exists at `{working-directory}/.claude/knowledge-extraction/{session-id}/`
+   - **IMPORTANT**: Path is relative to current working directory (project root), NOT home directory
 3. If exists:
    - Count insights in insights.md
    - Delete the entire session directory (insights.md + state.json)
@@ -80,7 +82,8 @@ If argument is "clear":
 
 If argument is "all":
 
-1. List all directories in `.claude/knowledge-extraction/` (excluding config.local.md)
+1. List all directories in `{working-directory}/.claude/knowledge-extraction/` (excluding config.local.md)
+   - **IMPORTANT**: Path is relative to current working directory (project root), NOT home directory
 2. For each session directory:
    - Check if insights.md exists
    - Count insights (lines starting with `## `)
@@ -102,13 +105,18 @@ Tip: Use `/insights` to view current session, `/insights extract` to convert.
 
 ## Storage Structure
 
+**All paths are relative to the current working directory (project root):**
+
 ```
-.claude/knowledge-extraction/
-├── config.local.md              # Configuration (optional)
-└── {session-id}/
-    ├── state.json               # Processing state
-    └── insights.md              # Collected insights with context
+{working-directory}/
+└── .claude/knowledge-extraction/
+    ├── config.local.md              # Configuration (optional)
+    └── {session-id}/
+        ├── state.json               # Processing state
+        └── insights.md              # Collected insights with context
 ```
+
+> **Note**: Insights are stored per-project, not in home directory.
 
 ## Error Handling
 
