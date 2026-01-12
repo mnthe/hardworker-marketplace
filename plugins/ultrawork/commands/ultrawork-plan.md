@@ -2,7 +2,7 @@
 name: ultrawork-plan
 description: "Interactive planning phase - explore, clarify, design, then produce task breakdown"
 argument-hint: "[--auto] <goal> | --help"
-allowed-tools: ["Task", "TaskOutput", "Read", "Write", "Edit", "AskUserQuestion", "Glob", "Grep", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/*.js:*)"]
+allowed-tools: ["Task", "TaskOutput", "Read", "Write", "Edit", "AskUserQuestion", "Glob", "Grep", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/*.js:*)", "mcp__plugin_serena_serena__activate_project"]
 ---
 
 # Ultrawork Plan Command

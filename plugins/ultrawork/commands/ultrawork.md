@@ -2,7 +2,7 @@
 name: ultrawork
 description: "Start ultrawork session with strict verification mode"
 argument-hint: "[--auto] [--max-workers N] [--max-iterations N] [--skip-verify] [--plan-only] <goal> | --help"
-allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/*.js:*)", "Task", "TaskOutput", "Read", "Write", "Edit", "AskUserQuestion", "Glob", "Grep"]
+allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/*.js:*)", "Task", "TaskOutput", "Read", "Write", "Edit", "AskUserQuestion", "Glob", "Grep", "mcp__plugin_serena_serena__activate_project"]
 ---
 
 # Ultrawork Command
@@ -99,6 +99,30 @@ For example, if `SESSION_ID` is `37b6a60f-8e3e-4631-8f62-8eaf3d235642`:
 SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --dir)
 # Returns: ~/.claude/ultrawork/sessions/37b6a60f-8e3e-4631-8f62-8eaf3d235642
 ```
+
+---
+
+## Step 0: Serena Project Activation (Optional)
+
+If the MCP tool `mcp__plugin_serena_serena__activate_project` is available, activate Serena for enhanced code navigation:
+
+```python
+# Check if Serena is available and activate
+if "mcp__plugin_serena_serena__activate_project" in available_tools:
+    try:
+        mcp__plugin_serena_serena__activate_project(project=".")
+        # Serena enabled - agents can use symbol-based tools
+    except:
+        pass  # Continue without Serena
+```
+
+**Benefits when Serena is active:**
+- Explorer: `get_symbols_overview`, `find_symbol` for precise code structure analysis
+- Planner: `find_referencing_symbols` for dependency tracking
+- Worker: `replace_symbol_body`, `rename_symbol` for safe refactoring
+- Verifier/Reviewer: Symbol-based impact analysis
+
+**If Serena is not available, agents will use standard tools (Read, Edit, Grep).**
 
 ---
 

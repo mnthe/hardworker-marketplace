@@ -18,7 +18,7 @@ description: |
   </example>
 model: haiku
 color: cyan
-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/context-*.js:*)"]
+tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/context-*.js:*)", "mcp__plugin_serena_serena__get_symbols_overview", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__search_for_pattern"]
 ---
 
 # Explorer Agent

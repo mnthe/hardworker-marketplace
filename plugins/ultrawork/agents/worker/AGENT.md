@@ -18,7 +18,7 @@ description: |
   </example>
 model: inherit
 color: green
-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-*.js:*)", "Glob", "Grep"]
+tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__replace_symbol_body", "mcp__plugin_serena_serena__insert_after_symbol", "mcp__plugin_serena_serena__insert_before_symbol", "mcp__plugin_serena_serena__rename_symbol"]
 ---
 
 # Worker Agent

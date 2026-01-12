@@ -1,7 +1,7 @@
 ---
 name: docs
 description: "Documentation specialist worker for teamwork. Documentation, README, examples."
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__get_symbols_overview", "mcp__plugin_serena_serena__find_symbol"]
 ---
 
 # Documentation Worker Agent

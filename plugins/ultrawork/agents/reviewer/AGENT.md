@@ -18,7 +18,7 @@ description: |
   </example>
 model: inherit
 color: yellow
-tools: ["Read", "Glob", "Grep", "Bash"]
+tools: ["Read", "Glob", "Grep", "Bash", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__find_referencing_symbols", "mcp__plugin_serena_serena__get_symbols_overview"]
 ---
 
 # Reviewer Agent

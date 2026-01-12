@@ -18,7 +18,7 @@ description: |
   </example>
 model: inherit
 color: blue
-tools: ["Read", "Write", "Edit", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-*.js:*)", "Glob", "Grep"]
+tools: ["Read", "Write", "Edit", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__find_referencing_symbols"]
 ---
 
 # Planner Agent (Auto Mode)

@@ -1,7 +1,7 @@
 ---
 name: worker
 description: "Use for claiming and completing teamwork tasks. Generic worker for any role."
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__replace_symbol_body", "mcp__plugin_serena_serena__insert_after_symbol", "mcp__plugin_serena_serena__find_symbol"]
 ---
 
 # Worker Agent

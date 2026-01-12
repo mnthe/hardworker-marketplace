@@ -2,7 +2,7 @@
 name: ultrawork-exec
 description: "Execute ultrawork plan with automatic retry loop"
 argument-hint: "[--session <id>] [--max-iterations N] [--skip-verify] | --help"
-allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/*.js:*)", "Task", "TaskOutput", "Read", "Edit"]
+allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/*.js:*)", "Task", "TaskOutput", "Read", "Edit", "mcp__plugin_serena_serena__activate_project"]
 ---
 
 # Ultrawork Exec Command

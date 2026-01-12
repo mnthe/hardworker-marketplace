@@ -1,7 +1,7 @@
 ---
 name: frontend
 description: "Frontend specialist worker for teamwork. UI, components, styling, user interactions."
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__replace_symbol_body", "mcp__plugin_serena_serena__get_symbols_overview"]
 ---
 
 # Frontend Worker Agent

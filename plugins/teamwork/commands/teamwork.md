@@ -2,7 +2,7 @@
 name: teamwork
 description: "Start a teamwork project with multi-session collaboration support"
 argument-hint: "[--project NAME] [--team NAME] <goal> | --help"
-allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-teamwork.js:*)", "Task", "TaskOutput", "Read", "Edit", "AskUserQuestion"]
+allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-teamwork.js:*)", "Task", "TaskOutput", "Read", "Edit", "AskUserQuestion", "mcp__plugin_serena_serena__activate_project"]
 ---
 
 # Teamwork Command
@@ -10,6 +10,28 @@ allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-teamwork.js:*)
 ## Overview
 
 Teamwork enables multi-session collaboration with role-based workers and file-per-task storage.
+
+---
+
+## Step 0: Serena Project Activation (Optional)
+
+If the MCP tool `mcp__plugin_serena_serena__activate_project` is available, activate Serena for enhanced code navigation:
+
+```python
+# Check if Serena is available and activate
+if "mcp__plugin_serena_serena__activate_project" in available_tools:
+    try:
+        mcp__plugin_serena_serena__activate_project(project=".")
+        # Serena enabled - agents can use symbol-based tools
+    except:
+        pass  # Continue without Serena
+```
+
+**Benefits when Serena is active:**
+- Coordinator: `get_symbols_overview`, `find_symbol` for precise code structure analysis
+- Workers: Symbol-based editing tools for safe refactoring
+
+**If Serena is not available, agents will use standard tools (Read, Edit, Grep).**
 
 ---
 

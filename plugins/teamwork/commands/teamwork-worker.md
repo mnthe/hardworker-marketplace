@@ -2,7 +2,7 @@
 name: teamwork-worker
 description: "Claim and complete teamwork tasks (one-shot or continuous loop)"
 argument-hint: "[--project NAME] [--team NAME] [--role ROLE] [--loop] | --help"
-allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/worker-setup.js:*)", "Task", "TaskOutput", "Read", "Edit"]
+allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/worker-setup.js:*)", "Task", "TaskOutput", "Read", "Edit", "mcp__plugin_serena_serena__activate_project"]
 ---
 
 # Teamwork Worker Command
@@ -10,6 +10,28 @@ allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/worker-setup.js:*)",
 ## Overview
 
 Workers claim and complete tasks from a teamwork project. Can run in one-shot mode (default) or continuous loop mode.
+
+---
+
+## Step 0: Serena Project Activation (Optional)
+
+If the MCP tool `mcp__plugin_serena_serena__activate_project` is available, activate Serena for enhanced code navigation:
+
+```python
+# Check if Serena is available and activate
+if "mcp__plugin_serena_serena__activate_project" in available_tools:
+    try:
+        mcp__plugin_serena_serena__activate_project(project=".")
+        # Serena enabled - worker agents can use symbol-based tools
+    except:
+        pass  # Continue without Serena
+```
+
+**Benefits when Serena is active:**
+- Workers: `replace_symbol_body`, `rename_symbol` for safe refactoring
+- Role specialists: Symbol-based tools for their expertise area
+
+**If Serena is not available, agents will use standard tools (Read, Edit, Grep).**
 
 ---
 

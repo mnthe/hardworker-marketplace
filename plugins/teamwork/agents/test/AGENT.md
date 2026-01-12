@@ -1,7 +1,7 @@
 ---
 name: test
 description: "Test specialist worker for teamwork. Tests, fixtures, mocks."
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__find_referencing_symbols"]
 ---
 
 # Test Worker Agent

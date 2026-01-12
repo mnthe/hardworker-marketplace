@@ -8,7 +8,7 @@
       "name": "ultrawork",
       "source": "./plugins/ultrawork",
       "description": "Bun cross-platform version of ultrawork - strict verification-first development with TDD support",
-      "version": "0.12.1",
+      "version": "0.13.0",
       "author": {
         "name": "mnthe"
       },
@@ -26,7 +26,7 @@
       "name": "teamwork",
       "source": "./plugins/teamwork",
       "description": "Bun cross-platform version of teamwork - multi-session collaboration with role-based workers and task management",
-      "version": "0.12.0",
+      "version": "0.13.0",
       "author": {
         "name": "mnthe"
       },
