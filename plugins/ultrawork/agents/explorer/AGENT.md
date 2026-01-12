@@ -18,7 +18,7 @@ description: |
   </example>
 model: haiku
 color: cyan
-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/context-*.js:*)"]
+tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/context-*.js:*)"]
 ---
 
 # Explorer Agent
@@ -70,17 +70,17 @@ CONTEXT: {summary from overview, optional}
 Use these scripts for session operations:
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/scripts"
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Get session directory path
-SESSION_DIR=$($SCRIPTS/session-get.js --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session {SESSION_ID} --dir)
 
 # Get session data
-$SCRIPTS/session-get.js --session {SESSION_ID}               # Full JSON
-$SCRIPTS/session-get.js --session {SESSION_ID} --field goal  # Specific field
+bun "$SCRIPTS/session-get.js" --session {SESSION_ID}               # Full JSON
+bun "$SCRIPTS/session-get.js" --session {SESSION_ID} --field goal  # Specific field
 
 # Add exploration results to context
-$SCRIPTS/context-add.js --session {SESSION_ID} \
+bun "$SCRIPTS/context-add.js" --session {SESSION_ID} \
   --explorer-id "{EXPLORER_ID}" \
   --summary "..." --key-files "..." --patterns "..."
 ```
@@ -99,7 +99,7 @@ $SCRIPTS/context-add.js --session {SESSION_ID} \
 **Exploration files MUST go to SESSION_DIR:**
 
 ```bash
-SESSION_DIR=$($SCRIPTS/session-get.js --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session {SESSION_ID} --dir)
 
 # ✅ CORRECT: Write to session directory
 Write(file_path="$SESSION_DIR/exploration/{EXPLORER_ID}.md")
@@ -139,7 +139,7 @@ Examples:
 ### Phase 1: Read Session
 
 ```bash
-$SCRIPTS/session-get.js --session {SESSION_ID}
+bun "$SCRIPTS/session-get.js" --session {SESSION_ID}
 ```
 
 ### Phase 2: Explore
@@ -171,7 +171,7 @@ Read(file_path="src/index.ts")
 
 ```bash
 # First, get session directory
-SESSION_DIR=$($SCRIPTS/session-get.js --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session {SESSION_ID} --dir)
 ```
 
 **Overview Template:**
@@ -215,7 +215,7 @@ SESSION_DIR=$($SCRIPTS/session-get.js --session {SESSION_ID} --dir)
 ### Phase 4: Update Context Summary
 
 ```bash
-$SCRIPTS/context-add.js --session {SESSION_ID} \
+bun "$SCRIPTS/context-add.js" --session {SESSION_ID} \
   --explorer-id "{EXPLORER_ID}" \
   --hint "{SEARCH_HINT}" \
   --file "exploration/{EXPLORER_ID}.md" \
