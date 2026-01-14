@@ -82,7 +82,6 @@ All scripts use Bun runtime with flag-based parameters.
 - `/insights` - Show current session's insights
 - `/insights extract` - Launch insight-extractor agent
 - `/insights clear` - Delete current session's insights
-- `/insights all` - Show all sessions' insights
 
 ## State Management
 

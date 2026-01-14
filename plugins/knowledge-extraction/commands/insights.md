@@ -1,7 +1,7 @@
 ---
 name: insights
 description: View and manage collected insights from Claude sessions
-argument-hint: "[extract|clear|all]"
+argument-hint: "[extract|clear]"
 allowed-tools:
   - Read
   - Write
@@ -22,7 +22,6 @@ Parse the argument to determine which action to perform:
 | (none) | Show current session's insights |
 | `extract` | Launch insight-extractor agent to convert insights |
 | `clear` | Delete current session's insights |
-| `all` | Show all sessions' insights |
 
 Argument provided: `$ARGUMENTS`
 
@@ -76,30 +75,6 @@ If argument is "clear":
 🗑️ Cleared {count} insight(s) from session {session-id}.
 ```
 
-## Action: Show All Sessions (`/insights all`)
-
-If argument is "all":
-
-1. List all directories in `~/.claude/knowledge-extraction/` (excluding config.local.md)
-2. For each session directory:
-   - Check if insights.md exists
-   - Count insights (lines starting with `## `)
-   - Show summary
-3. Display aggregated view
-
-**Display format:**
-```
-📚 All Collected Insights
-
-Session {id-1}: {count} insight(s)
-Session {id-2}: {count} insight(s)
-...
-
-Total: {total} insight(s) across {n} session(s)
-
-Tip: Use `/insights` to view current session, `/insights extract` to convert.
-```
-
 ## Storage Structure
 
 All insights are stored in a centralized location in the home directory:
@@ -128,5 +103,4 @@ Actions:
   (none)   - Show current session's insights
   extract  - Extract insights into reusable components
   clear    - Clear current session's insights
-  all      - Show all sessions' insights
 ```
