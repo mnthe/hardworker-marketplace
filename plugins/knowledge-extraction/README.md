@@ -40,7 +40,7 @@ JWT tokens should include minimal claims. Store sensitive data server-side.
 ─────────────────────────────────────────────────
 ```
 
-The **Stop/SubagentStop hooks** parse Claude's transcript and extract these patterns to `~/.claude/knowledge-extraction/sessions/{session-id}.md`.
+The **Stop/SubagentStop hooks** parse Claude's transcript and extract these patterns to `~/.claude/knowledge-extraction/{session-id}/insights.md`.
 
 **Efficiency**: State tracking (`state/{session-id}.json`) ensures already-processed messages are skipped on subsequent hook calls.
 
@@ -118,7 +118,6 @@ Create `~/.claude/knowledge-extraction/config.local.md` to customize:
 ---
 threshold: 5
 auto_recommend: true
-output_dir: ".claude"
 ---
 
 # Knowledge Extraction Configuration
@@ -128,11 +127,10 @@ Customize insight collection and extraction behavior.
 
 ### Options
 
-| Option           | Default   | Description                             |
-| ---------------- | --------- | --------------------------------------- |
-| `threshold`      | 5         | Insights before recommending extraction |
-| `auto_recommend` | true      | Show extraction recommendations         |
-| `output_dir`     | ".claude" | Where to create extracted components    |
+| Option           | Default | Description                             |
+| ---------------- | ------- | --------------------------------------- |
+| `threshold`      | 5       | Insights before recommending extraction |
+| `auto_recommend` | true    | Show extraction recommendations         |
 
 ## Storage
 

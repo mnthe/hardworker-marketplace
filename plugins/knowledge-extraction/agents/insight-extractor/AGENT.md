@@ -84,15 +84,41 @@ Classify each insight based on its characteristics:
    - **Context** (### Context): Text immediately before the insight marker
    - **Content** (### Content): The actual insight content
 
-### Step 2: Analyze Each Insight
+### Step 2: Validate Against Existing Knowledge
 
+Before proposing extraction, check if each insight already exists:
+
+**Check locations:**
+1. `./CLAUDE.md` - Project-level rules
+2. `~/.claude/CLAUDE.md` - Global rules
+3. `.claude/skills/` - Existing project skills
+4. `~/.claude/skills/` - Global skills
+
+**Validation process:**
+```
 For each insight:
+  1. Extract key concepts/keywords from insight content
+  2. Search existing CLAUDE.md files for similar content
+  3. Search existing skills for overlapping guidance
+  4. If >70% overlap found → mark as "already exists"
+  5. If partial overlap → mark as "potential merge candidate"
+```
+
+**Skip reasons:**
+- `이미 CLAUDE.md에 있음` - Content exists in project/global CLAUDE.md
+- `기존 skill과 중복` - Similar skill already exists
+- `관찰만` - Observation without actionable guidance
+- `너무 구체적` - Too specific to current context, not reusable
+
+### Step 3: Analyze Remaining Insights
+
+For each **non-duplicate** insight:
 1. Extract the type, context, and content
 2. Evaluate reusability scope (project vs global)
 3. Assess complexity (simple knowledge vs complex workflow)
 4. Determine primary extraction target
 
-### Step 3: Prepare Proposals
+### Step 4: Prepare Proposals
 
 Create a proposal for each insight:
 
@@ -112,42 +138,48 @@ Create a proposal for each insight:
 {preview of what will be created}
 ```
 
-### Step 4: Present to User
+### Step 5: Present to User
 
-Present proposals with content preview so users can make informed decisions:
+Present proposals with table summary + content preview:
 
 **Format:**
 ```markdown
 ⏺ Insight Extraction 제안
 
 추출 대상 {n}개:
+┌─────┬───────────────────────────────┬───────────┬───────────────────┐
+│  #  │            Insight            │  Target   │       위치        │
+├─────┼───────────────────────────────┼───────────┼───────────────────┤
+│ 1   │ {제목}                        │ CLAUDE.md │ project           │
+├─────┼───────────────────────────────┼───────────┼───────────────────┤
+│ 2   │ {제목}                        │ Skill     │ ~/.claude/skills/ │
+└─────┴───────────────────────────────┴───────────┴───────────────────┘
 
-### 1. {제목} → {Target} ({Location})
-> {insight 내용 요약 또는 첫 2-3줄}
-> {핵심 포인트}
+건너뜀 {n}개: #{번호} ({skip reason}), ...
 
-**Rationale:** {왜 이 target으로 분류했는지}
+---
 
-### 2. {제목} → {Target} ({Location})
-> {insight 내용 요약}
+### 내용 요약
 
-...
+**#1 {제목}**
+{사용자가 이해할 수 있도록 insight 내용을 1-2문장으로 요약 정리}
 
-건너뜀 {n}개: #{번호} ({이유}), ...
+**#2 {제목}**
+{핵심 내용 요약 - 원문 인용이 아닌 정리된 설명}
 
 ---
 어떻게 진행할까요?
 - 전체 승인: {n}개 모두 생성
-- 선택 승인: 번호 지정 (예: "1,3,6")
+- 선택 승인: 번호 지정 (예: "1,2")
 - 수정 요청: 특정 항목 내용/위치 변경
 ```
 
 **Key points:**
-- 각 insight의 실제 내용을 인용 블록으로 보여줌
-- 사용자가 제목만으로 판단하지 않도록 맥락 제공
-- 건너뛴 항목은 이유와 함께 간략히 표시
+- 테이블로 한눈에 파악할 수 있는 요약 제공
+- 아래에 각 insight의 **내용 요약** 추가 (원문 인용이 아닌 사용자가 이해할 수 있는 정리된 설명)
+- 건너뛴 항목은 이유와 함께 간략히 표시 (검증 단계에서 걸러진 것들)
 
-### Step 5: Execute Approved Extractions
+### Step 6: Execute Approved Extractions
 
 For each approved proposal:
 
@@ -180,7 +212,7 @@ For each approved proposal:
 - Append to appropriate section
 - Maintain existing structure
 
-### Step 6: Cleanup
+### Step 7: Cleanup
 
 After all approved extractions complete:
 1. Report what was created and where

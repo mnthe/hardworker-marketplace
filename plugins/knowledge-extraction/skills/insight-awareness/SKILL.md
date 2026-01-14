@@ -19,7 +19,7 @@ This skill guides you on creating valuable insights that will be **automatically
 2. Hook automatically:
    - Parses transcript after your response
    - Extracts content between markers
-   - Saves to .claude/knowledge-extraction/sessions/{session-id}.md
+   - Saves to ~/.claude/knowledge-extraction/{session-id}/insights.md
    - Tracks state to avoid duplicates
 ```
 
@@ -69,7 +69,6 @@ After insights accumulate:
 - `/insights` - View collected insights
 - `/insights extract` - Convert to Skills/Commands/CLAUDE.md
 - `/insights clear` - Clear session insights
-- `/insights all` - View all sessions
 
 ## Key Points
 
