@@ -31,8 +31,9 @@ Argument provided: `$ARGUMENTS`
 If no argument provided or argument is empty:
 
 1. Get current session ID from `CLAUDE_SESSION_ID` environment variable
-2. Check if insights file exists at `{working-directory}/.claude/knowledge-extraction/{session-id}/insights.md`
-   - **IMPORTANT**: Path is relative to current working directory (project root), NOT home directory
+2. Check if insights file exists at `{saved-working-dir}/.claude/knowledge-extraction/{session-id}/insights.md`
+   - **IMPORTANT**: `{saved-working-dir}` is resolved from saved state (captured by SessionStart hook), NOT current pwd
+   - Falls back to current pwd if no saved working directory state exists (backward compatibility)
 3. If exists, read and display the contents
 4. If not exists, inform that no insights have been collected this session
 
@@ -65,8 +66,9 @@ If argument is "extract":
 If argument is "clear":
 
 1. Get current session ID
-2. Check if session directory exists at `{working-directory}/.claude/knowledge-extraction/{session-id}/`
-   - **IMPORTANT**: Path is relative to current working directory (project root), NOT home directory
+2. Check if session directory exists at `{saved-working-dir}/.claude/knowledge-extraction/{session-id}/`
+   - **IMPORTANT**: `{saved-working-dir}` is resolved from saved state (captured by SessionStart hook), NOT current pwd
+   - Falls back to current pwd if no saved working directory state exists (backward compatibility)
 3. If exists:
    - Count insights in insights.md
    - Delete the entire session directory (insights.md + state.json)
@@ -82,8 +84,9 @@ If argument is "clear":
 
 If argument is "all":
 
-1. List all directories in `{working-directory}/.claude/knowledge-extraction/` (excluding config.local.md)
-   - **IMPORTANT**: Path is relative to current working directory (project root), NOT home directory
+1. List all directories in `{saved-working-dir}/.claude/knowledge-extraction/` (excluding config.local.md)
+   - **IMPORTANT**: `{saved-working-dir}` is resolved from saved state (captured by SessionStart hook), NOT current pwd
+   - Falls back to current pwd if no saved working directory state exists (backward compatibility)
 2. For each session directory:
    - Check if insights.md exists
    - Count insights (lines starting with `## `)
@@ -105,18 +108,31 @@ Tip: Use `/insights` to view current session, `/insights extract` to convert.
 
 ## Storage Structure
 
-**All paths are relative to the current working directory (project root):**
+**Path Resolution:**
+
+Paths are resolved from the **saved working directory** captured by the SessionStart hook:
 
 ```
-{working-directory}/
+{saved-working-dir}/
 └── .claude/knowledge-extraction/
-    ├── config.local.md              # Configuration (optional)
     └── {session-id}/
         ├── state.json               # Processing state
         └── insights.md              # Collected insights with context
 ```
 
-> **Note**: Insights are stored per-project, not in home directory.
+**Working Directory Resolution:**
+- The SessionStart hook captures the initial working directory at session start
+- Saved to `~/.claude/knowledge-extraction/working-dirs.json` (format: `{"session-id": "/path/to/dir"}`)
+- Scripts read this mapping to resolve paths consistently, even if you `cd` to other directories
+- **Backward compatibility**: Falls back to current pwd (`process.cwd()`) if no saved state exists
+
+**Configuration Storage:**
+```
+~/.claude/knowledge-extraction/
+└── config.local.md              # Global configuration (threshold, auto_recommend)
+```
+
+> **Note**: Insights are stored per-project in the saved working directory, not in home directory.
 
 ## Error Handling
 

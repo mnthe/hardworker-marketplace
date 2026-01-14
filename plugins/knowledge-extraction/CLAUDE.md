@@ -29,7 +29,8 @@ plugins/knowledge-extraction/
 │   └── insight-extractor.md  # Insight extraction agent
 ├── src/
 │   └── hooks/
-│       └── auto-extract-insight.js  # Hook implementation
+│       ├── auto-extract-insight.js  # Hook implementation
+│       └── session-start.js         # SessionStart hook
 ├── hooks/
 │   └── hooks.json            # Hook configuration
 ├── CLAUDE.md                 # This file
@@ -46,10 +47,11 @@ All scripts use Bun runtime with flag-based parameters.
 
 ## Hook Inventory
 
-| Hook          | File                     | Trigger      | Purpose                                                    |
-| ------------- | ------------------------ | ------------ | ---------------------------------------------------------- |
-| Stop          | auto-extract-insight.js  | Session stop | Extracts insights from transcript + recommends extraction  |
-| SubagentStop  | auto-extract-insight.js  | Agent stop   | Extracts insights from subagent transcript (no recommend)  |
+| Hook          | File                     | Trigger       | Purpose                                                    |
+| ------------- | ------------------------ | ------------- | ---------------------------------------------------------- |
+| SessionStart  | session-start.js         | Session start | Initialize session context and register working directory  |
+| Stop          | auto-extract-insight.js  | Session stop  | Extracts insights from transcript + recommends extraction  |
+| SubagentStop  | auto-extract-insight.js  | Agent stop    | Extracts insights from subagent transcript (no recommend)  |
 
 **Hook behavior:**
 - Parses Claude's transcript for `★ Insight` markers
@@ -91,6 +93,7 @@ All scripts use Bun runtime with flag-based parameters.
 ```
 ~/.claude/knowledge-extraction/
 ├── config.local.md              # Settings (threshold, auto_recommend)
+├── working-dirs.json            # Session to working directory mapping
 └── {session-id}/
     ├── state.json               # Processing state (lastProcessedUuid)
     └── insights.md              # Collected insights with context
@@ -100,6 +103,7 @@ All scripts use Bun runtime with flag-based parameters.
 - Each session has its own directory
 - `state.json` tracks last processed transcript message (prevents duplicates)
 - `insights.md` contains extracted insights with context
+- `working-dirs.json` maps session IDs to project working directories
 - Directories deleted after successful extraction via `/insights extract`
 
 ## State Formats
@@ -135,6 +139,22 @@ All scripts use Bun runtime with flag-based parameters.
   "lastProcessedUuid": "abc-123-uuid"
 }
 ```
+
+### Working Directory Mapping Format
+
+**File**: `~/.claude/knowledge-extraction/working-dirs.json`
+
+```json
+{
+  "session-abc-123": "/Users/username/projects/my-app",
+  "session-def-456": "/Users/username/projects/another-app"
+}
+```
+
+- Maps session IDs to their working directories
+- Created/updated by SessionStart hook
+- Used by `/insights all` to display project context
+- Helps identify which insights came from which project
 
 ### Configuration Format
 

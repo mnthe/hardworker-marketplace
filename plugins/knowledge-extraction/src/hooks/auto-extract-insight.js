@@ -11,11 +11,13 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
+const GLOBAL_STATE_DIR = path.join(os.homedir(), '.claude/knowledge-extraction');
 const BASE_DIR = '.claude/knowledge-extraction';
 const DEFAULT_THRESHOLD = 5;
 const CONTEXT_LINES = 3; // Lines before insight for context
@@ -42,8 +44,29 @@ function ensureDir(dirPath) {
   }
 }
 
+function getWorkingDir(sessionId) {
+  const workingDirsFile = path.join(GLOBAL_STATE_DIR, 'working-dirs.json');
+
+  if (!fs.existsSync(workingDirsFile)) {
+    return process.cwd();
+  }
+
+  try {
+    const data = JSON.parse(fs.readFileSync(workingDirsFile, 'utf-8'));
+
+    // Format: { "session-id": "/path/to/dir", ... }
+    if (data[sessionId]) {
+      return data[sessionId];
+    }
+
+    return process.cwd();
+  } catch {
+    return process.cwd();
+  }
+}
+
 function getSessionDir(sessionId) {
-  return path.join(process.cwd(), BASE_DIR, sessionId);
+  return path.join(getWorkingDir(sessionId), BASE_DIR, sessionId);
 }
 
 function getInsightsFile(sessionId) {
@@ -86,7 +109,7 @@ function countInsights(filePath) {
 }
 
 function getThreshold() {
-  const configPath = path.join(process.cwd(), BASE_DIR, 'config.local.md');
+  const configPath = path.join(GLOBAL_STATE_DIR, 'config.local.md');
   if (!fs.existsSync(configPath)) {
     return DEFAULT_THRESHOLD;
   }
@@ -106,7 +129,7 @@ function getThreshold() {
 }
 
 function isAutoRecommendEnabled() {
-  const configPath = path.join(process.cwd(), BASE_DIR, 'config.local.md');
+  const configPath = path.join(GLOBAL_STATE_DIR, 'config.local.md');
   if (!fs.existsSync(configPath)) {
     return true;
   }

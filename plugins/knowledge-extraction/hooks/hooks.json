@@ -24,6 +24,18 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/session-start.js",
+            "timeout": 10000
+          }
+        ]
+      }
     ]
   }
 }
