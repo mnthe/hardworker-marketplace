@@ -4,9 +4,9 @@
  * Auto Extract Insight Hook
  *
  * - SubagentStop: Extract insights from transcript only
- * - Stop: Extract insights + recommend extraction if threshold reached
+ * - Stop: Extract insights + recommend extraction if NEW insights added and threshold reached
  *
- * Storage structure: .claude/knowledge-extraction/{session-id}/{state.json, insights.md}
+ * Storage structure: ~/.claude/knowledge-extraction/{session-id}/{state.json, insights.md}
  */
 
 const fs = require('fs');
@@ -17,8 +17,7 @@ const os = require('os');
 // Configuration
 // ============================================================================
 
-const GLOBAL_STATE_DIR = path.join(os.homedir(), '.claude/knowledge-extraction');
-const BASE_DIR = '.claude/knowledge-extraction';
+const BASE_DIR = path.join(os.homedir(), '.claude/knowledge-extraction');
 const DEFAULT_THRESHOLD = 5;
 const CONTEXT_LINES = 3; // Lines before insight for context
 
@@ -44,29 +43,8 @@ function ensureDir(dirPath) {
   }
 }
 
-function getWorkingDir(sessionId) {
-  const workingDirsFile = path.join(GLOBAL_STATE_DIR, 'working-dirs.json');
-
-  if (!fs.existsSync(workingDirsFile)) {
-    return process.cwd();
-  }
-
-  try {
-    const data = JSON.parse(fs.readFileSync(workingDirsFile, 'utf-8'));
-
-    // Format: { "session-id": "/path/to/dir", ... }
-    if (data[sessionId]) {
-      return data[sessionId];
-    }
-
-    return process.cwd();
-  } catch {
-    return process.cwd();
-  }
-}
-
 function getSessionDir(sessionId) {
-  return path.join(getWorkingDir(sessionId), BASE_DIR, sessionId);
+  return path.join(BASE_DIR, sessionId);
 }
 
 function getInsightsFile(sessionId) {
@@ -80,12 +58,12 @@ function getStateFile(sessionId) {
 function loadState(sessionId) {
   const stateFile = getStateFile(sessionId);
   if (!fs.existsSync(stateFile)) {
-    return { lastProcessedUuid: null };
+    return { lastProcessedUuid: null, lastInsightsHash: null };
   }
   try {
     return JSON.parse(fs.readFileSync(stateFile, 'utf-8'));
   } catch {
-    return { lastProcessedUuid: null };
+    return { lastProcessedUuid: null, lastInsightsHash: null };
   }
 }
 
@@ -108,8 +86,20 @@ function countInsights(filePath) {
   }
 }
 
+function getFileHash(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    return hashContent(content);
+  } catch {
+    return null;
+  }
+}
+
 function getThreshold() {
-  const configPath = path.join(GLOBAL_STATE_DIR, 'config.local.md');
+  const configPath = path.join(BASE_DIR, 'config.local.md');
   if (!fs.existsSync(configPath)) {
     return DEFAULT_THRESHOLD;
   }
@@ -129,7 +119,7 @@ function getThreshold() {
 }
 
 function isAutoRecommendEnabled() {
-  const configPath = path.join(GLOBAL_STATE_DIR, 'config.local.md');
+  const configPath = path.join(BASE_DIR, 'config.local.md');
   if (!fs.existsSync(configPath)) {
     return true;
   }
@@ -376,6 +366,10 @@ async function main() {
 
     // Load state to skip already-processed messages
     const state = loadState(sessionId);
+    const insightsFile = getInsightsFile(sessionId);
+
+    // Get hash before extraction
+    const hashBefore = getFileHash(insightsFile);
 
     // Read and parse transcript
     const transcript = readTranscript(transcriptPath);
@@ -386,28 +380,6 @@ async function main() {
       state.lastProcessedUuid
     );
 
-    // Early exit if no new messages
-    if (newMessages.length === 0) {
-      if (hookEventName === 'Stop' && isAutoRecommendEnabled()) {
-        const insightsFile = getInsightsFile(sessionId);
-        const insightCount = countInsights(insightsFile);
-        const threshold = getThreshold();
-
-        if (insightCount >= threshold) {
-          const output = {
-            decision: "block",
-            reason: [
-              `📝 You have ${insightCount} insight(s) collected (threshold: ${threshold}).`,
-              "Consider running '/insights extract' to convert them into reusable components.",
-              "Or continue your current work if you prefer to extract later."
-            ].join('\n')
-          };
-          console.log(JSON.stringify(output));
-        }
-      }
-      process.exit(0);
-    }
-
     // Extract insights from all new messages with context
     const allInsights = [];
     for (const msg of newMessages) {
@@ -415,34 +387,8 @@ async function main() {
       allInsights.push(...insights);
     }
 
-    // Save state with last processed uuid
-    saveState(sessionId, { lastProcessedUuid: lastUuid });
-
-    if (allInsights.length === 0) {
-      if (hookEventName === 'Stop' && isAutoRecommendEnabled()) {
-        const insightsFile = getInsightsFile(sessionId);
-        const insightCount = countInsights(insightsFile);
-        const threshold = getThreshold();
-
-        if (insightCount >= threshold) {
-          const output = {
-            decision: "block",
-            reason: [
-              `📝 You have ${insightCount} insight(s) collected (threshold: ${threshold}).`,
-              "Consider running '/insights extract' to convert them into reusable components.",
-              "Or continue your current work if you prefer to extract later."
-            ].join('\n')
-          };
-          console.log(JSON.stringify(output));
-        }
-      }
-      process.exit(0);
-    }
-
     // Save new insights (deduplicated by content hash)
-    const insightsFile = getInsightsFile(sessionId);
     const existingHashes = loadExistingHashes(insightsFile);
-
     let newCount = 0;
     for (const insight of allInsights) {
       const hash = hashContent(insight.content);
@@ -453,8 +399,18 @@ async function main() {
       }
     }
 
-    // For Stop hook: also check threshold and recommend
-    if (hookEventName === 'Stop' && isAutoRecommendEnabled()) {
+    // Get hash after extraction
+    const hashAfter = getFileHash(insightsFile);
+    const insightsChanged = hashBefore !== hashAfter;
+
+    // Save state with last processed uuid and current hash
+    saveState(sessionId, {
+      lastProcessedUuid: lastUuid,
+      lastInsightsHash: hashAfter
+    });
+
+    // For Stop hook: recommend only if insights actually changed AND threshold reached
+    if (hookEventName === 'Stop' && isAutoRecommendEnabled() && insightsChanged) {
       const insightCount = countInsights(insightsFile);
       const threshold = getThreshold();
 
@@ -462,7 +418,7 @@ async function main() {
         const output = {
           decision: "block",
           reason: [
-            `📝 You have ${insightCount} insight(s) collected (threshold: ${threshold}).`,
+            `📝 ${newCount} new insight(s) extracted! Total: ${insightCount} (threshold: ${threshold}).`,
             "Consider running '/insights extract' to convert them into reusable components.",
             "Or continue your current work if you prefer to extract later."
           ].join('\n')
