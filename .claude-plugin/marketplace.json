@@ -47,7 +47,7 @@
       "name": "knowledge-extraction",
       "source": "./plugins/knowledge-extraction",
       "description": "Collect insights from Claude sessions and extract them into reusable components (Skills, Commands, Agents, CLAUDE.md)",
-      "version": "0.5.2",
+      "version": "0.5.3",
       "author": {
         "name": "mnthe"
       },

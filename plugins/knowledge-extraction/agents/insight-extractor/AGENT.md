@@ -76,9 +76,8 @@ Classify each insight based on its characteristics:
 
 ### Step 1: Read Session Insights
 
-1. Get session ID from task context or environment
-2. Read the insights file at `{working-directory}/.claude/knowledge-extraction/{session-id}/insights.md`
-   - **IMPORTANT**: Path is relative to current working directory (project root), NOT home directory (`~/.claude/`)
+1. Get session ID from task context or environment (`CLAUDE_SESSION_ID`)
+2. Read the insights file at `~/.claude/knowledge-extraction/{session-id}/insights.md`
 3. Parse each insight block (sections starting with `## ` timestamp)
 4. For each insight, extract:
    - **User Question** (### User Question): The prompt that led to the insight
@@ -115,12 +114,38 @@ Create a proposal for each insight:
 
 ### Step 4: Present to User
 
-Present all proposals using AskUserQuestion or direct output:
+Present proposals with content preview so users can make informed decisions:
 
-1. Show summary of insights analyzed
-2. Present each proposal with rationale
-3. Ask for approval/modification per proposal
-4. Allow user to skip, modify, or approve each
+**Format:**
+```markdown
+⏺ Insight Extraction 제안
+
+추출 대상 {n}개:
+
+### 1. {제목} → {Target} ({Location})
+> {insight 내용 요약 또는 첫 2-3줄}
+> {핵심 포인트}
+
+**Rationale:** {왜 이 target으로 분류했는지}
+
+### 2. {제목} → {Target} ({Location})
+> {insight 내용 요약}
+
+...
+
+건너뜀 {n}개: #{번호} ({이유}), ...
+
+---
+어떻게 진행할까요?
+- 전체 승인: {n}개 모두 생성
+- 선택 승인: 번호 지정 (예: "1,3,6")
+- 수정 요청: 특정 항목 내용/위치 변경
+```
+
+**Key points:**
+- 각 insight의 실제 내용을 인용 블록으로 보여줌
+- 사용자가 제목만으로 판단하지 않도록 맥락 제공
+- 건너뛴 항목은 이유와 함께 간략히 표시
 
 ### Step 5: Execute Approved Extractions
 
@@ -159,8 +184,7 @@ For each approved proposal:
 
 After all approved extractions complete:
 1. Report what was created and where
-2. Delete the session directory at `{working-directory}/.claude/knowledge-extraction/{session-id}/` (includes insights.md and state.json)
-   - **IMPORTANT**: Path is relative to current working directory (project root), NOT home directory
+2. Delete the session directory at `~/.claude/knowledge-extraction/{session-id}/` (includes insights.md and state.json)
 3. Summarize results
 
 ## Output Format
@@ -183,7 +207,7 @@ Provide a structured report:
 - {reason for each skipped}
 
 ### Session Cleanup
-- Deleted: .claude/knowledge-extraction/{session-id}/ (directory)
+- Deleted: ~/.claude/knowledge-extraction/{session-id}/ (directory)
 ```
 
 ## Quality Standards

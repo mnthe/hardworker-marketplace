@@ -26,7 +26,8 @@ plugins/knowledge-extraction/
 │   └── insight-awareness/
 │       └── SKILL.md          # Insight capture documentation
 ├── agents/
-│   └── insight-extractor.md  # Insight extraction agent
+│   └── insight-extractor/
+│       └── AGENT.md          # Insight extraction agent
 ├── src/
 │   └── hooks/
 │       └── auto-extract-insight.js  # Hook implementation

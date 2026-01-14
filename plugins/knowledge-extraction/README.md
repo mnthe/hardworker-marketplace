@@ -40,7 +40,7 @@ JWT tokens should include minimal claims. Store sensitive data server-side.
 ─────────────────────────────────────────────────
 ```
 
-The **Stop/SubagentStop hooks** parse Claude's transcript and extract these patterns to `.claude/knowledge-extraction/sessions/{session-id}.md`.
+The **Stop/SubagentStop hooks** parse Claude's transcript and extract these patterns to `~/.claude/knowledge-extraction/sessions/{session-id}.md`.
 
 **Efficiency**: State tracking (`state/{session-id}.json`) ensures already-processed messages are skipped on subsequent hook calls.
 
@@ -51,7 +51,6 @@ The **Stop/SubagentStop hooks** parse Claude's transcript and extract these patt
 | `/insights`         | View current session's insights         |
 | `/insights extract` | Extract insights to reusable components |
 | `/insights clear`   | Clear current session's insights        |
-| `/insights all`     | View all sessions' insights             |
 
 ## Agents
 
@@ -113,7 +112,7 @@ The **Stop/SubagentStop hooks** parse Claude's transcript and extract these patt
 
 ## Configuration
 
-Create `.claude/knowledge-extraction/config.local.md` to customize:
+Create `~/.claude/knowledge-extraction/config.local.md` to customize:
 
 ```yaml
 ---
@@ -140,7 +139,7 @@ Customize insight collection and extraction behavior.
 Insights and state are stored per-session:
 
 ```
-.claude/knowledge-extraction/
+~/.claude/knowledge-extraction/
 ├── config.local.md              # Configuration (optional)
 └── {session-id}/
     ├── state.json               # Processing state (last processed uuid)
@@ -202,10 +201,10 @@ Autonomous agent that:
 
 ```bash
 # Check if session directory exists
-ls .claude/knowledge-extraction/
+ls ~/.claude/knowledge-extraction/
 
 # Verify state file
-cat .claude/knowledge-extraction/{session-id}/state.json
+cat ~/.claude/knowledge-extraction/{session-id}/state.json
 
 # Ensure ★ Insight format is correct (must have exact markers)
 ```
@@ -220,7 +219,7 @@ cat .claude/knowledge-extraction/{session-id}/state.json
 ### Duplicate Insights
 
 State tracking should prevent duplicates. If duplicates occur:
-- Delete `.claude/knowledge-extraction/{session-id}/state.json`
+- Delete `~/.claude/knowledge-extraction/{session-id}/state.json`
 - Restart Claude session
 - Hook will reprocess with fresh state
 
