@@ -62,43 +62,20 @@ while True:
 
 ## Session ID Handling (CRITICAL)
 
-**All scripts require `--session <id>` flag.**
+**All scripts require `--session <id>` flag. Extract the actual UUID from system-reminder, not placeholders.**
 
-### Where to get SESSION_ID
+📖 **Detailed guide**: See [Session ID Handling Guide](references/session-id-guide.md)
 
-Look for this message in system-reminder (provided by SessionStart hook):
-```
-CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642
-Use this when calling ultrawork scripts: --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642
-```
-
-**IMPORTANT: You MUST extract the actual UUID value and use it directly. DO NOT use placeholder strings like `{SESSION_ID}` or `$SESSION_ID`.**
-
-### Correct usage example
-
-If the hook says `CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then:
-
+**Quick reference:**
 ```bash
-# ✅ CORRECT - use the actual value
+# Get SESSION_ID from system-reminder hook output
+# Example: CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642
+
+# Use actual UUID (NOT placeholders like {SESSION_ID})
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --plan-only "goal"
 
-# ❌ WRONG - do not use placeholders
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session {SESSION_ID} --plan-only "goal"
-```
-
-### Session Directory
-
-Get session directory via script:
-
-```bash
-SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
-```
-
-For example, if `SESSION_ID` is `37b6a60f-8e3e-4631-8f62-8eaf3d235642`:
-
-```bash
+# Get session directory
 SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --dir)
-# Returns: ~/.claude/ultrawork/sessions/37b6a60f-8e3e-4631-8f62-8eaf3d235642
 ```
 
 ---
@@ -128,192 +105,70 @@ Parse the setup output to get:
 
 ## Step 1.5: Resume Check (CRITICAL for interrupted sessions)
 
-**Before starting exploration, check session state to determine where to resume:**
+**Before starting exploration, check session state to determine where to resume.**
 
-```bash
-# Get session directory via script
-SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
+📖 **Detailed guide**: See [Explorer Phase - Resume Check](references/01-explorer.md#resume-check-for-interrupted-sessions)
 
-# Get session data via script
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID}                      # Full JSON
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field exploration_stage
-
-# Read context.json (using Read tool with session_dir)
-context = Read(f"{SESSION_DIR}/context.json")
-```
-
-**Resume logic by exploration_stage:**
-
-| Stage         | Status                           | Action                                             |
-| ------------- | -------------------------------- | -------------------------------------------------- |
-| `not_started` | Fresh start                      | Begin from Stage 2a (Overview)                     |
-| `overview`    | Overview running/done            | Check overview.md exists → proceed to 2b           |
-| `analyzing`   | Hints generated, no targeted yet | Re-run hint analysis, set expected_explorers       |
-| `targeted`    | Targeted explorers running       | Check expected vs actual, wait or re-spawn missing |
-| `complete`    | Exploration done                 | Skip to Step 3 (Planning)                          |
-
+**Quick reference:**
 ```python
-if exploration_stage == "not_started":
-    # Fresh start - go to Stage 2a
-    pass
+# Read session state
+exploration_stage = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field exploration_stage')
 
-elif exploration_stage == "overview":
-    # Check if overview actually completed
-    if Path(f"{session_dir}/exploration/overview.md").exists():
-        # Proceed to Stage 2b (analyze & plan targeted)
-        pass
-    else:
-        # Re-spawn overview explorer
-        pass
-
-elif exploration_stage == "analyzing":
-    # Overview done, need to generate hints and set expected_explorers
-    # Go to Stage 2b
-    pass
-
-elif exploration_stage == "targeted":
-    if expected_explorers and not exploration_complete:
-        missing = set(expected_explorers) - set(actual_explorers)
-        if missing:
-            print(f"Exploration incomplete. Missing: {missing}")
-            # Re-spawn missing explorers
-            pass
-
-elif exploration_stage == "complete":
-    # Skip to planning
-    pass
+# Resume based on stage
+# not_started → Begin overview
+# overview → Check overview.md exists → proceed to targeted
+# analyzing → Generate hints, set expected_explorers
+# targeted → Check for missing explorers, re-spawn if needed
+# complete → Skip to planning
 ```
-
-**Key checks:**
-1. `exploration_stage` in session.json determines resume point
-2. `expected_explorers` vs `explorers[].id` identifies missing work
-3. `exploration_complete` confirms all expected explorers finished
 
 ---
 
 ## Step 2: Exploration Phase (Dynamic)
 
-Exploration happens in two stages: Overview first, then targeted based on analysis.
+**Exploration happens in three stages: Overview → Analyze → Targeted.**
 
-### Stage 2a: Quick Overview (Direct via Skill)
+📖 **Detailed guide**: See [Explorer Phase Reference](references/01-explorer.md)
 
-**Invoke the overview-exploration skill directly (no agent spawn):**
+### Quick Workflow
 
+**Stage 1: Overview (Direct via Skill)**
 ```python
 Skill(skill="ultrawork:overview-exploration")
 ```
+Produces: `exploration/overview.md`, `context.json`
 
-The skill will:
-1. Update exploration_stage to "overview"
-2. Directly explore project structure using Glob, Read, Grep
-3. Write `exploration/overview.md` (in session directory)
-4. Initialize `context.json`
-
-**Time budget**: ~30 seconds, max 5-7 file reads
-
-This is synchronous - no polling needed. Proceed to Stage 2b after skill completes.
-
-### Stage 2b: Analyze & Plan Targeted Exploration
-
-**Update exploration_stage to "analyzing":**
-
+**Stage 2: Analyze & Plan Targeted**
 ```bash
+# Update stage
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage analyzing
+
+# Analyze overview + goal → generate hints
+# Set expected explorers BEFORE spawning
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-init.js" --session {SESSION_ID} --expected "overview,exp-1,exp-2"
 ```
 
-Based on **Overview + Goal**, decide what areas need detailed exploration.
-
-**Decision Matrix:**
-
-| Goal Keywords     | Detected Stack | Explore Areas                              |
-| ----------------- | -------------- | ------------------------------------------ |
-| auth, login, user | Next.js        | middleware, api/auth, existing user model  |
-| auth, login, user | Express        | routes, passport config, session           |
-| api, endpoint     | Any            | existing routes, controllers, schemas      |
-| database, model   | Prisma         | schema.prisma, migrations, existing models |
-| database, model   | TypeORM        | entities, migrations                       |
-| test, coverage    | Any            | existing tests, test config, mocks         |
-| ui, component     | React/Next     | components/, design system, styles         |
-| bug, fix, error   | Any            | related files from error context           |
-
-**Generate exploration hints dynamically:**
-
-```python
-# Analyze overview + goal
-hints = analyze_exploration_needs(overview, goal)
-
-# Example outputs:
-# Goal: "Add user authentication"
-# Overview: Next.js with Prisma, no existing auth
-# → hints = [
-#     "Authentication patterns: middleware, session, JWT",
-#     "Database: user model patterns in existing Prisma schema",
-#     "API routes: existing route patterns in app/api/"
-# ]
-```
-
-**Set expected explorers BEFORE spawning (CRITICAL):**
-
+**Stage 3: Targeted Exploration**
 ```bash
-# Generate expected explorer IDs
-expected_ids="overview"
-for i, hint in enumerate(hints):
-    expected_ids += f",exp-{i+1}"
-
-# Initialize context.json with expected explorers
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-init.js" --session {SESSION_ID} --expected "{expected_ids}"
-```
-
-This ensures:
-1. `expected_explorers` is set before spawning
-2. `exploration_complete` auto-updates when all explorers finish
-
-### Stage 2c: Targeted Exploration
-
-**Update exploration_stage to "targeted":**
-
-```bash
+# Update stage
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage targeted
-```
 
-Spawn explorers for each identified area (parallel, in single message):
+# Spawn explorers (parallel, in single message)
+# Task(subagent_type="ultrawork:explorer:explorer", ...) for each hint
 
-```python
-# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
-
-# Call multiple Tasks in single message = automatic parallel execution
-for i, hint in enumerate(hints):
-    Task(
-      subagent_type="ultrawork:explorer:explorer",
-      model="haiku",  # or sonnet for complex areas
-      prompt=f"""
-SESSION_ID: {SESSION_ID}
-EXPLORER_ID: exp-{i+1}
-
-SEARCH_HINT: {hint}
-
-CONTEXT: {overview_summary}
-"""
-    )
-# All explorers run in parallel and results are collected
-```
-
-**After all explorers complete, update exploration_stage to "complete":**
-
-```bash
+# After completion
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage complete
 ```
 
-### Exploration Output
-
-Explorers will create:
-- `exploration/overview.md` - Project overview
-- `exploration/exp-1.md`, `exp-2.md`, ... - Targeted findings
-- `context.json` - Aggregated summary with links (exploration_complete=true when all done)
+**Output**: `exploration/*.md`, `context.json` with exploration_complete=true
 
 ---
 
 ## Step 3: Planning Phase (MODE BRANCHING)
+
+📖 **Detailed guides**:
+- [Planning Phase Reference](references/02-planning.md) - Context analysis, task decomposition, YAGNI
+- [Interview Phase Reference](references/03-interview.md) - Deep clarification (interactive mode only)
 
 ### If `--auto` was set → Auto Mode
 

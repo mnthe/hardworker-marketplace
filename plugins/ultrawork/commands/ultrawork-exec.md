@@ -205,6 +205,8 @@ while iteration <= max_iterations:
 
 ## Step 4: Execution Phase Implementation
 
+📖 **Detailed guide**: See [Execute Phase Reference](references/04-execute.md)
+
 ```python
 def run_execution_phase(SESSION_ID, max_workers):
     # Get session_dir via: Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
@@ -251,6 +253,8 @@ SUCCESS CRITERIA:
 ---
 
 ## Step 5: Verification Phase Implementation
+
+📖 **Detailed guide**: See [Validate Phase Reference](references/05-validate.md)
 
 ```python
 def run_verification_phase(SESSION_ID):

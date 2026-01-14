@@ -144,6 +144,64 @@ bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
 
 Do NOT mark as resolved if failed - leave status as "open" for retry.
 
+### Phase 6: Commit Changes (Auto-Commit)
+
+**After task is marked resolved, commit all changes:**
+
+```bash
+# Stage all changes from this task
+git add -A
+
+# Commit with Angular Commit Message format
+git commit -m "$(cat <<'EOF'
+<type>(<scope>): <short description>
+
+[ultrawork] Session: {SESSION_ID} | Task: {TASK_ID}
+
+{TASK_SUBJECT}
+
+Criteria met:
+- {criterion 1}
+- {criterion 2}
+
+Files changed:
+- {file 1}
+- {file 2}
+EOF
+)"
+```
+
+**Angular Commit Message Types:**
+
+| Type | When to Use |
+|------|-------------|
+| feat | New feature or functionality |
+| fix | Bug fix |
+| refactor | Code refactoring without behavior change |
+| test | Adding or modifying tests |
+| docs | Documentation changes |
+| style | Code style changes (formatting, etc.) |
+| chore | Build, config, or maintenance tasks |
+
+**Auto-commit rules:**
+- **Only commit if task resolved** - Do NOT commit failed/partial work
+- **Stage all changes** - Use `git add -A` to include all modifications
+- **Angular format**:
+  - Title: `<type>(<scope>): <short description>` (50 chars max)
+  - Body: ultrawork metadata, task subject, criteria, files
+  - Scope: component/module being changed (optional)
+- **Record commit in evidence**:
+
+```bash
+bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
+  --add-evidence "Committed: $(git rev-parse --short HEAD)"
+```
+
+**Skip commit if:**
+- No files changed (`git status --porcelain` is empty)
+- Task not resolved (status ≠ resolved)
+- Inside a submodule or worktree where commits are discouraged
+
 ---
 
 ## Test Writing Requirements
@@ -320,6 +378,10 @@ Brief description of what was done.
 - Task ID: {TASK_ID}
 - Status: resolved / open (if failed)
 
+## Commit
+- Hash: {short commit hash}
+- Message: [ultrawork] Task {TASK_ID}: {TASK_SUBJECT}
+
 ## Notes
 Any additional context.
 ```
@@ -334,6 +396,8 @@ Any additional context.
 4. **No sub-agents** - Do NOT spawn other agents
 5. **No task creation** - Do NOT add new tasks to session
 6. **Be honest** - If something fails, report it (don't mark resolved)
+7. **Commit on success** - Always commit changes after task resolved (Phase 6)
+8. **Atomic commits** - One task = one commit for easy rollback
 
 ---
 

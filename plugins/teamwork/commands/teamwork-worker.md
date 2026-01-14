@@ -56,7 +56,7 @@ Parse the output to get:
 Register loop state for this terminal:
 
 ```!
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/loop-state.js" start "{PROJECT}" "{SUB_TEAM}" "{ROLE}"
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/loop-state.js" --set --project "{PROJECT}" --team "{SUB_TEAM}" --role "{ROLE}"
 ```
 
 ## Step 2: Check for Available Tasks
@@ -132,7 +132,7 @@ The hook reads state from `loop-state.js` and triggers the next iteration with s
 **If no more tasks:**
 
 ```!
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/loop-state.js" stop
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/loop-state.js" --clear
 ```
 
 Exit and report completion.

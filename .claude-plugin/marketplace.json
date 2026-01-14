@@ -8,7 +8,7 @@
       "name": "ultrawork",
       "source": "./plugins/ultrawork",
       "description": "Bun cross-platform version of ultrawork - strict verification-first development with TDD support",
-      "version": "0.14.0",
+      "version": "0.15.2",
       "author": {
         "name": "mnthe"
       },
@@ -26,7 +26,7 @@
       "name": "teamwork",
       "source": "./plugins/teamwork",
       "description": "Bun cross-platform version of teamwork - multi-session collaboration with role-based workers and task management",
-      "version": "0.13.0",
+      "version": "0.13.2",
       "author": {
         "name": "mnthe"
       },
@@ -47,7 +47,7 @@
       "name": "knowledge-extraction",
       "source": "./plugins/knowledge-extraction",
       "description": "Collect insights from Claude sessions and extract them into reusable components (Skills, Commands, Agents, CLAUDE.md)",
-      "version": "0.5.4",
+      "version": "0.5.5",
       "author": {
         "name": "mnthe"
       },

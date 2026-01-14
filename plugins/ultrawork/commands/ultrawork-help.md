@@ -1,6 +1,7 @@
 ---
 name: ultrawork-help
 description: "Show ultrawork plugin help and available commands"
+allowed-tools: []
 ---
 
 # Ultrawork Help

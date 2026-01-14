@@ -1,6 +1,29 @@
 ---
 name: worker
-description: "Use for claiming and completing teamwork tasks. Generic worker for any role."
+description: |
+  Use for claiming and completing teamwork tasks. Generic worker for any role.
+
+  Use this agent when working on general purpose tasks without role specialization. Examples:
+
+  <example>
+  Context: User wants to spawn a general worker to claim any available task
+  user: "/teamwork-worker"
+  assistant: Spawns generic worker agent, lists all available tasks across all roles, claims first available task (regardless of role), reads task description, implements solution, collects concrete evidence (command output, test results, files created), marks task resolved
+  <commentary>
+  The generic worker is appropriate when role doesn't matter or when you want a worker to claim any available task, providing maximum flexibility
+  </commentary>
+  </example>
+
+  <example>
+  Context: Worker handles a cross-cutting task that doesn't fit a specific role
+  user: "/teamwork-worker"
+  assistant: Spawns generic worker, claims task for updating configuration files, modifies package.json and tsconfig.json, verifies build succeeds, collects evidence (build passes, configs valid), marks resolved
+  <commentary>
+  Generic worker handles miscellaneous tasks that don't require specialized expertise, such as configuration updates or simple file operations
+  </commentary>
+  </example>
+model: inherit
+color: cyan
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__replace_symbol_body", "mcp__plugin_serena_serena__insert_after_symbol", "mcp__plugin_serena_serena__find_symbol"]
 ---
 

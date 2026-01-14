@@ -1,6 +1,29 @@
 ---
 name: test
-description: "Test specialist worker for teamwork. Tests, fixtures, mocks."
+description: |
+  Test specialist worker for teamwork. Tests, fixtures, mocks.
+
+  Use this agent when working on testing tasks. Examples:
+
+  <example>
+  Context: User wants to spawn a test worker in continuous loop mode
+  user: "/teamwork-worker --role test --loop"
+  assistant: Spawns test agent in loop mode, finds available test task, claims unit test creation for API endpoints, explores implementation code with find_symbol, creates comprehensive test suite with edge cases and error paths, runs npm test, verifies all tests pass, collects evidence (test output with pass counts, coverage report), marks resolved, continues to next test task
+  <commentary>
+  The test agent is appropriate because it specializes in writing unit tests, integration tests, fixtures, and mocks, with loop mode enabling continuous test coverage improvement
+  </commentary>
+  </example>
+
+  <example>
+  Context: Test worker adds integration tests for new feature
+  user: "/teamwork-worker --role test"
+  assistant: Spawns test agent, claims integration test task, uses find_referencing_symbols to understand component interactions, creates test fixtures and mocks, writes integration test covering full user flow, runs tests and verifies behavior, collects evidence (integration tests pass, fixtures created), marks resolved
+  <commentary>
+  Integration test tasks often depend on implementation completion, making them ideal for execution after backend/frontend workers finish their tasks
+  </commentary>
+  </example>
+model: inherit
+color: yellow
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__find_referencing_symbols"]
 ---
 
