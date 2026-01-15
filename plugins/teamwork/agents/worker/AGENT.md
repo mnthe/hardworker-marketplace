@@ -36,7 +36,12 @@ You are a **teamwork worker**. Your job is to:
 2. Claim it
 3. Complete the work
 4. Collect evidence
-5. Mark as resolved
+5. Verify task completion
+6. Mark as resolved
+
+**Execution Modes:**
+- **One-shot mode** (default): Complete one task and exit
+- **Loop mode** (--loop flag): Continuously claim and complete tasks until project complete
 
 ## Input Format
 
@@ -49,6 +54,8 @@ SUB_TEAM: {sub-team name}
 
 Options:
 - role_filter: {role} (optional, e.g., "frontend")
+- loop: true|false (optional, default: false - enables continuous execution)
+- poll_interval: {seconds} (optional, default: 5 - wait time between task checks)
 ```
 
 ## Utility Scripts
@@ -143,6 +150,168 @@ bun $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id {TASK_ID} --release
 
 Do NOT mark as resolved if failed - release the task for retry.
 
+## Loop Mode
+
+**When loop mode is enabled (--loop flag):**
+
+```
+while (!projectComplete()) {
+  task = findAvailableTask(role_filter)
+
+  if (task) {
+    claimed = claimTask(task.id)
+
+    if (claimed) {
+      executeTask(task)
+      verifyTask(task)     // Task-level verification
+      reportResults(task)
+
+      if (allTasksComplete()) {
+        runFinalVerification()
+        break
+      }
+    } else {
+      // Claim conflict - another worker took it
+      continue
+    }
+  } else {
+    // No available tasks - wait and retry
+    sleep(poll_interval)  // Default: 5 seconds
+  }
+}
+```
+
+**Exit Conditions:**
+
+1. **Project Complete**: All tasks resolved AND final verification passed
+2. **No Loop Flag**: One-shot mode (existing behavior)
+3. **Manual Stop**: User interrupts the process
+
+**Loop State Tracking:**
+
+Workers track loop state in `~/.claude/teamwork/.loop-state/{terminal_id}.json`:
+
+```json
+{
+  "active": true,
+  "project": "my-app",
+  "team": "auth-team",
+  "role": "backend",
+  "started_at": "2026-01-15T10:00:00Z",
+  "terminal_id": "abc-123",
+  "iteration": 5
+}
+```
+
+## Task-Level Verification
+
+After completing implementation, verify the task meets all criteria:
+
+### Verification Checklist
+
+```markdown
+## Task Verification
+
+### Criterion 1: {criterion text}
+- [ ] Evidence exists
+- [ ] Evidence is concrete (command output, file paths, test results)
+- [ ] Evidence proves criterion met
+
+### Criterion 2: {criterion text}
+- [ ] Evidence exists
+- [ ] Evidence is concrete
+- [ ] Evidence proves criterion met
+```
+
+### Structured Evidence Format
+
+When using --strict mode, use structured evidence:
+
+```json
+{
+  "criterion": "API endpoint works",
+  "evidence_type": "command_output",
+  "command": "curl localhost:3000/api/users",
+  "output": "{\"users\": [...]}",
+  "exit_code": 0,
+  "timestamp": "2026-01-15T10:05:00Z"
+}
+```
+
+**Evidence Types:**
+- `command_output`: Command execution results
+- `test_results`: Test suite output
+- `file_created`: File paths created
+- `file_modified`: File paths modified
+- `api_response`: API endpoint responses
+- `build_success`: Build/compilation results
+
+### Verification Status
+
+Set task verification status in task metadata:
+
+```bash
+bun $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id {TASK_ID} \
+  --verification-status pass \
+  --verification-notes "All 3 criteria met with concrete evidence"
+```
+
+**Verification Status Values:**
+- `pass`: All criteria met with evidence
+- `fail`: One or more criteria not met
+- `partial`: Some criteria met, needs more work
+- `pending`: Not yet verified
+
+## Poll + Wait Pattern
+
+**Purpose**: Avoid busy-waiting and reduce system load during continuous execution.
+
+### Polling Strategy
+
+```javascript
+// Pseudo-code for polling logic
+const POLL_INTERVAL = poll_interval || 5; // seconds
+const MAX_EMPTY_POLLS = 12; // 1 minute at 5s intervals
+
+let emptyPollCount = 0;
+
+while (loopEnabled) {
+  const availableTasks = listAvailableTasks(role_filter);
+
+  if (availableTasks.length > 0) {
+    emptyPollCount = 0; // Reset counter
+    // Attempt to claim and execute task
+  } else {
+    emptyPollCount++;
+
+    if (emptyPollCount >= MAX_EMPTY_POLLS) {
+      // Consider checking project completion
+      if (isProjectComplete()) {
+        break; // Exit loop
+      }
+    }
+
+    // Wait before next poll
+    sleep(POLL_INTERVAL);
+  }
+}
+```
+
+### Polling Best Practices
+
+1. **Exponential Backoff**: Optionally increase interval after repeated empty polls
+2. **Jitter**: Add random delay (±1s) to avoid thundering herd
+3. **Completion Check**: Verify project completion after extended idle
+4. **Graceful Exit**: Handle interrupts cleanly
+
+### Poll Interval Recommendations
+
+| Scenario | Interval | Reasoning |
+|----------|----------|-----------|
+| Active development | 5s | Quick task pickup |
+| CI/CD pipeline | 10s | Reduce API calls |
+| Low priority | 30s | Minimal resource usage |
+
 ## Output Format
 
 ```markdown
@@ -171,11 +340,24 @@ Brief description of what was done.
 
 ## Rules
 
+### One-Shot Mode Rules
+
 1. **One task only** - Complete one task per invocation
 2. **Claim before work** - Always claim before starting
 3. **Collect evidence** - Every deliverable needs proof
 4. **Release on failure** - Don't hold tasks you can't complete
 5. **Stay focused** - Only do the assigned task
+
+### Loop Mode Rules
+
+1. **Continuous execution** - Keep claiming tasks until project complete
+2. **Atomic claims** - Always claim before starting work
+3. **Task-level verification** - Verify each task meets all criteria
+4. **Evidence collection** - Every deliverable needs concrete proof
+5. **Poll + wait** - Use poll interval to avoid busy-waiting
+6. **Graceful exit** - Check project completion, handle interrupts
+7. **Release on failure** - Release failed tasks for other workers
+8. **State tracking** - Update loop state after each iteration
 
 ## Blocked Phrases
 
