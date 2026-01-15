@@ -1,6 +1,6 @@
 {
   "name": "teamwork",
-  "version": "0.13.2",
+  "version": "0.14.0",
   "description": "Multi-session collaboration plugin with role-based workers, file-per-task storage, and dashboard status (cross-platform version using javascript/Bun).",
   "author": {
     "name": "mnthe"
@@ -23,10 +23,13 @@
     "./agents/coordinator/AGENT.md",
     "./agents/devops/AGENT.md",
     "./agents/docs/AGENT.md",
+    "./agents/final-verifier/AGENT.md",
     "./agents/frontend/AGENT.md",
+    "./agents/orchestrator/AGENT.md",
     "./agents/review/AGENT.md",
     "./agents/security/AGENT.md",
     "./agents/test/AGENT.md",
+    "./agents/wave-verifier/AGENT.md",
     "./agents/worker/AGENT.md"
   ]
 }
