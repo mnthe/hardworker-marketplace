@@ -138,6 +138,27 @@ Skill(skill="ultrawork:overview-exploration")
 ```
 Produces: `exploration/overview.md`, `context.json`
 
+**Stage 1b: Scope Analysis (Parallel with Overview)**
+
+Spawn scope analyzer to detect cross-layer dependencies:
+
+```python
+# After overview exploration completes, spawn scope analyzer
+Task(
+  subagent_type="ultrawork:scope-analyzer:scope-analyzer",
+  model="haiku",
+  prompt=f"""
+SESSION_ID: {SESSION_ID}
+
+REQUEST: {goal}
+
+CONTEXT: (Read from exploration/overview.md after it exists)
+"""
+)
+```
+
+The scope analyzer runs in parallel with targeted exploration. It writes results to `context.json` via `scopeExpansion` field.
+
 **Stage 2: Analyze & Plan Targeted**
 ```bash
 # Update stage
@@ -230,6 +251,52 @@ Read("$SESSION_DIR/exploration/exp-3.md")
 Based on the goal "{goal}", I found:
 {summary of relevant findings}
 ```
+
+#### 3b-1. Display Scope Expansion Analysis (Interactive Mode Only)
+
+If scope expansion was detected, display it and ask user preference:
+
+```python
+# Read context.json
+context_data = Read(f"{SESSION_DIR}/context.json")
+# Parse JSON to get scopeExpansion
+
+if scopeExpansion and scopeExpansion.get('dependencies'):
+    # Display analysis
+    print(f"""
+## 📊 Scope Expansion Analysis
+
+**Original Request**: {scopeExpansion['originalRequest']}
+**Detected Layers**: {', '.join(scopeExpansion['detectedLayers'])}
+**Confidence**: {scopeExpansion['confidence']}
+
+### Dependencies Detected
+
+| From | To | Type | Reason |
+|------|----|------|--------|
+{format_dependency_table(scopeExpansion['dependencies'])}
+
+### Suggested Additional Tasks
+{format_suggested_tasks(scopeExpansion['suggestedTasks'])}
+
+### Blocking Constraints
+{format_constraints(scopeExpansion['blockingConstraints'])}
+""")
+
+    # Ask user preference (Interactive mode only)
+    AskUserQuestion(questions=[{
+      "question": "Include scope expansion tasks?",
+      "header": "Scope",
+      "options": [
+        {"label": "Include all (Recommended)", "description": "Add all blocking + recommended dependencies"},
+        {"label": "Blocking only", "description": "Only add tasks for blocking dependencies"},
+        {"label": "Skip", "description": "Proceed with original request only"}
+      ],
+      "multiSelect": False
+    }])
+```
+
+Store user's choice for planner to use when creating tasks.
 
 #### 3c. Clarify Requirements (Brainstorm Protocol)
 
