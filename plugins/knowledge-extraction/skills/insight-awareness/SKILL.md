@@ -34,6 +34,8 @@ Generate `★ Insight` markers when you discover:
 | `debugging` | Root cause findings | "Memory leak caused by unclosed listener" |
 | `architecture` | Design decisions | "Use event sourcing for audit trail" |
 | `tool-usage` | Effective techniques | "Combine Grep + Read for targeted searches" |
+| `standard` | Standards and conventions | "JSON files use 2-space indentation" |
+| `convention` | Naming and file patterns | "Scripts follow entity-action.js naming" |
 
 ## Quality Guidelines
 
@@ -67,7 +69,7 @@ Use the standard format for automatic extraction:
 After insights accumulate:
 
 - `/insights` - View collected insights
-- `/insights extract` - Convert to Skills/Commands/CLAUDE.md
+- `/insights extract` - Convert to Skills/Commands/CLAUDE.md/Rules Files
 - `/insights clear` - Clear session insights
 
 ## Key Points

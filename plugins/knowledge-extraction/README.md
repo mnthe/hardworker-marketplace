@@ -1,6 +1,6 @@
 # Knowledge Extraction Plugin
 
-Collect insights from Claude sessions and extract them into reusable components (Skills, Commands, Agents, CLAUDE.md).
+Collect insights from Claude sessions and extract them into reusable components (Skills, Commands, Agents, CLAUDE.md, Rules Files).
 
 ## Overview
 
@@ -12,7 +12,8 @@ This plugin automatically captures valuable insights generated during Claude ses
 - **Session Isolation**: Each session's insights stored separately
 - **Smart Classification**: Categorizes insights by type (code-pattern, workflow, debugging, etc.)
 - **Threshold Alerts**: Notifies when insight count reaches configurable threshold
-- **Multi-target Extraction**: Converts insights to Skills, Commands, Agents, or CLAUDE.md
+- **Multi-target Extraction**: Converts insights to Skills, Commands, Agents, CLAUDE.md, or Rules Files
+- **Standards Compliance**: Follows CLAUDE.md and Rules File writing guidelines automatically
 
 ## Installation
 
@@ -102,13 +103,30 @@ The **Stop/SubagentStop hooks** parse Claude's transcript and extract these patt
 
 ### Extraction Targets
 
-| Insight Type   | Primary Target | Criteria                            |
-| -------------- | -------------- | ----------------------------------- |
-| `code-pattern` | Skill          | Reusable patterns across projects   |
-| `workflow`     | Command        | Automatable step-by-step procedures |
-| `debugging`    | Skill          | Troubleshooting techniques          |
-| `architecture` | CLAUDE.md      | Project-specific decisions          |
-| `tool-usage`   | Skill          | Effective tool combinations         |
+| Insight Type   | Primary Target | Secondary Target | Criteria                            |
+| -------------- | -------------- | ---------------- | ----------------------------------- |
+| `code-pattern` | Skill          | Rules File       | Reusable patterns across projects   |
+| `workflow`     | Command        | Skill            | Automatable step-by-step procedures |
+| `debugging`    | Skill          | CLAUDE.md        | Troubleshooting techniques          |
+| `architecture` | CLAUDE.md      | Rules File       | Project-specific decisions          |
+| `tool-usage`   | Skill          | Rules File       | Effective tool combinations         |
+| `standard`     | Rules File     | CLAUDE.md        | Standards, conventions, formatting  |
+| `convention`   | Rules File     | CLAUDE.md        | Naming conventions, file patterns   |
+
+### Rules Files
+
+Rules files (`.claude/rules/*.rules`) are created for reusable standards that can be referenced from multiple places:
+
+- Documentation standards
+- Code style guidelines
+- Testing requirements
+- Workflow procedures
+
+The insight-extractor follows strict formatting guidelines when creating Rules files, including:
+- Proper file naming (`topic-name.rules`)
+- Required section structure
+- Evidence-based language (no speculation)
+- Consistent markdown formatting
 
 ## Configuration
 

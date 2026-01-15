@@ -224,6 +224,47 @@ Scripts run directly with Bun. No compilation needed.
 - **Context Preservation**: User question + surrounding text saved with insight
 - **Duplicate Prevention**: State tracking + content hashing prevents duplicates
 - **Threshold Reminders**: Automatic prompts when insight count reaches threshold
+- **Standards Compliance**: Extracted content follows CLAUDE.md and Rules File writing guidelines
+
+## Extraction Targets
+
+The insight-extractor supports multiple extraction targets:
+
+| Insight Type   | Primary Target | Secondary Target | Criteria                            |
+| -------------- | -------------- | ---------------- | ----------------------------------- |
+| `code-pattern` | Skill          | Rules File       | Reusable patterns across projects   |
+| `workflow`     | Command        | Skill            | Automatable step-by-step procedures |
+| `debugging`    | Skill          | CLAUDE.md        | Troubleshooting techniques          |
+| `architecture` | CLAUDE.md      | Rules File       | Project-specific decisions          |
+| `tool-usage`   | Skill          | Rules File       | Effective tool combinations         |
+| `standard`     | Rules File     | CLAUDE.md        | Standards, conventions, formatting  |
+| `convention`   | Rules File     | CLAUDE.md        | Naming conventions, file patterns   |
+
+## Writing Standards
+
+The insight-extractor agent follows strict writing standards when creating content:
+
+### CLAUDE.md Writing Standards
+
+- **Section Mapping**: Content placed in appropriate section based on insight type
+- **Formatting**: Tables, code blocks, trees follow standard patterns
+- **Evidence-based Language**: No speculation ("may", "could", "seems")
+
+### Rules File Standards
+
+- **File Naming**: `topic-name.rules` (lowercase, hyphenated)
+- **Section Structure**: Standards → Format → Examples → Checklist
+- **One Topic per File**: Focused, referenceable content
+
+### Validation Locations
+
+Before proposing extraction, checks for duplicates:
+1. `./CLAUDE.md` - Project-level rules
+2. `~/.claude/CLAUDE.md` - Global rules
+3. `.claude/skills/` - Existing project skills
+4. `~/.claude/skills/` - Global skills
+5. `.claude/rules/` - Project rules files
+6. `~/.claude/rules/` - Global rules files
 
 ## Integration with ★ Insight Format
 

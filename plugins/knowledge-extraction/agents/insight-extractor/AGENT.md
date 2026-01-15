@@ -1,7 +1,7 @@
 ---
 name: insight-extractor
 description: |
-  Use this agent when insights need to be analyzed and converted into reusable components (Skills, Commands, Agents, or CLAUDE.md updates). Examples:
+  Use this agent when insights need to be analyzed and converted into reusable components (Skills, Commands, Agents, CLAUDE.md, or Rules Files). Examples:
 
   <example>
   Context: User wants to extract insights collected during the session.
@@ -58,11 +58,13 @@ Classify each insight based on its characteristics:
 
 | Insight Type | Primary Target | Secondary Target | Criteria |
 |--------------|----------------|------------------|----------|
-| `code-pattern` | Skill | CLAUDE.md | Reusable patterns applicable across projects |
+| `code-pattern` | Skill | Rules File | Reusable patterns applicable across projects |
 | `workflow` | Command | Skill | Step-by-step procedures that can be automated |
 | `debugging` | Skill | CLAUDE.md | Troubleshooting techniques and solutions |
-| `architecture` | CLAUDE.md | - | Project-specific design decisions |
-| `tool-usage` | Skill | CLAUDE.md | Effective tool combinations and tips |
+| `architecture` | CLAUDE.md | Rules File | Project-specific design decisions |
+| `tool-usage` | Skill | Rules File | Effective tool combinations and tips |
+| `standard` | Rules File | CLAUDE.md | Standards, conventions, formatting rules |
+| `convention` | Rules File | CLAUDE.md | Naming conventions, file patterns |
 
 ### Target Selection Criteria
 
@@ -71,6 +73,7 @@ Classify each insight based on its characteristics:
 **→ Agent**: Complex autonomous task requiring multi-step analysis
 **→ CLAUDE.md (project)**: Project-specific rules, conventions, decisions
 **→ CLAUDE.md (global)**: Universal practices, cross-project patterns
+**→ Rules File (.claude/rules/*.rules)**: Reusable standards that could be referenced from multiple places
 
 ## Analysis Process
 
@@ -93,6 +96,8 @@ Before proposing extraction, check if each insight already exists:
 2. `~/.claude/CLAUDE.md` - Global rules
 3. `.claude/skills/` - Existing project skills
 4. `~/.claude/skills/` - Global skills
+5. `.claude/rules/` - Project rules files
+6. `~/.claude/rules/` - Global rules files
 
 **Validation process:**
 ```
@@ -106,6 +111,7 @@ For each insight:
 
 **Skip reasons:**
 - `이미 CLAUDE.md에 있음` - Content exists in project/global CLAUDE.md
+- `이미 rules 파일에 있음` - Content exists in project/global rules files
 - `기존 skill과 중복` - Similar skill already exists
 - `관찰만` - Observation without actionable guidance
 - `너무 구체적` - Too specific to current context, not reusable
@@ -130,7 +136,7 @@ Create a proposal for each insight:
 **Content:**
 > {insight content}
 
-**Proposed Target:** {Skill | Command | Agent | CLAUDE.md}
+**Proposed Target:** {Skill | Command | Agent | CLAUDE.md | Rules File}
 **Location:** {file path where component will be created}
 **Rationale:** {why this target is appropriate}
 
@@ -153,6 +159,8 @@ Present proposals with table summary + content preview:
 │ 1   │ {제목}                        │ CLAUDE.md │ project           │
 ├─────┼───────────────────────────────┼───────────┼───────────────────┤
 │ 2   │ {제목}                        │ Skill     │ ~/.claude/skills/ │
+├─────┼───────────────────────────────┼───────────┼───────────────────┤
+│ 3   │ {제목}                        │ Rules     │ .claude/rules/    │
 └─────┴───────────────────────────────┴───────────┴───────────────────┘
 
 건너뜀 {n}개: #{번호} ({skip reason}), ...
@@ -209,8 +217,302 @@ For each approved proposal:
 ```
 ./CLAUDE.md (project) or ~/.claude/CLAUDE.md (global)
 ```
+- Follow CLAUDE.md Writing Standards below
 - Append to appropriate section
 - Maintain existing structure
+
+**Creating Rules File:**
+```
+.claude/rules/{topic}.rules
+```
+- Follow Rules File Writing Standards below
+- Use for reusable patterns across multiple contexts
+
+---
+
+## CLAUDE.md Writing Standards
+
+When creating or updating CLAUDE.md files, follow these standards rigorously.
+
+### CLAUDE.md Purpose by Location
+
+| Level | Location | Purpose |
+|-------|----------|---------|
+| Root | `/CLAUDE.md` | Project overview, development guidelines |
+| Plugin | `/plugins/*/CLAUDE.md` | Plugin-specific context for agents |
+| Agent | `/plugins/*/agents/*/CLAUDE.md` | Agent role context |
+| Session | `~/.claude/*/sessions/*/CLAUDE.md` | Session activity tracking |
+| Global | `~/.claude/CLAUDE.md` | Cross-project universal practices |
+
+### Required Section Order for CLAUDE.md
+
+1. **Title** (H1) - Name and one-line description
+2. **Plugin/Project Description** - Detailed explanation
+3. **File Structure** - Tree view of directory
+4. **Script Inventory** - Table format (Script, Purpose, Key Parameters)
+5. **Hook Inventory** - Table format (Hook File, Event, Purpose, Behavior)
+6. **Agent Inventory** - Table format (Agent, Model, Role, Key Responsibilities)
+7. **State Management** - Directory structure and format specifications
+8. **Development Rules** - Coding standards and patterns
+
+### Formatting Standards
+
+#### Tables
+
+Use pipe format with header separator, consistent alignment:
+
+```markdown
+| Column 1 | Column 2 | Column 3 |
+|----------|----------|----------|
+| Value 1  | Value 2  | Value 3  |
+```
+
+**Requirements:**
+- Left-align text columns
+- Use consistent spacing between pipes
+- Keep column widths readable
+
+#### Directory Trees
+
+Use ASCII art with proper alignment:
+
+```
+parent/
+├── child1/              # Comment at column 28+
+│   └── grandchild
+└── child2/
+    └── file.json        # Explain file purpose
+```
+
+**Rules:**
+- 4 spaces per indent level
+- `├──` for non-last items
+- `└──` for last item in level
+- `│` for vertical continuation
+- Add inline comments for clarity
+
+#### Code Blocks
+
+Always specify language tag:
+
+```markdown
+\`\`\`bash
+# Shell commands
+\`\`\`
+
+\`\`\`json
+// JSON with inline comments
+\`\`\`
+
+\`\`\`javascript
+// JavaScript code
+\`\`\`
+```
+
+#### JSON Examples
+
+```json
+{
+  "field": "value",        // Explain field purpose
+  "status": "open",        // List enum values
+  "count": 42              // Numeric example
+}
+```
+
+**Rules:**
+- 2-space indentation
+- Inline comments for non-obvious fields
+- Realistic example values
+- Document enum values below JSON block
+
+### Section Mapping for Insights
+
+When adding insights to CLAUDE.md, map them to appropriate sections:
+
+| Insight Type | Target Section | Content Format |
+|--------------|----------------|----------------|
+| Architecture | Development Rules | Guideline with rationale |
+| Code pattern | Development Rules | Pattern description + example code |
+| Workflow | (consider Command instead) | Step-by-step procedure |
+| Tool usage | Development Rules | Tips table or subsection |
+| Convention | Development Rules | Rule statement |
+
+### When to Update vs Create New
+
+**Update existing CLAUDE.md when:**
+- Adding to an existing pattern category
+- Insight fits within current section structure
+- Content complements existing guidance
+
+**Create new rules file instead when:**
+- Topic deserves dedicated, reusable documentation
+- Content would be referenced from multiple CLAUDE.md files
+- Topic is complex enough to warrant its own structure
+
+---
+
+## Rules File Writing Standards
+
+When creating `.claude/rules/*.rules` files for reusable patterns.
+
+### File Naming
+
+- Use lowercase with hyphens: `topic-name.rules`
+- Be descriptive: `plugin-documentation.rules`, not `docs.rules`
+- One topic per file
+
+### Required Structure
+
+```markdown
+# Topic Title
+
+## Section 1
+
+### Subsection 1.1
+
+Content...
+
+### Subsection 1.2
+
+Content...
+
+## Section 2
+
+...
+```
+
+### Section Types for Rules Files
+
+| Section Type | Purpose | Format |
+|--------------|---------|--------|
+| **Standards** | What to follow | Bullet lists, tables |
+| **Format** | How to structure | Code block examples |
+| **Examples** | Reference implementations | Labeled code blocks |
+| **Checklist** | Verification items | `- [ ]` checkboxes |
+
+### Example Rules File Structure
+
+```markdown
+# Development Workflow
+
+## Context Management
+
+**Goal**: Minimize main context consumption.
+
+### Delegation Principle
+
+Offload work that would consume significant main context:
+- Multi-file exploration or search
+- Repetitive verification tasks
+
+## Commit Practices
+
+### Conventional Commits
+
+- `feat(plugin):` New features
+- `fix(plugin):` Bug fixes
+
+## Checklist
+
+- [ ] Version synced
+- [ ] CLAUDE.md updated
+```
+
+### When to Create Rules Files
+
+Create a `.rules` file when insight is:
+- **Reusable**: Applies across multiple contexts
+- **Standalone**: Can be understood without other context
+- **Procedural**: Defines how to do something consistently
+- **Reference-worthy**: Will be consulted repeatedly
+
+Examples of good rules file topics:
+- Documentation standards
+- Code style guidelines
+- Testing requirements
+- Workflow procedures
+- Tool usage patterns
+
+---
+
+## Content Quality Standards
+
+All extracted content must follow these quality requirements.
+
+### Evidence-Based Language
+
+**FORBIDDEN phrases** - Never use speculation:
+
+| Forbidden | Replacement |
+|-----------|-------------|
+| "may" | Use definitive statement or remove |
+| "could" | State what IS or IS NOT |
+| "seems" | Verify and state fact |
+| "probably" | Confirm or mark as uncertain |
+| "should work" | Test and report result |
+| "basic implementation" | Describe what it actually does |
+| "you can extend this" | Remove or provide concrete extension |
+| "TODO" / "FIXME" | Resolve before extraction |
+
+**REQUIRED evidence for claims:**
+
+| Claim | Required Proof |
+|-------|----------------|
+| "Fixed" | Test passes, error gone |
+| "Works" | Demonstrated execution |
+| "Complete" | All acceptance criteria met |
+
+### Formatting Consistency
+
+- **Headings**: H1 for title, H2 for major sections, H3 for subsections
+- **Lists**: Use `-` for unordered, `1.` for ordered
+- **Bold**: Use `**text**` for emphasis
+- **Inline code**: Use backticks for commands, paths, values
+
+### Content Transformation Rules
+
+When transforming insight content:
+
+1. **Remove conversational artifacts**
+   - "I found that..." → Direct statement
+   - "You might want to..." → Imperative form
+   - "It looks like..." → State the fact
+
+2. **Preserve actionable knowledge**
+   - Keep the WHY and HOW
+   - Remove speculation and hedging
+   - Add concrete examples where helpful
+
+3. **Structure for scannability**
+   - Use tables for comparisons
+   - Use bullet lists for sequences
+   - Use code blocks for examples
+
+### Example Transformation
+
+**Before (raw insight):**
+```
+When debugging hook issues, you might want to check the transcript path. 
+It seems like the hook receives JSON input via stdin, and you could 
+probably parse it to get useful context.
+```
+
+**After (extracted to CLAUDE.md):**
+```markdown
+### Hook Debugging
+
+Hooks receive JSON input via stdin with structure:
+- `session_id`: Current session identifier
+- `transcript_path`: Path to conversation transcript
+- `hook_event_name`: Event that triggered the hook
+
+Debug by parsing stdin JSON:
+\`\`\`bash
+cat /tmp/hook-input.json | jq '.transcript_path'
+\`\`\`
+```
+
+---
 
 ### Step 7: Cleanup
 
@@ -234,6 +536,7 @@ Provide a structured report:
 |---|------|------|----------|
 | 1 | Skill | {name} | .claude/skills/{name}/SKILL.md |
 | 2 | CLAUDE.md | - | ./CLAUDE.md (appended) |
+| 3 | Rules File | {topic} | .claude/rules/{topic}.rules |
 
 ### Skipped: {n} insight(s)
 - {reason for each skipped}
