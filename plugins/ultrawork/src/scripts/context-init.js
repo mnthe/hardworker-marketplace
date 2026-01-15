@@ -30,6 +30,7 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  * @property {string[]} key_files
  * @property {string[]} patterns
  * @property {string[]} constraints
+ * @property {Object|null} scopeExpansion
  */
 
 const ARG_SPEC = {
@@ -83,13 +84,14 @@ function main() {
       // Create new context.json
       /** @type {ContextFile} */
       const newContext = {
-        version: '2.1',
+        version: '2.2',
         expected_explorers: expectedExplorers,
         exploration_complete: false,
         explorers: [],
         key_files: [],
         patterns: [],
         constraints: [],
+        scopeExpansion: null,
       };
 
       fs.writeFileSync(contextFile, JSON.stringify(newContext, null, 2), 'utf-8');

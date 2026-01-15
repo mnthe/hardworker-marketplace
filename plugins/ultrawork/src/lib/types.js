@@ -98,12 +98,38 @@
  */
 
 /**
+ * @typedef {Object} Dependency
+ * @property {string} from - Source layer/component
+ * @property {string} to - Target layer/component
+ * @property {'blocking'|'recommended'|'optional'} type - Dependency classification
+ * @property {string} reason - Why this dependency exists
+ */
+
+/**
+ * @typedef {Object} SuggestedTask
+ * @property {string} layer - Target layer (frontend, backend, database, codegen)
+ * @property {string} description - What needs to be done
+ * @property {string[]} [dependsOn] - Task IDs this depends on
+ */
+
+/**
+ * @typedef {Object} ScopeExpansion
+ * @property {string} originalRequest - User's original request
+ * @property {string[]} detectedLayers - Layers detected (frontend, backend, database, codegen)
+ * @property {Dependency[]} dependencies - Cross-layer dependencies
+ * @property {SuggestedTask[]} suggestedTasks - Suggested additional tasks
+ * @property {string[]} blockingConstraints - Constraints that block progress
+ * @property {'high'|'medium'|'low'} confidence - Analysis confidence
+ */
+
+/**
  * @typedef {Object} Context
  * @property {Explorer[]} explorers
  * @property {boolean} exploration_complete
  * @property {string[]} [key_files]
  * @property {string[]} [patterns]
  * @property {string[]} [expected_explorers]
+ * @property {ScopeExpansion} [scopeExpansion] - Cross-layer dependency analysis
  */
 
 // ============================================================================
