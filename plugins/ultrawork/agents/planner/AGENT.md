@@ -115,6 +115,55 @@ For each decision point:
 3. Record decision with rationale
 4. Mark `asked_user: false`
 
+### Handle Scope Expansion (Auto Mode)
+
+In auto mode, read and apply scope expansion from context.json:
+
+```python
+# Read context.json
+context = Read(f"{SESSION_DIR}/context.json")
+
+if context.get('scopeExpansion'):
+    scope = context['scopeExpansion']
+
+    # Conservative inclusion in auto mode:
+    # - Always include blocking dependencies (required)
+    # - Include recommended dependencies (best practice)
+    # - Skip optional dependencies (can be added later)
+
+    for dep in scope.get('dependencies', []):
+        if dep['type'] in ['blocking', 'recommended']:
+            # Record as auto-included decision
+            decisions.append({
+                "topic": f"Scope: {dep['from']} → {dep['to']}",
+                "choice": "Include",
+                "rationale": dep['reason'],
+                "asked_user": False,
+                "auto_included": True
+            })
+
+    # Use suggested tasks as basis for task graph
+    for task in scope.get('suggestedTasks', []):
+        # Add to task planning
+        planned_tasks.append({
+            "layer": task['layer'],
+            "description": task['description'],
+            "from_scope_expansion": True
+        })
+```
+
+**Scope Expansion Task Ordering:**
+
+When scope expansion suggests multiple layers, order tasks by dependency:
+
+1. **Database** tasks first (if detected) - schema must exist
+2. **Backend** tasks second - API must exist for FE
+3. **Codegen** tasks third - regenerate after BE changes
+4. **Frontend** tasks fourth - depends on codegen types
+5. **Verify** task always last
+
+This ensures blocking constraints are respected.
+
 ### Phase 3: Write Design
 
 **IMPORTANT: Design documents go to PROJECT directory (NOT session directory).**
@@ -137,6 +186,13 @@ Write comprehensive design document with:
 - Each task = one discrete unit of work (~30 minutes max)
 - Task can be completed by a single worker agent
 - Prefer more granular tasks over fewer large ones
+
+**Include scope expansion tasks:**
+
+If `scopeExpansion.suggestedTasks` exists, incorporate them into the task graph:
+- Map each suggested task to a concrete task with criteria
+- Respect the suggested execution order (DB → BE → Codegen → FE)
+- Add appropriate `blocked_by` relationships
 
 **Complexity Levels:**
 
