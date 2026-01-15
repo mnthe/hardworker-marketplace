@@ -70,6 +70,7 @@ All scripts use Bun runtime with flag-based parameters.
 | **setup-ultrawork.js** | Initialize session directory, create session.json | `--session <ID>` `--goal "..."` `--max-workers N` `--auto` |
 | **session-get.js** | Read session data or get session directory path | `--session <ID>` `--field phase` `--dir` `--file` |
 | **session-update.js** | Update session phase, plan approval, exploration stage | `--session <ID>` `--phase EXECUTION` `--plan-approved` `--exploration-stage complete` |
+| **scope-set.js** | Set scope expansion data in context.json | `--session <ID>` `--data '<JSON>'` |
 | **task-create.js** | Create task JSON file with validation | `--session <ID>` `--id "1"` `--subject "..."` `--criteria "c1\|c2"` `--complexity standard\|complex` `--approach tdd` |
 | **task-get.js** | Read task details or extract specific field | `--session <ID>` `--task-id "1"` `--field status` (aliases: --task, --id) |
 | **task-list.js** | List tasks with filtering | `--session <ID>` `--status open\|resolved` `--format json\|table` |
@@ -104,6 +105,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **worker** | inherit | Task implementation | Execute ONE task, collect evidence, update task file. Supports standard and TDD approaches |
 | **verifier** | inherit | Quality gatekeeper | Audit evidence, scan for blocked patterns, run final tests, PASS/FAIL determination, trigger Ralph loop on fail |
 | **reviewer** | inherit | Code review | Deep verification, read actual code, check edge cases, detect security issues, provide specific feedback |
+| **scope-analyzer** | haiku | Dependency detection | Analyze cross-layer deps, output to context.json scopeExpansion |
 
 ## State Management
 
@@ -253,6 +255,73 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
   "constraints": []
 }
 ```
+
+## Scope Expansion Detection
+
+### Overview
+
+Scope Analyzer detects when user's request requires work beyond explicit scope:
+- FE request → BE API needed
+- BE request → FE update needed
+- Any change → Codegen required
+- BE change → DB migration needed
+
+### When It Runs
+
+- **Timing**: After overview exploration, parallel with targeted exploration
+- **Agent**: `scope-analyzer` (haiku model)
+- **Output**: `context.json.scopeExpansion`
+
+### context.json Extension
+
+```json
+{
+  "scopeExpansion": {
+    "originalRequest": "Add PPT options to Feed form",
+    "detectedLayers": ["frontend", "backend", "database", "codegen"],
+    "dependencies": [
+      {
+        "from": "FE Form",
+        "to": "BE API DTO",
+        "type": "blocking",
+        "reason": "FE references types that don't exist in BE"
+      }
+    ],
+    "suggestedTasks": [
+      { "layer": "database", "description": "Add PPT fields to schema" },
+      { "layer": "backend", "description": "Update Feed DTO" },
+      { "layer": "codegen", "description": "Regenerate API client" },
+      { "layer": "frontend", "description": "Add PPT options to form" }
+    ],
+    "blockingConstraints": ["BE API must exist before FE"],
+    "confidence": "high"
+  }
+}
+```
+
+### Dependency Types
+
+| Type | Icon | Meaning | Auto Mode |
+|------|------|---------|-----------|
+| blocking | 🔴 | Cannot proceed without | Always include |
+| recommended | 🟡 | Should include | Always include |
+| optional | 🟢 | Nice to have | Skip |
+
+### Mode Behavior
+
+| Mode | Behavior |
+|------|----------|
+| Interactive | Display analysis, ask user preference (all/blocking/skip) |
+| Auto | Conservative inclusion (blocking + recommended) |
+
+### Task Ordering
+
+When scope expansion suggests multiple layers:
+1. Database first (schema must exist)
+2. Backend second (API must exist for FE)
+3. Codegen third (regenerate after BE)
+4. Frontend fourth (depends on types)
+5. Verify always last
 
 ## Development Rules
 
