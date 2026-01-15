@@ -160,6 +160,7 @@ Exit and report completion.
 | `--team NAME` | Override sub-team name (default: branch name) |
 | `--role ROLE` | Only claim tasks with this role |
 | `--loop` | Continuous mode - keep claiming tasks |
+| `--strict` | Enable strict evidence mode (require concrete verification for all criteria) |
 
 ## Role Options
 
@@ -189,6 +190,15 @@ Exit and report completion.
 
 # Specialized continuous
 /teamwork-worker --role backend --loop
+
+# Strict evidence mode (for wave verification)
+/teamwork-worker --strict
+
+# Strict + loop (continuous with verification)
+/teamwork-worker --strict --loop
+
+# Strict + role specialization
+/teamwork-worker --role test --strict
 
 # Specific project
 /teamwork-worker --project myapp --team feature-x

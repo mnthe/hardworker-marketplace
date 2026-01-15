@@ -43,6 +43,8 @@ Start one with: /teamwork "your goal"
 **Otherwise, read:**
 - project.json
 - All task files in tasks/
+- waves.json (if exists - for wave-based projects)
+- verification/*.json (if exists - for verification results)
 
 ## Step 3: Calculate Statistics
 
@@ -58,6 +60,20 @@ Count by role:
 Calculate:
 - Overall progress percentage
 - Active workers (tasks with owner)
+
+**If waves.json exists (wave-based project):**
+
+Count by wave:
+- Wave status (planning/in_progress/verified/failed)
+- Tasks per wave
+- Completed tasks per wave
+- Wave verification results
+
+Parse verification files:
+- Read verification/*.json
+- Extract verdict (PASS/FAIL)
+- Extract test results
+- Extract conflict information
 
 ## Step 4: Display Dashboard
 
@@ -81,6 +97,40 @@ Calculate:
  Open:       3 tasks
  In Progress: 1 task
  Completed:  6 tasks
+
+{If waves.json exists:}
+───────────────────────────────────────────────────────────
+ WAVE PROGRESS
+───────────────────────────────────────────────────────────
+
+ Wave 1: ✅ VERIFIED   (3/3 tasks, 100%)
+ Wave 2: ✅ VERIFIED   (5/5 tasks, 100%)
+ Wave 3: ⏳ IN PROGRESS (2/4 tasks, 50%)
+         Task 7: ✓ resolved
+         Task 8: ◐ in progress (session-abc)
+         Task 9: ○ open
+         Task 10: ○ open
+ Wave 4: ⏸️  PENDING    (0/2 tasks, 0%)
+         (blocked by Wave 3)
+
+ Overall: Wave 3/4 active
+
+{If verification files exist:}
+───────────────────────────────────────────────────────────
+ VERIFICATION
+───────────────────────────────────────────────────────────
+
+ Wave 1: ✅ PASS (verified 2026-01-15 10:30)
+         - Build passed
+         - Tests passed (15/15)
+         - No conflicts
+
+ Wave 2: ✅ PASS (verified 2026-01-15 11:45)
+         - Build passed
+         - Tests passed (23/23)
+         - No conflicts
+
+ Wave 3: (in progress, not yet verified)
 
 ───────────────────────────────────────────────────────────
  BY ROLE
@@ -109,9 +159,14 @@ Calculate:
 
  /teamwork-worker              Start working on tasks
  /teamwork-worker --loop       Continuous worker mode
+ /teamwork-worker --strict     Strict evidence mode (for waves)
  /teamwork-status --verbose    Show task details
 
 ═══════════════════════════════════════════════════════════
+
+{Wave-based projects show additional sections:}
+- WAVE PROGRESS: Shows wave-by-wave execution status
+- VERIFICATION: Shows verification results for completed waves
 ```
 
 ## Step 5: Verbose Mode (if --verbose)
