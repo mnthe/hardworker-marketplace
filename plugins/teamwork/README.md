@@ -8,18 +8,23 @@ Teamwork enables distributed collaboration across multiple Claude sessions. A co
 
 **Key capabilities:**
 - Role-based task assignment (frontend, backend, test, devops, etc.)
+- Wave-based parallel execution with dependency management (v2)
+- Three-tier verification (task, wave, project levels) (v2)
 - File-per-task storage with atomic operations
 - Continuous loop mode for unattended execution
-- Dashboard status view with progress tracking
+- Dashboard status view with wave progress tracking
 - Cross-platform support (Windows, MacOS, Linux)
 
 ## Features
 
+- **Wave-Based Execution** (v2): Tasks organized into parallel execution waves based on dependencies
 - **Parallel Execution**: Multiple workers run simultaneously in separate terminals
 - **Role Specialization**: Workers filter tasks by role (frontend, backend, test, etc.)
+- **Three-Tier Verification** (v2): Task-level, wave-level, and final project verification
+- **Structured Evidence** (v2): Command outputs, file changes, and test results tracked systematically
 - **Atomic Operations**: File-based locking prevents race conditions
 - **Loop Mode**: Workers automatically claim next task until project complete
-- **Progress Dashboard**: Real-time status view with completion metrics
+- **Progress Dashboard**: Real-time status view with wave progress and completion metrics
 - **Zero Build Step**: Pure JavaScript with JSDoc types (no TypeScript compilation)
 
 ## Installation
@@ -39,7 +44,29 @@ claude --plugin-dir /path/to/teamwork
 
 ## Usage
 
-### Basic Workflow
+### Basic Workflow (v2 with Waves)
+
+```bash
+# Terminal 1: Start project with plan documents (enables wave execution)
+/teamwork --plans docs/plan1.md docs/plan2.md
+
+# Or with goal (traditional mode)
+/teamwork "build REST API with authentication and tests"
+
+# Terminal 2: Start backend worker
+/teamwork-worker --role backend --loop
+
+# Terminal 3: Start frontend worker
+/teamwork-worker --role frontend --loop
+
+# Terminal 4: Check progress with wave visualization
+/teamwork-status
+
+# Terminal 5 (optional): Manual verification trigger
+/teamwork-verify --wave 2
+```
+
+### Traditional Workflow (v1 compatibility)
 
 ```bash
 # Terminal 1: Start project (coordination)
@@ -86,9 +113,10 @@ claude --plugin-dir /path/to/teamwork
 
 | Command            | Description                                             | Options                                                                   |
 | ------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `/teamwork <goal>` | Start coordination session, create task breakdown       | `--project NAME`, `--team NAME`                                           |
+| `/teamwork <goal>` | Start coordination session, create task breakdown       | `--project NAME`, `--team NAME`, `--plans FILE...` (v2)                   |
 | `/teamwork-status` | View dashboard with progress metrics and active workers | `--project NAME`, `--team NAME`, `--verbose`                              |
-| `/teamwork-worker` | Claim and complete one task (one-shot mode)             | `--loop`, `--role ROLE`, `--project NAME`, `--team NAME`                  |
+| `/teamwork-worker` | Claim and complete one task (one-shot mode)             | `--loop`, `--role ROLE`, `--strict` (v2), `--project NAME`, `--team NAME` |
+| `/teamwork-verify` | Trigger manual verification (v2)                        | `--wave N`, `--final`, `--project NAME`, `--team NAME`                    |
 
 ### Options
 
@@ -98,6 +126,7 @@ claude --plugin-dir /path/to/teamwork
 | ---------------- | ---------------------------------------------- |
 | `--project NAME` | Override project name (default: git repo name) |
 | `--team NAME`    | Override team name (default: git branch name)  |
+| `--plans FILE...` | (v2) Plan documents to parse for wave-based execution |
 
 #### /teamwork-worker
 
@@ -105,6 +134,7 @@ claude --plugin-dir /path/to/teamwork
 | ---------------- | ------------------------------------------------------- |
 | `--loop`         | Continuous mode - keep working until all tasks complete |
 | `--role ROLE`    | Only claim tasks assigned to this role                  |
+| `--strict`       | (v2) Require structured evidence (ultrawork-level verification) |
 | `--project NAME` | Override project name detection                         |
 | `--team NAME`    | Override team name detection                            |
 
@@ -116,19 +146,31 @@ claude --plugin-dir /path/to/teamwork
 | `--team NAME`    | Override team name detection                      |
 | `--verbose`      | Show detailed task list with status and ownership |
 
+#### /teamwork-verify (v2)
+
+| Option           | Description                                       |
+| ---------------- | ------------------------------------------------- |
+| `--wave N`       | Verify specific wave (cross-task checks)          |
+| `--final`        | Run final project verification                    |
+| `--project NAME` | Override project name detection                   |
+| `--team NAME`    | Override team name detection                      |
+
 ## Agents
 
-| Agent           | Model   | Purpose            | Key Responsibilities                                            |
-| --------------- | ------- | ------------------ | --------------------------------------------------------------- |
-| **coordinator** | opus    | Planning           | Breaks down goals into tasks, assigns roles, creates task files |
-| **frontend**    | inherit | UI Implementation  | UI components, styling, user interactions                       |
-| **backend**     | inherit | API Implementation | API endpoints, services, database, business logic               |
-| **test**        | inherit | Testing            | Unit tests, integration tests, fixtures, mocks                  |
-| **devops**      | inherit | Infrastructure     | CI/CD pipelines, deployment, infrastructure                     |
-| **docs**        | inherit | Documentation      | README files, API documentation, examples                       |
-| **security**    | inherit | Security           | Authentication, authorization, input validation                 |
-| **review**      | inherit | Code Review        | Code review, refactoring suggestions                            |
-| **worker**      | inherit | General Purpose    | Claims tasks for any role (fallback agent)                      |
+| Agent               | Model   | Purpose                   | Key Responsibilities                                            |
+| ------------------- | ------- | ------------------------- | --------------------------------------------------------------- |
+| **orchestrator**    | opus    | Monitoring & Orchestration | (v2) Monitors waves, triggers verification, handles conflicts  |
+| **wave-verifier**   | sonnet  | Wave Verification         | (v2) Cross-task checks, conflict detection, wave-level tests    |
+| **final-verifier**  | opus    | Project Verification      | (v2) Full project build/test, evidence completeness validation  |
+| **coordinator**     | opus    | Planning                  | Breaks down goals into tasks, assigns roles, creates task files |
+| **frontend**        | inherit | UI Implementation         | UI components, styling, user interactions                       |
+| **backend**         | inherit | API Implementation        | API endpoints, services, database, business logic               |
+| **test**            | inherit | Testing                   | Unit tests, integration tests, fixtures, mocks                  |
+| **devops**          | inherit | Infrastructure            | CI/CD pipelines, deployment, infrastructure                     |
+| **docs**            | inherit | Documentation             | README files, API documentation, examples                       |
+| **security**        | inherit | Security                  | Authentication, authorization, input validation                 |
+| **review**          | inherit | Code Review               | Code review, refactoring suggestions                            |
+| **worker**          | inherit | General Purpose           | Claims tasks for any role (fallback agent)                      |
 
 ## How It Works
 
@@ -170,6 +212,32 @@ Shows progress dashboard:
 - Per-role completion metrics
 - Active workers and claimed tasks
 - Blocked tasks waiting on dependencies
+```
+
+### Phase 4: Verification (v2)
+
+```
+Wave N completed (all tasks resolved)
+    ↓
+Orchestrator detects completion
+    ↓
+Triggers wave-verifier agent
+    ↓
+Cross-task checks:
+- File conflict detection
+- Dependency validation
+- Wave-scoped build/test
+    ↓
+Results: PASS → next wave | FAIL → fix tasks added
+    ↓ (if final wave passed)
+Triggers final-verifier agent
+    ↓
+Project-level checks:
+- Full build/test
+- Evidence completeness
+- Blocked pattern scanning
+    ↓
+Results: PASS → COMPLETE | FAIL → new fix wave
 ```
 
 ### Concurrency Safety
@@ -217,10 +285,15 @@ Tasks are assigned roles during coordination phase:
 ```
 ~/.claude/teamwork/{project}/{team}/
 ├── project.json              # Project metadata and statistics
-└── tasks/
-    ├── 1.json                # Individual task files
-    ├── 2.json
-    └── ...
+├── waves.json                # Wave definitions and progress (v2)
+├── tasks/
+│   ├── 1.json                # Individual task files
+│   ├── 2.json
+│   └── ...
+└── verification/             # Verification results (v2)
+    ├── wave-1.json
+    ├── wave-2.json
+    └── final.json
 ```
 
 ### Task File Format
@@ -232,10 +305,26 @@ Tasks are assigned roles during coordination phase:
   "description": "Create user and post tables with migrations",
   "role": "backend",
   "status": "open",
+  "blocked_by": [],
+  "wave": 1,
   "created_at": "2026-01-12T10:30:00Z",
   "updated_at": "2026-01-12T10:30:00Z",
   "claimed_by": null,
-  "evidence": []
+  "evidence": [
+    {
+      "type": "command",
+      "command": "npm run migrate",
+      "output": "Migration completed successfully",
+      "exit_code": 0,
+      "timestamp": "2026-01-12T10:35:00Z"
+    },
+    {
+      "type": "file",
+      "action": "created",
+      "path": "prisma/migrations/001_users/migration.sql",
+      "timestamp": "2026-01-12T10:34:00Z"
+    }
+  ]
 }
 ```
 
@@ -243,6 +332,12 @@ Tasks are assigned roles during coordination phase:
 - `open`: Available for claiming
 - `in_progress`: Claimed by a worker
 - `resolved`: Completed with evidence
+
+**Evidence types (v2):**
+- `command`: Command execution with exit code
+- `file`: File operations (created, modified, deleted)
+- `test`: Test results with pass/fail counts
+- `note`: General observations
 
 ### Project File Format
 
@@ -378,6 +473,35 @@ nano ~/.claude/teamwork/{project}/{team}/tasks/{id}.json
 # Or delete corrupted task and recreate
 rm ~/.claude/teamwork/{project}/{team}/tasks/{id}.json
 ```
+
+## Backward Compatibility
+
+Teamwork v2 maintains full backward compatibility with v1:
+
+### Compatibility Matrix
+
+| Feature | v1 Behavior | v2 Behavior | Migration Required |
+|---------|-------------|-------------|-------------------|
+| **Commands** | `/teamwork`, `/teamwork-worker`, `/teamwork-status` | Same + `/teamwork-verify` | No - all v1 commands work |
+| **Evidence** | Simple strings | Structured objects | No - both formats supported |
+| **Waves** | Not used | Optional wave execution | No - enabled via `--plans` flag |
+| **Verification** | Manual | Automatic (if waves.json exists) | No - opt-in |
+
+### Migration Paths
+
+**Existing Projects (v1 → v2)**:
+1. Continue using v1 mode (no changes needed)
+2. Add `waves.json` manually to enable wave verification
+3. Use `--plans` flag on new projects for wave support
+
+**New Projects**:
+- Use `--plans` flag: Enables wave-based execution and verification
+- Use goal string: Traditional v1 mode without waves
+
+**Mixed Mode**:
+- v1 projects can adopt wave verification by adding `waves.json`
+- Workers support both evidence formats simultaneously
+- Dashboard shows wave progress if waves.json exists, otherwise traditional view
 
 ## Requirements
 
