@@ -25,6 +25,12 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  * @property {string} [id]
  * @property {TaskStatus} [status]
  * @property {string} [addEvidence]
+ * @property {string} [evidenceType]
+ * @property {string} [command]
+ * @property {string} [output]
+ * @property {string} [exitCode]
+ * @property {string} [path]
+ * @property {string} [action]
  * @property {string} [owner]
  * @property {boolean} [release]
  * @property {boolean} [help]
@@ -39,6 +45,12 @@ const ARG_SPEC = {
   '--id': { key: 'id', alias: '-i', required: true },
   '--status': { key: 'status', alias: '-s' },
   '--add-evidence': { key: 'addEvidence', alias: '-e' },
+  '--evidence-type': { key: 'evidenceType' },
+  '--command': { key: 'command' },
+  '--output': { key: 'output' },
+  '--exit-code': { key: 'exitCode' },
+  '--path': { key: 'path' },
+  '--action': { key: 'action' },
   '--owner': { key: 'owner', alias: '-o' },
   '--release': { key: 'release', alias: '-r', flag: true },
   '--help': { key: 'help', alias: '-h', flag: true }
@@ -92,7 +104,32 @@ async function main() {
 
       // Add evidence if provided
       if (args.addEvidence) {
+        // Simple string evidence (backward compatibility)
         task.evidence.push(args.addEvidence);
+      } else if (args.evidenceType) {
+        // Structured evidence
+        const evidence = {
+          type: args.evidenceType,
+          timestamp: new Date().toISOString()
+        };
+
+        // Add type-specific fields
+        if (args.evidenceType === 'command') {
+          if (args.command) evidence.command = args.command;
+          if (args.output) evidence.output = args.output;
+          if (args.exitCode !== undefined) evidence.exit_code = parseInt(args.exitCode, 10);
+        } else if (args.evidenceType === 'file') {
+          if (args.path) evidence.path = args.path;
+          if (args.action) evidence.action = args.action;
+        } else if (args.evidenceType === 'test') {
+          if (args.command) evidence.command = args.command;
+          if (args.output) evidence.output = args.output;
+          if (args.exitCode !== undefined) evidence.exit_code = parseInt(args.exitCode, 10);
+        } else if (args.evidenceType === 'manual') {
+          if (args.output) evidence.description = args.output;
+        }
+
+        task.evidence.push(evidence);
       }
 
       // Update owner if provided

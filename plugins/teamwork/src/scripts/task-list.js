@@ -26,6 +26,7 @@ const { getTasksDir, listTaskIds, readTask } = require('../lib/project-utils.js'
  * @property {string} [team]
  * @property {TaskStatus} [status]
  * @property {Role} [role]
+ * @property {string} [wave]
  * @property {boolean} [available]
  * @property {'json'|'table'} [format]
  */
@@ -35,6 +36,7 @@ const ARG_SPEC = {
   '--team': { key: 'team', alias: '-t', required: true },
   '--status': { key: 'status', alias: '-s' },
   '--role': { key: 'role', alias: '-r' },
+  '--wave': { key: 'wave', alias: '-w' },
   '--available': { key: 'available', alias: '-a', flag: true },
   '--format': { key: 'format', alias: '-f', default: 'table' },
   '--help': { key: 'help', alias: '-h', flag: true }
@@ -58,6 +60,11 @@ function matchesFilters(task, args) {
 
   // Role filter
   if (args.role && task.role !== args.role) {
+    return false;
+  }
+
+  // Wave filter
+  if (args.wave && task.wave !== args.wave) {
     return false;
   }
 
@@ -91,10 +98,16 @@ function listTasks(args) {
   // Collect tasks
   const taskIds = listTaskIds(args.project, args.team);
   const tasks = [];
+  let hasWaveField = false;
 
   for (const taskId of taskIds) {
     try {
       const task = readTask(args.project, args.team, taskId);
+
+      // Check if any task has wave field
+      if (task.wave !== undefined) {
+        hasWaveField = true;
+      }
 
       // Apply filters
       if (matchesFilters(task, args)) {
@@ -111,10 +124,19 @@ function listTasks(args) {
     console.log(JSON.stringify(tasks, null, 2));
   } else {
     // Table format
-    console.log('ID|STATUS|ROLE|TITLE|CLAIMED_BY');
-    for (const task of tasks) {
-      const claimedBy = task.claimed_by || '';
-      console.log(`${task.id}|${task.status}|${task.role}|${task.title}|${claimedBy}`);
+    if (hasWaveField) {
+      console.log('ID|STATUS|ROLE|WAVE|TITLE|CLAIMED_BY');
+      for (const task of tasks) {
+        const claimedBy = task.claimed_by || '';
+        const wave = task.wave || '';
+        console.log(`${task.id}|${task.status}|${task.role}|${wave}|${task.title}|${claimedBy}`);
+      }
+    } else {
+      console.log('ID|STATUS|ROLE|TITLE|CLAIMED_BY');
+      for (const task of tasks) {
+        const claimedBy = task.claimed_by || '';
+        console.log(`${task.id}|${task.status}|${task.role}|${task.title}|${claimedBy}`);
+      }
     }
   }
 }

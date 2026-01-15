@@ -30,6 +30,7 @@ const {
  * @property {string} [title]
  * @property {string} [description]
  * @property {Role} [role]
+ * @property {string} [wave]
  */
 
 const ARG_SPEC = {
@@ -39,6 +40,7 @@ const ARG_SPEC = {
   '--title': { key: 'title', required: true },
   '--description': { key: 'description', alias: '-d' },
   '--role': { key: 'role', alias: '-r', default: 'worker' },
+  '--wave': { key: 'wave', alias: '-w' },
   '--help': { key: 'help', alias: '-h', flag: true }
 };
 
@@ -80,6 +82,11 @@ function createTask(args) {
     claimed_by: null,
     evidence: [],
   };
+
+  // Add wave field if provided
+  if (args.wave) {
+    task.wave = args.wave;
+  }
 
   // Write task JSON
   fs.writeFileSync(taskFile, JSON.stringify(task, null, 2), 'utf-8');
