@@ -1,7 +1,7 @@
 ---
 name: teamwork
 description: "Start a teamwork project with multi-session collaboration support"
-argument-hint: "[--project NAME] [--team NAME] <goal> | --help"
+argument-hint: "[--project NAME] [--team NAME] [--plans FILE1,FILE2,...] <goal> | --help"
 allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-teamwork.js:*)", "Task", "TaskOutput", "Read", "Edit", "AskUserQuestion", "mcp__plugin_serena_serena__activate_project"]
 ---
 
@@ -50,8 +50,74 @@ Parse the output to get:
 - Sub-team name
 - Teamwork directory path
 - Goal
+- Plans option (if provided)
 
-## Step 2: Spawn Coordinator
+## Step 2: Load Plan Documents (if --plans provided)
+
+**If `--plans` option was provided:**
+
+Read each plan file specified:
+
+```bash
+# For each plan file in comma-separated list
+cat {plan_file_1}
+cat {plan_file_2}
+```
+
+**Plans are optional.** If no plans provided, skip this step.
+
+**Plan documents provide:**
+- Technical requirements
+- Component breakdown
+- Dependencies between components
+- Acceptance criteria
+- Architecture decisions
+
+## Step 3: Spawn Orchestrator or Coordinator
+
+**Decision logic:**
+
+- **If `--plans` provided** → Spawn **orchestrator** (wave-based execution with monitoring)
+- **If no plans** → Spawn **coordinator** (simple task decomposition)
+
+### Option A: Spawn Orchestrator (with --plans)
+
+<CRITICAL>
+**SPAWN THE ORCHESTRATOR AGENT NOW.**
+
+The orchestrator will:
+1. Load plan documents
+2. Explore the codebase
+3. Create task breakdown with dependencies
+4. Calculate waves for parallel execution
+5. Monitor wave execution continuously
+6. Trigger wave verification after each wave
+7. Handle verification failures
+8. Report project completion
+</CRITICAL>
+
+**ACTION REQUIRED - Call Task tool with:**
+- subagent_type: "teamwork:orchestrator"
+- model: "opus"
+- prompt:
+  ```
+  TEAMWORK_DIR: {teamwork_dir}
+  PROJECT: {project}
+  SUB_TEAM: {sub_team}
+
+  Goal: {goal}
+
+  Options:
+  - plans: {comma_separated_plan_files}
+  - monitor_interval: 10
+  - max_iterations: 1000
+  ```
+
+Wait for orchestrator to complete using TaskOutput.
+
+**Note:** Orchestrator runs a monitoring loop, so this may take longer than coordinator.
+
+### Option B: Spawn Coordinator (no plans - simple mode)
 
 <CRITICAL>
 **SPAWN THE COORDINATOR AGENT NOW.**
@@ -77,7 +143,7 @@ The coordinator will:
 
 Wait for coordinator to complete using TaskOutput.
 
-## Step 3: Display Results
+## Step 4: Display Results
 
 Read the project.json and task files:
 
@@ -118,6 +184,7 @@ Display summary:
 |--------|-------------|
 | `--project NAME` | Override project name (default: git repo name) |
 | `--team NAME` | Override sub-team name (default: branch name) |
+| `--plans FILE1,FILE2,...` | Load plan documents for wave-based execution (spawns orchestrator instead of coordinator) |
 
 ---
 

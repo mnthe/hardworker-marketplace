@@ -1,7 +1,7 @@
 ---
 name: teamwork-worker
 description: "Claim and complete teamwork tasks (one-shot or continuous loop)"
-argument-hint: "[--project NAME] [--team NAME] [--role ROLE] [--loop] | --help"
+argument-hint: "[--project NAME] [--team NAME] [--role ROLE] [--loop] [--strict] | --help"
 allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/worker-setup.js:*)", "Task", "TaskOutput", "Read", "Edit", "mcp__plugin_serena_serena__activate_project"]
 ---
 
@@ -48,6 +48,7 @@ Parse the output to get:
 - Sub-team name
 - Role filter (optional)
 - Loop mode (true/false)
+- Strict mode (true/false)
 - Teamwork directory path
 
 **If no project found:** Show error and suggest `/teamwork "goal"` first.
@@ -93,9 +94,21 @@ Use /teamwork-status to check progress.
 
   Options:
   - role_filter: {role or null}
+  - strict_mode: {true or false}
   ```
 
 Wait for worker to complete using TaskOutput.
+
+**Strict Mode Behavior:**
+
+When `--strict` is enabled, workers must:
+- Provide concrete evidence for EVERY success criterion
+- Run tests and capture exit codes
+- Document file paths created/modified
+- Include command outputs in evidence
+- Never mark tasks resolved without verification
+
+Without `--strict`, workers use relaxed evidence collection (implementation-focused).
 
 ## Step 4: Report Result
 
