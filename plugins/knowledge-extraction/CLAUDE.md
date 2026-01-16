@@ -29,6 +29,8 @@ plugins/knowledge-extraction/
 │   └── insight-extractor/
 │       └── AGENT.md          # Insight extraction agent
 ├── src/
+│   ├── lib/
+│   │   └── hook-utils.js    # Shared hook utilities
 │   └── hooks/
 │       └── auto-extract-insight.js  # Hook implementation
 ├── hooks/
@@ -46,6 +48,12 @@ All hook scripts use Bun runtime and read JSON input from stdin.
 | Script | Purpose | Key Parameters |
 |--------|---------|----------------|
 | **auto-extract-insight.js** | Hook for automatic insight extraction from transcript. Parses ★ Insight markers, saves to insights.md with context, tracks state to prevent duplicates, recommends extraction when threshold reached (Stop hook only). | Reads from stdin: `session_id`, `transcript_path`, `hook_event_name`, `stop_hook_active` |
+
+### Shared Libraries
+
+| Library | Location | Purpose | Exports |
+|---------|----------|---------|---------|
+| **hook-utils.js** | src/lib/hook-utils.js | Shared utilities for hook scripts | `readStdin()` - Reads JSON input from stdin |
 
 ## Hook Inventory
 

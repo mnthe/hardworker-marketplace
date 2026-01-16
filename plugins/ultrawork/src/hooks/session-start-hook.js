@@ -8,6 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { readStdin, createSessionStart, runHook } = require('../lib/hook-utils.js');
 
 /**
  * @typedef {Object} HookInput
@@ -18,26 +19,6 @@ const os = require('os');
  * @typedef {Object} SessionData
  * @property {string} [phase]
  */
-
-/**
- * SessionStart hook output format (top-level properties, no hookSpecificOutput)
- * @typedef {Object} HookOutput
- * @property {string} [systemMessage] - Message shown to Claude
- */
-
-/**
- * Read all stdin data
- * @returns {Promise<string>}
- */
-async function readStdin() {
-  const chunks = [];
-
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
-  }
-
-  return chunks.join('');
-}
 
 /**
  * Cleanup old sessions (completed/cancelled/failed older than 7 days)

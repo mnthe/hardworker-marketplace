@@ -30,7 +30,8 @@ plugins/teamwork/
 │   │   ├── file-lock.js       # Cross-platform file locking with owner identification
 │   │   ├── optimistic-lock.js # Task claim/release with file lock protection
 │   │   ├── project-utils.js   # Project and task path utilities
-│   │   └── args.js            # Common argument parsing
+│   │   ├── args.js            # Common argument parsing
+│   │   └── hook-utils.js      # Hook utilities (stdin, output, error handling)
 │   ├── scripts/               # CLI scripts (15 files)
 │   │   ├── setup-teamwork.js
 │   │   ├── project-create.js
