@@ -72,12 +72,12 @@ bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --available --ro
 # Claim a task (--owner uses session ID for lock identification)
 bun $SCRIPTS/task-claim.js --project {PROJECT} --team {SUB_TEAM} --id 1 --owner ${CLAUDE_SESSION_ID}
 
-# Update task
+# Update task (--owner for lock identification)
 bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id 1 \
-  --status resolved --add-evidence "npm test: 15/15 passed"
+  --status resolved --add-evidence "npm test: 15/15 passed" --owner ${CLAUDE_SESSION_ID}
 
 # Release task (on failure)
-bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id 1 --release
+bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id 1 --release --owner ${CLAUDE_SESSION_ID}
 ```
 
 ## Process
@@ -152,7 +152,8 @@ All command evidence MUST include exit code:
 bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
   --status resolved \
   --add-evidence "Created src/models/User.ts" \
-  --add-evidence "npm test: 15/15 passed, exit 0"
+  --add-evidence "npm test: 15/15 passed, exit 0" \
+  --owner ${CLAUDE_SESSION_ID}
 ```
 
 **On Failure:**
@@ -160,10 +161,11 @@ bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
 ```bash
 # Add evidence of what went wrong
 bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
-  --add-evidence "FAILED: npm test exited with code 1"
+  --add-evidence "FAILED: npm test exited with code 1" \
+  --owner ${CLAUDE_SESSION_ID}
 
 # Release the task for another worker
-bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} --release
+bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} --release --owner ${CLAUDE_SESSION_ID}
 ```
 
 Do NOT mark as resolved if failed - release the task for retry.
@@ -271,7 +273,8 @@ Set task verification status in task metadata:
 ```bash
 bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
   --verification-status pass \
-  --verification-notes "All 3 criteria met with concrete evidence"
+  --verification-notes "All 3 criteria met with concrete evidence" \
+  --owner ${CLAUDE_SESSION_ID}
 ```
 
 **Verification Status Values:**

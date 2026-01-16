@@ -81,8 +81,11 @@ async function main() {
       process.exit(1);
     }
 
-    // Acquire lock
-    const acquired = await acquireLock(taskFile);
+    // Get owner for lock identification
+    const owner = args.owner || process.env.CLAUDE_SESSION_ID;
+
+    // Acquire lock with owner identification
+    const acquired = await acquireLock(taskFile, owner);
     if (!acquired) {
       console.error(`Error: Failed to acquire lock for task ${args.id}`);
       process.exit(1);
@@ -159,7 +162,7 @@ async function main() {
       console.log(`OK: Task ${args.id} updated`);
       console.log(JSON.stringify(task, null, 2));
     } finally {
-      releaseLock(taskFile);
+      releaseLock(taskFile, owner);
     }
   } catch (error) {
     if (error instanceof Error) {

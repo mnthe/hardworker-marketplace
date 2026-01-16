@@ -87,7 +87,7 @@ bun $SCRIPTS/task-get.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
 bun $SCRIPTS/task-claim.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} --owner ${CLAUDE_SESSION_ID}
 
 bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
-  --status resolved --add-evidence "..."
+  --status resolved --add-evidence "..." --owner ${CLAUDE_SESSION_ID}
 
 # Wave management
 bun $SCRIPTS/wave-calculate.js --project {PROJECT} --team {SUB_TEAM}
