@@ -608,7 +608,7 @@ Limit concurrent workers to reduce resource usage:
 /ultrawork --max-workers 2 "large refactoring"
 ```
 
-Default: 4 workers. Reduce for:
+Default: unlimited (0). Reduce for:
 - Resource-constrained environments
 - Tasks with heavy build steps
 - Debugging (easier to follow logs)
