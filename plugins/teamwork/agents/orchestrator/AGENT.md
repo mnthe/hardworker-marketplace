@@ -69,7 +69,7 @@ Options:
 ## Utility Scripts
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/plugins/teamwork/src/scripts"
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Project management
 bun $SCRIPTS/project-create.js --project {PROJECT} --team {SUB_TEAM} --goal "..."
