@@ -1,5 +1,8 @@
 # Plugin Documentation Standards
 
+**Source of Truth**: This file (authoritative for plugin documentation format)
+**Last Updated**: 2026-01-16
+
 ## README.md Format
 
 User-facing documentation for plugin installation, usage, and troubleshooting.
