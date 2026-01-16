@@ -56,10 +56,10 @@ WAVE_ID: {wave number}
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Get all tasks for the wave
-bun $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --format json
+bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --format json
 
 # Get task details
-bun $SCRIPTS/task-get.js --dir {TEAMWORK_DIR} --id {TASK_ID}
+bun $SCRIPTS/task-get.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
 ```
 
 ## Process
@@ -68,7 +68,7 @@ bun $SCRIPTS/task-get.js --dir {TEAMWORK_DIR} --id {TASK_ID}
 
 ```bash
 # List all tasks to find wave tasks
-bun $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --format json
+bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --format json
 
 # Read each task file to extract evidence
 cat {TEAMWORK_DIR}/tasks/{id}.json

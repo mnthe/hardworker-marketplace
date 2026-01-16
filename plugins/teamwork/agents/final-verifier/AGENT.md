@@ -56,10 +56,10 @@ SUB_TEAM: {sub-team name}
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Get all tasks
-bun $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --format json
+bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --format json
 
 # Get task details
-bun $SCRIPTS/task-get.js --dir {TEAMWORK_DIR} --id {TASK_ID}
+bun $SCRIPTS/task-get.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
 ```
 
 ## Blocked Patterns
@@ -86,7 +86,7 @@ These patterns indicate incomplete or unprofessional work and must be flagged:
 
 ```bash
 # List all tasks
-bun $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --format json
+bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --format json
 
 # Read each task file to extract evidence
 cat {TEAMWORK_DIR}/tasks/{id}.json

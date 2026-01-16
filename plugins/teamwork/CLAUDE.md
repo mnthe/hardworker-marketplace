@@ -496,7 +496,6 @@ Teamwork v2 maintains full backward compatibility with v1:
 
 ```bash
 bun src/scripts/project-create.js \
-  --dir ~/.claude/teamwork/my-app/auth-team \
   --project my-app \
   --team auth-team \
   --goal "Implement user authentication"
@@ -519,13 +518,15 @@ bun src/scripts/task-create.js \
 ```bash
 # All available tasks
 bun src/scripts/task-list.js \
-  --dir ~/.claude/teamwork/my-app/auth-team \
+  --project my-app \
+  --team auth-team \
   --available \
   --format json
 
 # Filter by role
 bun src/scripts/task-list.js \
-  --dir ~/.claude/teamwork/my-app/auth-team \
+  --project my-app \
+  --team auth-team \
   --available \
   --role backend
 ```
@@ -534,7 +535,8 @@ bun src/scripts/task-list.js \
 
 ```bash
 bun src/scripts/task-claim.js \
-  --dir ~/.claude/teamwork/my-app/auth-team \
+  --project my-app \
+  --team auth-team \
   --id "1" \
   --owner session-abc-123
 ```
@@ -544,20 +546,23 @@ bun src/scripts/task-claim.js \
 ```bash
 # Add evidence
 bun src/scripts/task-update.js \
-  --dir ~/.claude/teamwork/my-app/auth-team \
+  --project my-app \
+  --team auth-team \
   --id "1" \
   --add-evidence "Created src/middleware/auth.ts"
 
 # Mark resolved
 bun src/scripts/task-update.js \
-  --dir ~/.claude/teamwork/my-app/auth-team \
+  --project my-app \
+  --team auth-team \
   --id "1" \
   --status resolved \
   --add-evidence "npm test: 5/5 passed, exit 0"
 
 # Release task (on failure)
 bun src/scripts/task-update.js \
-  --dir ~/.claude/teamwork/my-app/auth-team \
+  --project my-app \
+  --team auth-team \
   --id "1" \
   --release
 ```
