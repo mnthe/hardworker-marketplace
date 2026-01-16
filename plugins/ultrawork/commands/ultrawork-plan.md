@@ -226,10 +226,14 @@ Reference: `skills/planning/SKILL.md`
 # Get session directory
 SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
 
-# Read lightweight summary
-Read("$SESSION_DIR/context.json")
+# Get context summary (AI-friendly markdown) - NEVER use Read on JSON
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-get.js" --session ${CLAUDE_SESSION_ID} --summary
 
-# Read detailed exploration as needed
+# Or get specific fields
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-get.js" --session ${CLAUDE_SESSION_ID} --field key_files
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-get.js" --session ${CLAUDE_SESSION_ID} --field patterns
+
+# Read detailed exploration files (Markdown OK)
 Read("$SESSION_DIR/exploration/exp-1.md")
 Read("$SESSION_DIR/exploration/exp-2.md")
 Read("$SESSION_DIR/exploration/exp-3.md")
@@ -253,9 +257,9 @@ Based on the goal "{goal}", I found:
 If scope expansion was detected, display it and ask user preference:
 
 ```python
-# Read context.json
-context_data = Read(f"{SESSION_DIR}/context.json")
-# Parse JSON to get scopeExpansion
+# Get scopeExpansion via script (NEVER Read JSON directly)
+# Bash: bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-get.js" --session ${CLAUDE_SESSION_ID} --field scopeExpansion
+scopeExpansion = parse_json(scope_output)
 
 if scopeExpansion and scopeExpansion.get('dependencies'):
     # Display analysis

@@ -27,23 +27,24 @@ plugins/ultrawork/
 │   │   ├── types.js           # JSDoc type definitions (@typedef)
 │   │   ├── file-lock.js       # Cross-platform file locking
 │   │   └── session-utils.js   # Session management utilities
-│   ├── scripts/               # CLI scripts (17 files)
+│   ├── scripts/               # CLI scripts (18 files)
 │   │   ├── setup-ultrawork.js
 │   │   ├── session-get.js
-│   │   ├── session-field.js     # NEW: Optimized single field extraction (supports dot notation for nested fields)
+│   │   ├── session-field.js     # Optimized single field extraction
 │   │   ├── session-update.js
 │   │   ├── task-create.js
 │   │   ├── task-get.js
 │   │   ├── task-list.js
 │   │   ├── task-update.js
-│   │   ├── task-summary.js      # NEW: AI-friendly task markdown
+│   │   ├── task-summary.js      # AI-friendly task markdown
 │   │   ├── context-init.js
 │   │   ├── context-add.js
+│   │   ├── context-get.js       # Read context.json with field extraction
 │   │   ├── ultrawork-status.js
 │   │   ├── ultrawork-clean.js
 │   │   ├── ultrawork-evidence.js
-│   │   ├── evidence-summary.js  # NEW: AI-friendly evidence index
-│   │   └── evidence-query.js    # NEW: Filter & query evidence
+│   │   ├── evidence-summary.js  # AI-friendly evidence index
+│   │   └── evidence-query.js    # Filter & query evidence
 │   └── hooks/                 # Lifecycle hooks (9 files)
 │       ├── session-start-hook.js
 │       ├── session-context-hook.js
@@ -86,6 +87,7 @@ All scripts use Bun runtime with flag-based parameters.
 | **task-update.js** | Update task status and add evidence | `--session <ID>` `--task-id "1"` `--status resolved` `--add-evidence "..."` (aliases: --task, --id) |
 | **context-init.js** | Initialize context.json with expected explorers | `--session <ID>` `--expected "overview,exp-1"` |
 | **context-add.js** | Add explorer summary to context.json | `--session <ID>` `--explorer-id "exp-1"` `--summary "..."` `--key-files "f1,f2"` |
+| **context-get.js** | Read context.json data with field extraction | `--session <ID>` `--field explorers` `--summary` `--file` |
 | **ultrawork-status.js** | Display session status dashboard | `--session <ID>` `--all` |
 | **ultrawork-clean.js** | Clean up sessions based on age and status | `--all` `--completed` `--older-than N` |
 | **ultrawork-evidence.js** | View collected evidence log | `--session <ID>` |
@@ -93,6 +95,39 @@ All scripts use Bun runtime with flag-based parameters.
 | **task-summary.js** | Generate AI-friendly task markdown | `--session <ID>` `--task <ID>` `--save` |
 | **evidence-summary.js** | Generate AI-friendly evidence index | `--session <ID>` `--save` `--format md\|json` |
 | **evidence-query.js** | Query evidence with filters | `--session <ID>` `--type test_result` `--last 5` `--search "npm"` `--task 1` |
+
+## Data Access Guide
+
+**Always use scripts for JSON data. Never use Read tool directly on JSON files.**
+
+| Data | Script | When to Use Read |
+|------|--------|------------------|
+| session.json | `session-get.js` | Never |
+| context.json | `context-get.js` | Never |
+| tasks/*.json | `task-get.js`, `task-list.js` | Never |
+| exploration/*.md | - | Always (Markdown OK) |
+| docs/plans/*.md | - | Always (Markdown OK) |
+
+**Why scripts over direct Read?**
+1. **Token efficiency**: JSON wastes tokens on structure (`{`, `"key":`, etc.)
+2. **Field extraction**: Scripts return only needed data (`--field status`)
+3. **AI-friendly output**: `--summary` generates markdown for better comprehension
+4. **Error handling**: Consistent validation and error messages
+5. **Abstraction**: Storage format changes don't affect agent code
+
+**Example patterns:**
+
+```bash
+# BAD: Direct JSON read wastes tokens
+Read("$SESSION_DIR/context.json")  # Returns full JSON with all structure
+
+# GOOD: Script returns only what's needed
+bun "$SCRIPTS/context-get.js" --session ${CLAUDE_SESSION_ID} --summary     # AI-friendly markdown
+bun "$SCRIPTS/context-get.js" --session ${CLAUDE_SESSION_ID} --field key_files  # Just the array
+
+# Markdown files are OK to read directly
+Read("$SESSION_DIR/exploration/overview.md")  # OK
+```
 
 ## Hook Inventory
 
