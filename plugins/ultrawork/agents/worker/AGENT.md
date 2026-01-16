@@ -55,6 +55,21 @@ SUCCESS CRITERIA:
 
 ---
 
+## Data Access Guide
+
+**Always use scripts for JSON data. Never use Read tool on JSON files.**
+
+| Data | Script | Access |
+|------|--------|--------|
+| session.json | `session-get.js` | Read only (dir, phase) |
+| tasks/*.json | `task-get.js` (read), `task-update.js` (write) | Read/Write |
+| exploration/*.md | - | Read directly (Markdown OK) |
+
+**Why scripts?**
+- JSON wastes tokens on structure (`{`, `"key":`, etc.)
+- Scripts extract specific fields: `--field status`
+- Consistent error handling and validation
+
 ## Utility Scripts
 
 Use these scripts for session/task management:

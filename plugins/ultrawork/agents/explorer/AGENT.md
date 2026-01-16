@@ -18,7 +18,7 @@ description: |
   </example>
 model: haiku
 color: cyan
-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/context-*.js:*)", "mcp__plugin_serena_serena__get_symbols_overview", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__search_for_pattern"]
+tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/context-*.js:*)", "mcp__plugin_serena_serena__get_symbols_overview", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__search_for_pattern"]
 ---
 
 # Explorer Agent
@@ -64,6 +64,21 @@ CONTEXT: {summary from overview, optional}
 ```
 
 ---
+
+## Data Access Guide
+
+**Always use scripts for JSON data. Never use Read tool on JSON files.**
+
+| Data | Script | Access |
+|------|--------|--------|
+| session.json | `session-get.js` | Read only (goal, working_dir) |
+| context.json | `context-add.js` | Write only (exploration summary) |
+| exploration/*.md | - | Write (findings), Read (previous explorers) |
+
+**Why scripts?**
+- JSON wastes tokens on structure (`{`, `"key":`, etc.)
+- Scripts extract specific fields: `--field goal`
+- Consistent error handling and validation
 
 ## Utility Scripts
 

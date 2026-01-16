@@ -63,17 +63,17 @@ Options:
 
 **Always use scripts for JSON data. Never use Read tool on JSON files.**
 
-| Data | Script | When to Use Read |
-|------|--------|------------------|
-| session.json | `session-get.js` | Never |
-| context.json | `context-get.js` | Never |
-| tasks/*.json | `task-get.js`, `task-list.js` | Never |
-| exploration/*.md | - | Always (Markdown OK) |
-| docs/plans/*.md | - | Always (Markdown OK) |
+| Data | Script | Access |
+|------|--------|--------|
+| session.json | `session-get.js` (read), `session-update.js` (write) | Read/Write |
+| context.json | `context-get.js` | Read only (exploration summary) |
+| tasks/*.json | `task-create.js` (write) | Write only |
+| exploration/*.md | - | Read directly (Markdown OK) |
+| docs/plans/*.md | - | Write design doc, Read for review |
 
 **Why scripts?**
 - JSON wastes tokens on structure (`{`, `"key":`, etc.)
-- Scripts can extract specific fields: `--field goal`
+- Scripts extract specific fields: `--field goal`
 - Scripts provide summaries: `--summary`
 - Consistent error handling and validation
 

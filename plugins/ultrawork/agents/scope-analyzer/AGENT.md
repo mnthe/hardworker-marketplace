@@ -63,6 +63,23 @@ DESIGN_DOC: {path to design document, optional}
 
 ---
 
+## Data Access Guide
+
+**Always use scripts for JSON data. Never use Read tool on JSON files.**
+
+| Data | Script | Access |
+|------|--------|--------|
+| session.json | `session-get.js` | Read only (goal, working_dir) |
+| context.json | `scope-set.js` | Write only (scopeExpansion) |
+| exploration/*.md | - | Read directly (Markdown OK) |
+
+**Why scripts?**
+- JSON wastes tokens on structure (`{`, `"key":`, etc.)
+- Scripts extract specific fields: `--field goal`
+- Consistent error handling and validation
+
+---
+
 ## Analysis Process
 
 ### Phase 1: Understand Request
