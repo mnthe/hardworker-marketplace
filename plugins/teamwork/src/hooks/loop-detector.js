@@ -201,17 +201,11 @@ async function main() {
         cmd += ` --role ${role}`;
       }
 
-      // Output JSON to trigger fresh restart
+      // Output JSON to trigger fresh restart (block exit, feed command as next prompt)
       outputAndExit({
-        decision: 'restart_fresh',
-        command: cmd,
-        context: {
-          project,
-          team,
-          role,
-          fresh_start_at: state.fresh_start_at,
-        },
-        systemMessage: 'Teamwork loop: fresh start triggered',
+        decision: 'block',
+        reason: cmd,
+        systemMessage: `🔄 Teamwork fresh start | Project: ${project} | Role: ${role}`,
       });
       return;
     }
@@ -241,16 +235,11 @@ async function main() {
       cmd += ` --role ${role}`;
     }
 
-    // Output JSON to trigger next iteration
+    // Output JSON to trigger next iteration (block exit, feed command as next prompt)
     outputAndExit({
-      decision: 'continue',
-      command: cmd,
-      context: {
-        project,
-        team,
-        role,
-      },
-      systemMessage: 'Teamwork loop: continuing to next task',
+      decision: 'block',
+      reason: cmd,
+      systemMessage: `🔄 Teamwork loop | Project: ${project} | Role: ${role}`,
     });
 
   } catch (err) {
