@@ -5,6 +5,7 @@
  * Blocks Edit/Write during PLANNING phase (except design.md, session files)
  * Enforces TDD order: test files must be written before implementation
  * v2.0: Added TDD enforcement
+ * v2.1: Added additionalContext support (Claude Code v2.1.9+)
  */
 
 const fs = require('fs');
@@ -234,32 +235,41 @@ function hasTddRedEvidence(task) {
  * @returns {PreToolUseOutput}
  */
 function createTddViolationResponse(tool, filePath, task) {
-  const reason = `⛔ TDD VIOLATION: Write test first!
+  const reason = `${tool} blocked: TDD requires test-first approach`;
 
-Task "${task.subject}" uses TDD approach.
-You must write and run a failing test BEFORE implementation.
+  const additionalContext = `⛔ TDD VIOLATION: Write test first!
 
-Current file: ${filePath}
-Task ID: ${task.id}
+Task: "${task.subject}" (ID: ${task.id})
 Task approach: tdd
+Current file: ${filePath}
 
-TDD Workflow:
+WHY BLOCKED:
+This task uses Test-Driven Development (TDD) approach. You must write and run a failing test BEFORE writing implementation code. This ensures your tests actually verify the behavior you're implementing.
+
+CURRENT STATE:
+Missing TDD-RED evidence (test not written/run yet)
+
+TDD WORKFLOW:
 1. 🔴 RED: Write test file first → run test → verify it FAILS
 2. 🟢 GREEN: Write implementation → run test → verify it PASSES
 3. 🔄 REFACTOR: Improve code → verify tests still pass
 
-Current state: Missing TDD-RED evidence (test not written/run yet)
-
-To proceed:
+WHAT TO DO:
 1. Write your test file first (*.test.ts, *.spec.js, etc.)
-2. Run the test and record the failure
-3. Then implement the feature`;
+2. Run the test and record the failure (TDD-RED evidence)
+3. Then implement the feature in ${filePath}
+
+TEST FILE PATTERNS:
+- *.test.ts, *.test.js
+- *.spec.ts, *.spec.js
+- __tests__/*.ts, __tests__/*.js`;
 
   return {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
-      permissionDecision: 'deny',
-      permissionDecisionReason: reason
+      decision: 'block',
+      reason: reason,
+      additionalContext: additionalContext
     }
   };
 }
