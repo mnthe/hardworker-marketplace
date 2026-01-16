@@ -6,7 +6,6 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 const { getSessionsDir, getSessionDir, readSessionField } = require('../lib/session-utils.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
 
@@ -27,9 +26,6 @@ const ARG_SPEC = {
 
 /** @type {string[]} */
 const TERMINAL_STATES = ['COMPLETE', 'CANCELLED', 'FAILED'];
-
-/** @type {string[]} */
-const ACTIVE_STATES = ['PLANNING', 'EXECUTION', 'VERIFICATION'];
 
 const DEFAULT_DAYS = 7;
 
@@ -82,13 +78,12 @@ function getSessionMetadata(sessionId, sessionDir) {
 
 /**
  * Check if session should be deleted based on mode
- * @param {string} sessionId - Session ID
  * @param {string} phase - Session phase
  * @param {number} ageDays - Session age in days
  * @param {Object} mode - Cleanup mode
  * @returns {boolean} True if session should be deleted
  */
-function shouldDeleteSession(sessionId, phase, ageDays, mode) {
+function shouldDeleteSession(phase, ageDays, mode) {
   // --all mode: delete everything
   if (mode.all) {
     return true;
@@ -138,7 +133,7 @@ function cleanSessions(mode) {
     const sessionDir = getSessionDir(sessionId);
     const metadata = getSessionMetadata(sessionId, sessionDir);
 
-    if (shouldDeleteSession(sessionId, metadata.phase, metadata.age_days, mode)) {
+    if (shouldDeleteSession(metadata.phase, metadata.age_days, mode)) {
       try {
         fs.rmSync(sessionDir, { recursive: true, force: true });
         deletedSessions.push(metadata);
