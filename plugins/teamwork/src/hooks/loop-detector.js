@@ -146,7 +146,21 @@ async function readStdin() {
  * @returns {void}
  */
 function outputAndExit(output) {
-  console.log(JSON.stringify(output));
+  // Wrap output in v2.1.9 hookSpecificOutput format
+  const hookOutput = {
+    hookSpecificOutput: {
+      hookEventName: "Stop",
+      ...output
+    }
+  };
+
+  // Convert systemMessage to additionalContext for v2.1.9
+  if (hookOutput.hookSpecificOutput.systemMessage) {
+    hookOutput.hookSpecificOutput.additionalContext = hookOutput.hookSpecificOutput.systemMessage;
+    delete hookOutput.hookSpecificOutput.systemMessage;
+  }
+
+  console.log(JSON.stringify(hookOutput));
   process.exit(0);
 }
 
