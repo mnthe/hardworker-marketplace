@@ -25,12 +25,19 @@ Planning takes the exploration findings and turns them into:
 Read exploration context to inform decisions:
 
 ```bash
-# Read context summary
-cat {session_dir}/context.json
+# Get context summary (AI-friendly markdown) - NEVER cat JSON directly
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-get.js" --session ${CLAUDE_SESSION_ID} --summary
 
-# Read detailed findings
-cat {session_dir}/exploration/overview.md
-cat {session_dir}/exploration/exp-*.md
+# Or get specific fields
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-get.js" --session ${CLAUDE_SESSION_ID} --field key_files
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-get.js" --session ${CLAUDE_SESSION_ID} --field patterns
+```
+
+```python
+# Read detailed exploration files (Markdown files OK to Read directly)
+Read(f"{session_dir}/exploration/overview.md")
+Read(f"{session_dir}/exploration/exp-1.md")
+# etc.
 ```
 
 Extract key information:
@@ -60,7 +67,7 @@ Determine planning depth based on goal complexity:
 - [context-aware-options.md](../../skills/planning/references/context-aware-options.md) - Option generation
 
 **Key principles**:
-1. Ask ONE question at a time
+1. Ask related questions in batches (max 4 per AskUserQuestion call)
 2. Generate options from exploration context (not generic templates)
 3. Recommend option that follows existing patterns
 4. Record all decisions for design document

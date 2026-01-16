@@ -224,13 +224,20 @@ Reference: `skills/planning/SKILL.md`
 
 #### 3a. Read Context
 
+```bash
+# Get session directory
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
+
+# Get context summary (AI-friendly markdown) - NEVER use Read on JSON
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-get.js" --session ${CLAUDE_SESSION_ID} --summary
+
+# Or get specific fields
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-get.js" --session ${CLAUDE_SESSION_ID} --field key_files
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-get.js" --session ${CLAUDE_SESSION_ID} --field patterns
+```
+
 ```python
-# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
-
-# Read lightweight summary
-Read(f"{session_dir}/context.json")
-
-# Read detailed exploration as needed
+# Read detailed exploration files (Markdown OK)
 Read(f"{session_dir}/exploration/exp-1.md")
 Read(f"{session_dir}/exploration/exp-2.md")
 Read(f"{session_dir}/exploration/exp-3.md")
@@ -251,9 +258,9 @@ Based on the goal "{goal}", I found:
 
 #### 3c. Clarify Requirements (Brainstorm Protocol)
 
-**Ask ONE question at a time.** Reference `skills/planning/SKILL.md` Phase 2-3.
+**Ask related questions in batches (max 4 per AskUserQuestion call).** Reference `commands/references/03-interview.md` for full interview protocol.
 
-For each ambiguous or unclear aspect:
+For ambiguous or unclear aspects:
 
 ```python
 AskUserQuestion(questions=[{
@@ -294,10 +301,17 @@ AskUserQuestion(questions=[{
 
 #### 3e. Write Design Document
 
-Write comprehensive design to `design.md`:
+**IMPORTANT: Design documents go to PROJECT directory, not session directory.**
 
 ```bash
-# Use Write tool to create design.md
+# Get working directory from session
+WORKING_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir)
+
+# Create docs/plans directory if needed
+mkdir -p "$WORKING_DIR/docs/plans"
+
+# Write design document to PROJECT directory
+# Format: YYYY-MM-DD-{goal-slug}-design.md
 ```
 
 See `skills/planning/SKILL.md` Phase 4 for template.
@@ -329,11 +343,17 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 
 **Read the plan:**
 
-```python
-# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
+```bash
+# Get working directory (for design doc) and list tasks
+WORKING_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir)
 
-Bash(f"ls {session_dir}/tasks/")
-Read(f"{session_dir}/design.md")
+# List tasks via script (NEVER ls directly)
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session ${CLAUDE_SESSION_ID} --format table
+```
+
+```python
+# Read design document from PROJECT directory (Markdown OK)
+Read(f"{working_dir}/docs/plans/YYYY-MM-DD-{{goal-slug}}-design.md")
 ```
 
 Display plan summary:
@@ -359,20 +379,20 @@ Display plan summary:
 
 ```python
 AskUserQuestion(questions=[{
-  "question": "이 계획으로 진행할까요?",
+  "question": "Proceed with this plan?",
   "header": "Plan approval",
   "options": [
-    {"label": "승인", "description": "이 계획대로 실행합니다"},
-    {"label": "수정 요청", "description": "계획을 수정합니다"},
-    {"label": "취소", "description": "작업을 취소합니다"}
+    {"label": "Approve", "description": "Execute according to this plan"},
+    {"label": "Request changes", "description": "Modify the plan"},
+    {"label": "Cancel", "description": "Cancel the work"}
   ],
   "multiSelect": False
 }])
 ```
 
-- "승인" → proceed to Step 5
-- "수정 요청" → get feedback, re-run planning
-- "취소" → end session
+- "Approve" → proceed to Step 5
+- "Request changes" → get feedback, re-run planning
+- "Cancel" → end session
 
 **If `--plan-only` was set:** Stop here, report plan summary.
 
@@ -426,22 +446,32 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 
 ## Directory Structure
 
-Get session directory: `bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir`
+**Session Directory** (internal metadata):
+`bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir`
 
 ```
 $SESSION_DIR/
-├── session.json        # Session metadata (JSON)
-├── context.json        # Explorer summaries (JSON)
-├── design.md           # Design document (Markdown)
-├── exploration/        # Detailed exploration (Markdown)
+├── session.json        # Session metadata (JSON) - use session-get.js
+├── context.json        # Explorer summaries (JSON) - use context-get.js
+├── exploration/        # Detailed exploration (Markdown - OK to Read)
 │   ├── overview.md
 │   ├── exp-1.md
 │   ├── exp-2.md
 │   └── exp-3.md
-└── tasks/              # Task files (JSON)
+└── tasks/              # Task files (JSON) - use task-*.js scripts
     ├── 1.json
     ├── 2.json
     └── verify.json
+```
+
+**Project Directory** (user deliverables):
+`bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir`
+
+```
+$WORKING_DIR/
+└── docs/
+    └── plans/
+        └── YYYY-MM-DD-{goal-slug}-design.md  # Design document (Markdown - OK to Read)
 ```
 
 ---

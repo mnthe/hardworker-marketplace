@@ -203,7 +203,7 @@ function createSession(args) {
         console.error(`⚠️  Warning: Active session exists (ID: ${sessionId})`);
         console.error(`   Goal: ${existing.goal}`);
         console.error('');
-        console.error('   Use /ultrawork-cancel to cancel it first');
+        console.error('   Use /ultrawork-clean to cancel it first');
         console.error('   Use /ultrawork --force to override');
         process.exit(1);
       }

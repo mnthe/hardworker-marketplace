@@ -21,7 +21,7 @@ For each decision point:
 
 | Rule | Description |
 |------|-------------|
-| **One at a time** | Never batch multiple questions in one message |
+| **Batch related** | Group related questions (max 4 per AskUserQuestion call) |
 | **Multiple choice** | Prefer options over open-ended when possible |
 | **Recommend** | Add "(Recommended)" to your suggested option |
 | **Max 4 options** | Keep choices manageable |

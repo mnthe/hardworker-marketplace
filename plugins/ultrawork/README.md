@@ -64,8 +64,8 @@ claude --plugin-dir /path/to/hardworker-marketplace/plugins/ultrawork
 # Show collected evidence
 /ultrawork-evidence
 
-# Cancel current session
-/ultrawork-cancel
+# Clean up sessions
+/ultrawork-clean
 
 # Show help
 /ultrawork-help
@@ -154,13 +154,27 @@ Displays:
 
 Shows collected evidence for all tasks with verification status.
 
-#### /ultrawork-cancel
+#### /ultrawork-clean
 
 ```bash
-/ultrawork-cancel
+# Default: Delete sessions older than 7 days in terminal states
+/ultrawork-clean
+
+# Delete sessions older than N days in terminal states
+/ultrawork-clean --older-than 30
+
+# Delete all completed sessions (terminal states)
+/ultrawork-clean --completed
+
+# Delete ALL sessions (including active ones)
+/ultrawork-clean --all
 ```
 
-Cancels current session, preserves all history and evidence.
+Cleans up ultrawork sessions based on age and status:
+- **Default**: Deletes sessions >7 days old in COMPLETE/CANCELLED/FAILED states
+- **--older-than N**: Deletes sessions older than N days in terminal states
+- **--completed**: Deletes all sessions in terminal states regardless of age
+- **--all**: Deletes ALL sessions including active ones (PLANNING/EXECUTION/VERIFICATION)
 
 ## Commands
 
@@ -171,7 +185,7 @@ Cancels current session, preserves all history and evidence.
 | `/ultrawork-exec`        | Execute existing plan          | `--max-iterations N`, `--skip-verify`                                             |
 | `/ultrawork-status`      | Check session status           | `--all`                                                                           |
 | `/ultrawork-evidence`    | Show collected evidence        | -                                                                                 |
-| `/ultrawork-cancel`      | Cancel current session         | -                                                                                 |
+| `/ultrawork-clean`       | Clean up sessions              | `--older-than N`, `--completed`, `--all`                                          |
 | `/ultrawork-help`        | Show help documentation        | -                                                                                 |
 
 ## Agents

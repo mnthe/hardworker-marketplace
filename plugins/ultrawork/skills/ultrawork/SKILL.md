@@ -115,7 +115,7 @@ See `references/state-schema.md` for complete schema documentation.
 |---------|---------|
 | `/ultrawork-status` | Check current phase and progress |
 | `/ultrawork-evidence` | View collected evidence log |
-| `/ultrawork-cancel` | Cancel active session |
+| `/ultrawork-clean` | Clean up sessions (interactive/all/stale) |
 | `/ultrawork-exec` | Execute existing plan |
 | `/ultrawork-plan` | Planning phase only |
 

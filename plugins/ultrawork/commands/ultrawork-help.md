@@ -33,7 +33,7 @@ Ultrawork is a **strict verification-first development mode** that enforces rigo
 | `/ultrawork <goal>` | Full auto mode (plan + exec) |
 | `/ultrawork-status` | Check current phase and progress |
 | `/ultrawork-evidence` | View collected evidence |
-| `/ultrawork-cancel` | Cancel current session |
+| `/ultrawork-clean` | Clean up project workspace |
 | `/ultrawork-help` | Show this help |
 
 ## Recommended Workflow

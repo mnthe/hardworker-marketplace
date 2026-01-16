@@ -8,6 +8,7 @@
  */
 
 const fs = require('fs');
+const { withLock } = require('./file-lock.js');
 
 /**
  * @typedef {import('./types.js').Task} Task
@@ -45,44 +46,47 @@ const fs = require('fs');
  * }
  */
 async function claimTaskOptimistic(taskPath, claimerId) {
-  // Read current task state
+  // Check file exists before acquiring lock
   if (!fs.existsSync(taskPath)) {
     return { success: false, reason: 'task_not_found' };
   }
 
-  const content = fs.readFileSync(taskPath, 'utf8');
-  /** @type {Task} */
-  const task = JSON.parse(content);
+  // Use file lock with owner identification for reentrant locks and stale detection
+  return await withLock(taskPath, async () => {
+    // Re-check after acquiring lock (file may have been deleted)
+    if (!fs.existsSync(taskPath)) {
+      return { success: false, reason: 'task_not_found' };
+    }
 
-  // Check if already claimed by someone else
-  if (task.claimed_by && task.claimed_by !== claimerId) {
-    return { success: false, reason: 'already_claimed' };
-  }
+    const content = fs.readFileSync(taskPath, 'utf8');
+    /** @type {Task} */
+    const task = JSON.parse(content);
 
-  // Check if task is not in open status (blocked, resolved, etc.)
-  if (task.status !== 'open' && task.status !== 'in_progress') {
-    return { success: false, reason: 'not_claimable' };
-  }
+    // Check if already claimed by someone else
+    if (task.claimed_by && task.claimed_by !== claimerId) {
+      return { success: false, reason: 'already_claimed' };
+    }
 
-  // Store version for optimistic concurrency control
-  const originalVersion = task.version || 0;
+    // Check if task is not in open status (blocked, resolved, etc.)
+    if (task.status !== 'open' && task.status !== 'in_progress') {
+      return { success: false, reason: 'not_claimable' };
+    }
 
-  // Prepare update
-  task.claimed_by = claimerId;
-  task.claimed_at = new Date().toISOString();
-  task.status = 'in_progress';
-  task.version = originalVersion + 1;
-  task.updated_at = new Date().toISOString();
+    // Prepare update (version still incremented for tracking)
+    const originalVersion = task.version || 0;
+    task.claimed_by = claimerId;
+    task.claimed_at = new Date().toISOString();
+    task.status = 'in_progress';
+    task.version = originalVersion + 1;
+    task.updated_at = new Date().toISOString();
 
-  // Atomic write with version check
-  const result = await writeWithVersionCheck(taskPath, task, originalVersion);
+    // Write atomically (within lock, no race possible)
+    const tempPath = `${taskPath}.${process.pid}.tmp`;
+    fs.writeFileSync(tempPath, JSON.stringify(task, null, 2), 'utf8');
+    fs.renameSync(tempPath, taskPath);
 
-  if (!result.success) {
-    // Version conflict - another worker claimed it
-    return { success: false, reason: 'version_conflict' };
-  }
-
-  return { success: true, task };
+    return { success: true, task };
+  }, claimerId); // Pass claimerId as owner for lock identification
 }
 
 /**
@@ -159,39 +163,42 @@ async function writeWithVersionCheck(path, data, expectedVersion) {
  * }
  */
 async function releaseTaskOptimistic(taskPath, claimerId) {
-  // Read current task state
+  // Check file exists before acquiring lock
   if (!fs.existsSync(taskPath)) {
     return { success: false, reason: 'task_not_found' };
   }
 
-  const content = fs.readFileSync(taskPath, 'utf8');
-  /** @type {Task} */
-  const task = JSON.parse(content);
+  // Use file lock with owner identification for reentrant locks and stale detection
+  return await withLock(taskPath, async () => {
+    // Re-check after acquiring lock (file may have been deleted)
+    if (!fs.existsSync(taskPath)) {
+      return { success: false, reason: 'task_not_found' };
+    }
 
-  // Check if task is claimed by this claimer
-  if (task.claimed_by !== claimerId) {
-    return { success: false, reason: 'not_claimed_by_claimer' };
-  }
+    const content = fs.readFileSync(taskPath, 'utf8');
+    /** @type {Task} */
+    const task = JSON.parse(content);
 
-  // Store version for optimistic concurrency control
-  const originalVersion = task.version || 0;
+    // Check if task is claimed by this claimer
+    if (task.claimed_by !== claimerId) {
+      return { success: false, reason: 'not_claimed_by_claimer' };
+    }
 
-  // Prepare update
-  task.claimed_by = null;
-  task.claimed_at = null;
-  task.status = 'open';
-  task.version = originalVersion + 1;
-  task.updated_at = new Date().toISOString();
+    // Prepare update (version still incremented for tracking)
+    const originalVersion = task.version || 0;
+    task.claimed_by = null;
+    task.claimed_at = null;
+    task.status = 'open';
+    task.version = originalVersion + 1;
+    task.updated_at = new Date().toISOString();
 
-  // Atomic write with version check
-  const result = await writeWithVersionCheck(taskPath, task, originalVersion);
+    // Write atomically (within lock, no race possible)
+    const tempPath = `${taskPath}.${process.pid}.tmp`;
+    fs.writeFileSync(tempPath, JSON.stringify(task, null, 2), 'utf8');
+    fs.renameSync(tempPath, taskPath);
 
-  if (!result.success) {
-    // Version conflict
-    return { success: false, reason: 'version_conflict' };
-  }
-
-  return { success: true, task };
+    return { success: true, task };
+  }, claimerId); // Pass claimerId as owner for lock identification
 }
 
 // Export functions

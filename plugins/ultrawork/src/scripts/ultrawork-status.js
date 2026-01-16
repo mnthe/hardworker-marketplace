@@ -203,7 +203,7 @@ function showSessionStatus(sessionId) {
   console.log('───────────────────────────────────────────────────────────');
   console.log('');
   console.log(' /ultrawork-evidence - View detailed evidence');
-  console.log(' /ultrawork-cancel   - Cancel session');
+  console.log(' /ultrawork-clean    - Clean up session');
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
 }

@@ -61,6 +61,21 @@ Run final tests.
 
 ---
 
+## Data Access Guide
+
+**Always use scripts for JSON data. Never use Read tool on JSON files.**
+
+| Data | Script | Access |
+|------|--------|--------|
+| session.json | `session-get.js` (read), `session-update.js` (write) | Read/Write |
+| tasks/*.json | `task-list.js`, `task-get.js` (read), `task-update.js` (write) | Read/Write |
+| exploration/*.md | - | Read directly (Markdown OK) |
+
+**Why scripts?**
+- JSON wastes tokens on structure (`{`, `"key":`, etc.)
+- Scripts extract specific fields: `--field status`
+- Consistent error handling and validation
+
 ## Utility Scripts
 
 ```bash

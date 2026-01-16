@@ -125,19 +125,17 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 
 **Before starting exploration, check session state to determine where to resume:**
 
-```python
-# SESSION_ID from hook output, session_dir derived from it
-# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
+```bash
+# Get session directory
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
 
-# Read session.json
-session = Bash(f'cat {session_dir}/session.json')
-exploration_stage = session.get("exploration_stage", "not_started")
+# Read session state via script (NEVER cat JSON directly)
+EXPLORATION_STAGE=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field exploration_stage)
 
-# Read context.json
-context = Read(f"{session_dir}/context.json")
-exploration_complete = context.get("exploration_complete", False) if context else False
-expected_explorers = context.get("expected_explorers", []) if context else []
-actual_explorers = [e["id"] for e in context.get("explorers", [])] if context else []
+# Read context via script (NEVER Read JSON directly)
+EXPLORATION_COMPLETE=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-get.js" --session ${CLAUDE_SESSION_ID} --field exploration_complete)
+EXPECTED_EXPLORERS=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-get.js" --session ${CLAUDE_SESSION_ID} --field expected_explorers)
+EXPLORERS=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-get.js" --session ${CLAUDE_SESSION_ID} --field explorers)
 ```
 
 ### Resume logic by exploration_stage

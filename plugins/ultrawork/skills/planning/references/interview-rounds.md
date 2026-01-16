@@ -13,42 +13,42 @@ This document provides detailed templates for each interview round. The planner 
 ```python
 AskUserQuestion(questions=[
   {
-    "question": "핵심 목표가 X인데, Y와 Z 중 어느 방향에 가깝나요?",
+    "question": "The core goal is X, which direction is closer: Y or Z?",
     "header": "Intent",
     "options": [
-      {"label": "Y 방향", "description": "..."},
-      {"label": "Z 방향", "description": "..."},
-      {"label": "둘 다", "description": "..."}
+      {"label": "Y Direction", "description": "..."},
+      {"label": "Z Direction", "description": "..."},
+      {"label": "Both", "description": "..."}
     ],
     "multiSelect": False
   },
   {
-    "question": "이 기능의 범위는 어디까지인가요?",
+    "question": "What is the scope of this feature?",
     "header": "Scope",
     "options": [
-      {"label": "최소 구현 (MVP)", "description": "핵심 기능만"},
-      {"label": "표준 구현", "description": "일반적인 수준"},
-      {"label": "완전 구현", "description": "모든 엣지케이스 포함"}
+      {"label": "Minimal Implementation (MVP)", "description": "Core features only"},
+      {"label": "Standard Implementation", "description": "Typical level"},
+      {"label": "Complete Implementation", "description": "All edge cases included"}
     ],
     "multiSelect": False
   },
   {
-    "question": "기존 코드/시스템과의 관계는?",
+    "question": "Relationship with existing code/system?",
     "header": "Integration",
     "options": [
-      {"label": "독립적", "description": "기존 코드 영향 없음"},
-      {"label": "확장", "description": "기존 코드에 추가"},
-      {"label": "수정", "description": "기존 코드 변경 필요"}
+      {"label": "Independent", "description": "No impact on existing code"},
+      {"label": "Extension", "description": "Add to existing code"},
+      {"label": "Modification", "description": "Existing code changes required"}
     ],
     "multiSelect": False
   },
   {
-    "question": "성공 기준은 무엇인가요?",
+    "question": "What are the success criteria?",
     "header": "Success",
     "options": [
-      {"label": "테스트 통과", "description": "자동화 테스트 기준"},
-      {"label": "수동 검증", "description": "직접 확인"},
-      {"label": "둘 다", "description": "테스트 + 수동 검증"}
+      {"label": "Tests Pass", "description": "Automated test criteria"},
+      {"label": "Manual Verification", "description": "Direct verification"},
+      {"label": "Both", "description": "Tests + Manual Verification"}
     ],
     "multiSelect": False
   }
@@ -64,30 +64,30 @@ AskUserQuestion(questions=[
 ```python
 AskUserQuestion(questions=[
   {
-    "question": "아키텍처 패턴은 어떻게 할까요?",
+    "question": "What architecture pattern should we use?",
     "header": "Architecture",
     "options": [...],  # Generate from context
     "multiSelect": False
   },
   {
-    "question": "사용할 라이브러리/기술 스택은?",
+    "question": "What libraries/tech stack to use?",
     "header": "Tech Stack",
     "options": [...],  # Generate from context
-    "multiSelect": True  # 다중 선택 가능
+    "multiSelect": True  # Multiple selection allowed
   },
   {
-    "question": "데이터 모델/스키마 방향은?",
+    "question": "Data model/schema direction?",
     "header": "Data Model",
     "options": [...],  # Generate from context
     "multiSelect": False
   },
   {
-    "question": "테스트 전략은? (TDD 권장)",
+    "question": "Testing strategy? (TDD recommended)",
     "header": "Testing",
     "options": [
-      {"label": "TDD (Recommended)", "description": "테스트 먼저 작성"},
-      {"label": "Standard", "description": "구현 후 테스트"},
-      {"label": "Mixed", "description": "핵심 로직만 TDD"}
+      {"label": "TDD (Recommended)", "description": "Write tests first"},
+      {"label": "Standard", "description": "Test after implementation"},
+      {"label": "Mixed", "description": "TDD for core logic only"}
     ],
     "multiSelect": False
   }
@@ -103,25 +103,25 @@ AskUserQuestion(questions=[
 ```python
 AskUserQuestion(questions=[
   {
-    "question": "예상되는 에러 시나리오와 처리 방식은?",
+    "question": "Expected error scenarios and handling approach?",
     "header": "Errors",
     "options": [...],  # Generate from context
     "multiSelect": True
   },
   {
-    "question": "동시성/경쟁 조건 고려가 필요한가요?",
+    "question": "Is concurrency/race condition consideration needed?",
     "header": "Concurrency",
     "options": [...],  # Generate from context
     "multiSelect": False
   },
   {
-    "question": "성능 요구사항이 있나요?",
+    "question": "Are there performance requirements?",
     "header": "Performance",
     "options": [...],  # Generate from context
     "multiSelect": False
   },
   {
-    "question": "보안 고려사항은?",
+    "question": "What are security considerations?",
     "header": "Security",
     "options": [...],  # Generate from context
     "multiSelect": True
@@ -138,25 +138,25 @@ AskUserQuestion(questions=[
 ```python
 AskUserQuestion(questions=[
   {
-    "question": "UI/UX 세부사항은?",
+    "question": "What are the UI/UX details?",
     "header": "UI/UX",
     "options": [...],  # Generate from context
     "multiSelect": False
   },
   {
-    "question": "로깅/모니터링 요구사항은?",
+    "question": "What are the logging/monitoring requirements?",
     "header": "Observability",
     "options": [...],  # Generate from context
     "multiSelect": True
   },
   {
-    "question": "문서화 범위는?",
+    "question": "What is the documentation scope?",
     "header": "Documentation",
     "options": [...],  # Generate from context
     "multiSelect": False
   },
   {
-    "question": "배포/롤백 전략은?",
+    "question": "What is the deployment/rollback strategy?",
     "header": "Deployment",
     "options": [...],  # Generate from context
     "multiSelect": False
@@ -174,13 +174,13 @@ AskUserQuestion(questions=[
 # First, ask what topics to explore
 AskUserQuestion(questions=[
   {
-    "question": "추가로 논의하고 싶은 영역을 선택해주세요",
+    "question": "Please select additional areas to discuss",
     "header": "Topics",
     "options": [
-      {"label": "기술 세부사항", "description": "구현 방식 심화"},
-      {"label": "엣지케이스", "description": "예외 상황 추가"},
-      {"label": "성능 최적화", "description": "성능 관련 결정"},
-      {"label": "기타", "description": "다른 주제"}
+      {"label": "Technical Details", "description": "In-depth implementation approach"},
+      {"label": "Edge Cases", "description": "Additional exception cases"},
+      {"label": "Performance Optimization", "description": "Performance-related decisions"},
+      {"label": "Other", "description": "Other topics"}
     ],
     "multiSelect": True
   }
@@ -197,19 +197,19 @@ After completing each round, ask if user wants to continue:
 
 ```python
 AskUserQuestion(questions=[{
-  "question": f"Round {n} 완료. 계속할까요?",
+  "question": f"Round {n} complete. Continue?",
   "header": "Continue",
   "options": [
-    {"label": "충분함", "description": "Plan 작성으로 진행"},
-    {"label": "계속", "description": "다음 라운드 진행"}
+    {"label": "Sufficient", "description": "Proceed to Plan writing"},
+    {"label": "Continue", "description": "Proceed to next round"}
   ],
   "multiSelect": False
 }])
 ```
 
 **Behavior**:
-- **"충분함"** → Exit interview, proceed to Phase 4 (Document Design)
-- **"계속"** → Next round (no upper limit)
+- **"Sufficient"** → Exit interview, proceed to Phase 4 (Document Design)
+- **"Continue"** → Next round (no upper limit)
 
 ---
 

@@ -18,7 +18,7 @@ description: |
   </example>
 model: inherit
 color: blue
-tools: ["Read", "Write", "Edit", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__find_referencing_symbols"]
+tools: ["Read", "Write", "Edit", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/context-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__find_referencing_symbols"]
 ---
 
 # Planner Agent (Auto Mode)
@@ -59,17 +59,38 @@ Options:
 
 ---
 
+## Data Access Guide
+
+**Always use scripts for JSON data. Never use Read tool on JSON files.**
+
+| Data | Script | Access |
+|------|--------|--------|
+| session.json | `session-get.js` (read), `session-update.js` (write) | Read/Write |
+| context.json | `context-get.js` | Read only (exploration summary) |
+| tasks/*.json | `task-create.js` (write) | Write only |
+| exploration/*.md | - | Read directly (Markdown OK) |
+| docs/plans/*.md | - | Write design doc, Read for review |
+
+**Why scripts?**
+- JSON wastes tokens on structure (`{`, `"key":`, etc.)
+- Scripts extract specific fields: `--field goal`
+- Scripts provide summaries: `--summary`
+- Consistent error handling and validation
+
 ## Utility Scripts
 
 ```bash
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
-# Get session directory path
+# Session data
 SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
-
-# Get session data
 bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
 bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --field goal  # Specific field
+
+# Context data (exploration results)
+bun "$SCRIPTS/context-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
+bun "$SCRIPTS/context-get.js" --session ${CLAUDE_SESSION_ID} --field explorers  # Specific field
+bun "$SCRIPTS/context-get.js" --session ${CLAUDE_SESSION_ID} --summary     # AI-friendly markdown
 
 # Update session
 bun "$SCRIPTS/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
@@ -100,11 +121,19 @@ Classify the work intent to adjust your approach:
 
 ```bash
 SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
-bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID}
+
+# Session info
+bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --field goal
+
+# Context summary (AI-friendly markdown)
+bun "$SCRIPTS/context-get.js" --session ${CLAUDE_SESSION_ID} --summary
+
+# Or specific context fields
+bun "$SCRIPTS/context-get.js" --session ${CLAUDE_SESSION_ID} --field explorers
+bun "$SCRIPTS/context-get.js" --session ${CLAUDE_SESSION_ID} --field scopeExpansion
 ```
 
-Read exploration files with Read tool:
-- `$SESSION_DIR/context.json`
+Read exploration detail files (Markdown OK):
 - `$SESSION_DIR/exploration/*.md`
 
 ### Phase 2: Analyze & Decide
@@ -119,38 +148,18 @@ For each decision point:
 
 In auto mode, read and apply scope expansion from context.json:
 
-```python
-# Read context.json
-context = Read(f"{SESSION_DIR}/context.json")
-
-if context.get('scopeExpansion'):
-    scope = context['scopeExpansion']
-
-    # Conservative inclusion in auto mode:
-    # - Always include blocking dependencies (required)
-    # - Include recommended dependencies (best practice)
-    # - Skip optional dependencies (can be added later)
-
-    for dep in scope.get('dependencies', []):
-        if dep['type'] in ['blocking', 'recommended']:
-            # Record as auto-included decision
-            decisions.append({
-                "topic": f"Scope: {dep['from']} → {dep['to']}",
-                "choice": "Include",
-                "rationale": dep['reason'],
-                "asked_user": False,
-                "auto_included": True
-            })
-
-    # Use suggested tasks as basis for task graph
-    for task in scope.get('suggestedTasks', []):
-        # Add to task planning
-        planned_tasks.append({
-            "layer": task['layer'],
-            "description": task['description'],
-            "from_scope_expansion": True
-        })
+```bash
+# Get scope expansion data (returns JSON or empty if not present)
+SCOPE=$(bun "$SCRIPTS/context-get.js" --session ${CLAUDE_SESSION_ID} --field scopeExpansion)
 ```
+
+**Processing logic:**
+- Conservative inclusion in auto mode:
+  - Always include `blocking` dependencies (required)
+  - Include `recommended` dependencies (best practice)
+  - Skip `optional` dependencies (can be added later)
+- Record each auto-included decision with `asked_user: false`
+- Use `suggestedTasks` as basis for task graph
 
 **Scope Expansion Task Ordering:**
 

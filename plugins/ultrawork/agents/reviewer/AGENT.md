@@ -18,7 +18,7 @@ description: |
   </example>
 model: inherit
 color: yellow
-tools: ["Read", "Glob", "Grep", "Bash", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__find_referencing_symbols", "mcp__plugin_serena_serena__get_symbols_overview"]
+tools: ["Read", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-get.js:*)", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__find_referencing_symbols", "mcp__plugin_serena_serena__get_symbols_overview"]
 ---
 
 # Reviewer Agent
@@ -46,6 +46,22 @@ SUCCESS CRITERIA: {criteria}
 CHANGED FILES: {list of files}
 WORKER OUTPUT: {worker's report}
 ```
+
+---
+
+## Data Access Guide
+
+**Always use scripts for JSON data. Never use Read tool on JSON files.**
+
+| Data | Script | Access |
+|------|--------|--------|
+| tasks/*.json | `task-get.js` | Read only (criteria, evidence) |
+| code files | - | Read directly |
+
+**Why scripts?**
+- JSON wastes tokens on structure (`{`, `"key":`, etc.)
+- Scripts extract specific fields: `--field criteria`
+- Consistent error handling and validation
 
 ---
 

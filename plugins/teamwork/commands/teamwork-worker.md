@@ -11,6 +11,10 @@ allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/worker-setup.js:*)",
 
 Workers claim and complete tasks from a teamwork project. Can run in one-shot mode (default) or continuous loop mode.
 
+**Automatic Role Detection**: When `--role` is not specified, the worker automatically detects the role from the first available task and spawns the appropriate role-specific agent (frontend, backend, test, etc.). This ensures tasks are handled by agents with specialized knowledge and tools for their domain.
+
+**Role Selection Precedence**: `--role` flag (explicit) > task.role (auto-detected) > "worker" (generic fallback)
+
 ---
 
 ## Step 0: Serena Project Activation (Optional)
@@ -82,10 +86,65 @@ Project complete or all tasks claimed.
 Use /teamwork-status to check progress.
 ```
 
+## Step 2.5: Detect Task Role (if --role not specified)
+
+**If user did NOT specify `--role` flag:**
+
+Query available tasks to detect role from first available task:
+
+```bash
+AVAILABLE_TASKS=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" \
+  --project {PROJECT} \
+  --team {SUB_TEAM} \
+  --available \
+  --format json)
+```
+
+Parse first task's role field:
+
+```bash
+DETECTED_ROLE=$(echo "$AVAILABLE_TASKS" | bun -e "
+  const tasks = JSON.parse(require('fs').readFileSync(0, 'utf-8'));
+  if (tasks.length > 0 && tasks[0].role) {
+    console.log(tasks[0].role);
+  } else {
+    console.log('worker');
+  }
+")
+```
+
+**Variable values:**
+- `DETECTED_ROLE`: Role from first available task, or "worker" if no tasks or no role field
+
+**If user specified `--role` flag:**
+Skip this step. Use user-specified role directly.
+
 ## Step 3: Spawn Worker Agent
 
+**Determine agent type using precedence order:**
+
+Use the following logic to select `subagent_type`:
+
+```python
+# Precedence: user --role > detected task.role > default 'worker'
+if user_specified_role:
+    # User explicitly specified --role flag (highest priority)
+    subagent_type = f"teamwork:{user_specified_role}"
+    role_filter = user_specified_role
+elif DETECTED_ROLE and DETECTED_ROLE != "worker":
+    # Role detected from task in Step 2.5 (medium priority)
+    subagent_type = f"teamwork:{DETECTED_ROLE}"
+    role_filter = DETECTED_ROLE
+else:
+    # Default fallback (lowest priority)
+    subagent_type = "teamwork:worker"
+    role_filter = None
+```
+
+**Valid role values**: `frontend`, `backend`, `test`, `devops`, `docs`, `security`, `review`, `worker`
+
 **ACTION REQUIRED - Call Task tool with:**
-- subagent_type: "teamwork:worker" (or "teamwork:{role}" if role specified)
+- subagent_type: `{subagent_type}` (determined using logic above)
 - model: "sonnet"
 - prompt:
   ```
@@ -94,7 +153,7 @@ Use /teamwork-status to check progress.
   SUB_TEAM: {sub_team}
 
   Options:
-  - role_filter: {role or null}
+  - role_filter: {role_filter}
   - strict_mode: {true or false}
   - fresh_start_interval: {N or 10}
   ```
@@ -185,10 +244,16 @@ Exit and report completion.
 # One-shot: complete one task
 /teamwork-worker
 
-# Continuous: keep working until done
+# Auto-detect role from task (smart agent selection)
+# If first available task has role="backend", spawns teamwork:backend agent
+# If first available task has role="frontend", spawns teamwork:frontend agent
+# If no role specified in task, falls back to generic teamwork:worker
+/teamwork-worker
+
+# Continuous: keep working until done (with auto-detection)
 /teamwork-worker --loop
 
-# Specialized: only frontend tasks
+# Explicit role override (ignores task.role field)
 /teamwork-worker --role frontend
 
 # Specialized continuous
@@ -211,4 +276,20 @@ Exit and report completion.
 
 # Specific project
 /teamwork-worker --project myapp --team feature-x
+```
+
+### Agent Selection Examples
+
+```bash
+# Scenario 1: Task has role="backend", no --role flag specified
+# → Spawns teamwork:backend agent (auto-detected)
+
+# Scenario 2: Task has role="frontend", --role backend specified
+# → Spawns teamwork:backend agent (explicit flag takes precedence)
+
+# Scenario 3: Task has no role field (or role="worker"), no --role flag
+# → Spawns teamwork:worker agent (generic fallback)
+
+# Scenario 4: Multiple tasks, first has role="test", no --role flag
+# → Spawns teamwork:test agent (uses first available task's role)
 ```
