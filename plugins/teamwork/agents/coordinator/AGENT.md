@@ -1,5 +1,6 @@
 ---
 name: coordinator
+deprecated: true
 description: |
   DEPRECATED: Use orchestrator agent instead. The orchestrator now handles both planning and monitoring.
 
