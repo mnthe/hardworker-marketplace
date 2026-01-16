@@ -32,9 +32,7 @@ const {
  */
 
 /**
- * @typedef {Object} HookOutput
- * @property {Object} hookSpecificOutput
- * @property {string} hookSpecificOutput.hookEventName
+ * SubagentStop hooks output empty object (no hookSpecificOutput required)
  */
 
 /**
@@ -74,13 +72,8 @@ async function readStdin() {
  * @returns {void}
  */
 function outputResponse() {
-  /** @type {HookOutput} */
-  const output = {
-    hookSpecificOutput: {
-      hookEventName: 'SubagentStop',
-    },
-  };
-  console.log(JSON.stringify(output));
+  // SubagentStop hooks should output empty object (no hookSpecificOutput)
+  console.log('{}');
 }
 
 // ============================================================================

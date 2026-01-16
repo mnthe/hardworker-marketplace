@@ -40,11 +40,11 @@ const STATE_DIR = path.join(TEAMWORK_DIR, '.loop-state');
  */
 
 /**
+ * Stop hook output format (top-level properties, no hookSpecificOutput)
  * @typedef {Object} HookOutput
- * @property {'continue' | 'restart_fresh' | 'allow'} [decision]
- * @property {string} [command]
- * @property {Object} [context]
- * @property {string} [systemMessage]
+ * @property {'approve' | 'block'} [decision] - approve: allow stop, block: continue working
+ * @property {string} [reason] - Explanation for the decision
+ * @property {string} [systemMessage] - Additional context for Claude
  */
 
 // ============================================================================
@@ -145,21 +145,9 @@ async function readStdin() {
  * @returns {void}
  */
 function outputAndExit(output) {
-  // Wrap output in v2.1.9 hookSpecificOutput format
-  const hookOutput = {
-    hookSpecificOutput: {
-      hookEventName: "Stop",
-      ...output
-    }
-  };
-
-  // Convert systemMessage to additionalContext for v2.1.9
-  if (hookOutput.hookSpecificOutput.systemMessage) {
-    hookOutput.hookSpecificOutput.additionalContext = hookOutput.hookSpecificOutput.systemMessage;
-    delete hookOutput.hookSpecificOutput.systemMessage;
-  }
-
-  console.log(JSON.stringify(hookOutput));
+  // Stop hooks use top-level properties (no hookSpecificOutput wrapper)
+  // Valid fields: decision ("approve"|"block"), reason, systemMessage
+  console.log(JSON.stringify(output));
   process.exit(0);
 }
 
