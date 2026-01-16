@@ -89,7 +89,7 @@ All scripts use Bun runtime with flag-based parameters.
 | **context-add.js** | Add explorer summary to context.json | `--session <ID>` `--explorer-id "exp-1"` `--summary "..."` `--key-files "f1,f2"` |
 | **context-get.js** | Read context.json data with field extraction | `--session <ID>` `--field explorers` `--summary` `--file` |
 | **ultrawork-status.js** | Display session status dashboard | `--session <ID>` `--all` |
-| **ultrawork-clean.js** | Clean up sessions based on age and status | `--all` `--completed` `--older-than N` |
+| **ultrawork-clean.js** | Clean current session or batch cleanup | `--session <ID>` (single) or `--all` `--completed` `--older-than N` (batch) |
 | **ultrawork-evidence.js** | View collected evidence log | `--session <ID>` |
 | **session-field.js** | Optimized single field extraction with dot notation support | `--session <ID>` `--field phase` `--field options.auto_mode` `--json` |
 | **task-summary.js** | Generate AI-friendly task markdown | `--session <ID>` `--task <ID>` `--save` |
@@ -598,15 +598,15 @@ bun src/scripts/ultrawork-status.js --session abc-123
 
 ### Clean Sessions
 ```bash
-# Default: Delete sessions older than 7 days in terminal states
-bun src/scripts/ultrawork-clean.js
+# Clean current session (for fresh /ultrawork start)
+bun src/scripts/ultrawork-clean.js --session ${CLAUDE_SESSION_ID}
 
-# Delete sessions older than N days in terminal states
+# Batch: Delete sessions older than N days in terminal states
 bun src/scripts/ultrawork-clean.js --older-than 30
 
-# Delete all completed sessions (terminal states)
+# Batch: Delete all completed sessions (terminal states)
 bun src/scripts/ultrawork-clean.js --completed
 
-# Delete ALL sessions (including active ones)
+# Batch: Delete ALL sessions (including active ones)
 bun src/scripts/ultrawork-clean.js --all
 ```

@@ -2,7 +2,10 @@
 
 /**
  * Ultrawork Clean Script
- * Delete sessions based on cleanup mode (--all, --completed, --older-than)
+ *
+ * Two modes:
+ * 1. Single session clean (no batch flags): Delete current session for fresh /ultrawork start
+ * 2. Batch cleanup (with --all, --completed, --older-than): Delete multiple sessions
  */
 
 const fs = require('fs');
@@ -14,6 +17,7 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
 // ============================================================================
 
 const ARG_SPEC = {
+  '--session': { key: 'session' },
   '--all': { key: 'all', flag: true },
   '--completed': { key: 'completed', flag: true },
   '--older-than': { key: 'olderThan' },
@@ -100,11 +104,51 @@ function shouldDeleteSession(phase, ageDays, mode) {
 }
 
 // ============================================================================
-// Clean Sessions
+// Single Session Clean
 // ============================================================================
 
 /**
- * Clean sessions based on mode
+ * Clean a single session (delete entire session directory)
+ * @param {string} sessionId - Session ID to clean
+ * @returns {{success: boolean, session_id: string, message: string}}
+ */
+function cleanSingleSession(sessionId) {
+  const sessionDir = getSessionDir(sessionId);
+
+  if (!fs.existsSync(sessionDir)) {
+    return {
+      success: true,
+      session_id: sessionId,
+      message: 'Session does not exist (already clean)'
+    };
+  }
+
+  try {
+    const metadata = getSessionMetadata(sessionId, sessionDir);
+    fs.rmSync(sessionDir, { recursive: true, force: true });
+
+    return {
+      success: true,
+      session_id: sessionId,
+      goal: metadata.goal,
+      phase: metadata.phase,
+      message: 'Session deleted. Run /ultrawork to start fresh.'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      session_id: sessionId,
+      message: `Failed to delete session: ${error.message}`
+    };
+  }
+}
+
+// ============================================================================
+// Batch Clean Sessions
+// ============================================================================
+
+/**
+ * Clean sessions based on mode (batch cleanup)
  * @param {Object} mode - Cleanup mode options
  * @returns {{deleted_count: number, deleted_sessions: Array, preserved_count: number}}
  */
@@ -157,6 +201,15 @@ function cleanSessions(mode) {
 // ============================================================================
 
 /**
+ * Check if any batch cleanup flags are specified
+ * @param {Object} args - Parsed arguments
+ * @returns {boolean} True if batch mode
+ */
+function isBatchMode(args) {
+  return args.all || args.completed || args.olderThan;
+}
+
+/**
  * Main execution function
  * @returns {void}
  */
@@ -166,13 +219,16 @@ function main() {
     const helpText = generateHelp(
       'ultrawork-clean.js',
       ARG_SPEC,
-      'Clean up ultrawork sessions based on age and status.\n\n' +
-      'Modes:\n' +
-      '  --older-than N  Delete sessions older than N days in terminal states (default: 7)\n' +
+      'Clean ultrawork sessions.\n\n' +
+      'Single session mode (default):\n' +
+      '  --session ID    Clean specific session (default: CLAUDE_SESSION_ID)\n' +
+      '                  Deletes entire session directory for fresh /ultrawork start\n\n' +
+      'Batch cleanup mode:\n' +
+      '  --older-than N  Delete sessions older than N days in terminal states\n' +
       '  --completed     Delete all sessions in terminal states (COMPLETE, CANCELLED, FAILED)\n' +
       '  --all           Delete ALL sessions including active ones\n\n' +
       'Terminal states: COMPLETE, CANCELLED, FAILED\n' +
-      'Active states: PLANNING, EXECUTION, VERIFICATION (preserved by default)'
+      'Active states: PLANNING, EXECUTION, VERIFICATION'
     );
     console.log(helpText);
     process.exit(0);
@@ -180,18 +236,33 @@ function main() {
 
   const args = parseArgs(ARG_SPEC);
 
-  // Determine cleanup mode
-  const mode = {
-    all: args.all || false,
-    completed: args.completed || false,
-    olderThan: args.olderThan || DEFAULT_DAYS
-  };
+  // Check if batch mode or single session mode
+  if (isBatchMode(args)) {
+    // Batch cleanup mode
+    const mode = {
+      all: args.all || false,
+      completed: args.completed || false,
+      olderThan: args.olderThan
+    };
 
-  // Run cleanup
-  const result = cleanSessions(mode);
+    const result = cleanSessions(mode);
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    // Single session mode
+    const sessionId = args.session || process.env.CLAUDE_SESSION_ID;
 
-  // Output result as JSON
-  console.log(JSON.stringify(result, null, 2));
+    if (!sessionId) {
+      console.error('Error: --session required (or set CLAUDE_SESSION_ID)');
+      process.exit(1);
+    }
+
+    const result = cleanSingleSession(sessionId);
+    console.log(JSON.stringify(result, null, 2));
+
+    if (!result.success) {
+      process.exit(1);
+    }
+  }
 }
 
 main();
