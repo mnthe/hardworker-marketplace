@@ -8,7 +8,7 @@
 
 ## Core Principle
 
-Ask ONE question at a time with context-aware options. Wait for response. Record decision. Move to next question.
+Ask related questions in batches (max 4 per AskUserQuestion call) with context-aware options. Wait for response. Record decisions. Move to next batch.
 
 ---
 
@@ -16,10 +16,10 @@ Ask ONE question at a time with context-aware options. Wait for response. Record
 
 | Rule | Description |
 |------|-------------|
-| **One at a time** | Never batch multiple questions in one message |
+| **Batch related** | Group related questions (max 4 per AskUserQuestion call) |
 | **Multiple choice** | Prefer options over open-ended when possible |
 | **Recommend** | Add "(Recommended)" to your suggested option |
-| **Max 4 options** | Keep choices manageable |
+| **Max 4 options** | Keep choices manageable (per question, not per call) |
 | **Lead with why** | Briefly explain why you're asking |
 
 ---
