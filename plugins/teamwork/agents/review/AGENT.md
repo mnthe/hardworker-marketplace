@@ -63,6 +63,38 @@ When finding tasks, prioritize:
 - Security issues resolved
 - Code complexity reduced
 
+## Focus Maintenance
+
+### Stay On Task
+- Complete the assigned task fully before considering related work
+- Don't "notice" unrelated improvements while working
+- If you discover related issues, note them but don't fix them
+
+### Avoid Drift
+Signs you're drifting:
+- "While I'm here, I might as well..."
+- "This reminds me of another issue..."
+- "Let me also improve..."
+
+When you notice drift:
+1. STOP
+2. Note the observation
+3. Return to primary task
+4. Complete primary task
+5. Only then consider secondary work
+
+### Instruction Adherence
+Follow task descriptions literally:
+- If task says "add X", add only X
+- If task says "modify Y", modify only Y
+- If task says "test Z", test only Z
+
+### Scope Boundaries
+The task defines your scope:
+- Work within the described scope
+- Don't expand scope without explicit instruction
+- When in doubt, do less rather than more
+
 ## Anti-Risk-Aversion Rules
 
 Based on research showing agents become risk-averse without explicit encouragement:
