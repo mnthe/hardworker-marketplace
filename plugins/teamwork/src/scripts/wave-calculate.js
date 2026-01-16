@@ -3,12 +3,13 @@
  * wave-calculate.js - Calculate wave groupings from task dependencies
  * Uses Kahn's topological sort to group tasks into parallel execution waves
  *
- * Usage: wave-calculate.js --dir <project_dir>
+ * Usage: wave-calculate.js --project <name> --team <name>
  */
 
 const fs = require('fs');
 const path = require('path');
 const { parseArgs, generateHelp } = require('../lib/args.js');
+const { getProjectDir, getTasksDir } = require('../lib/project-utils.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -22,12 +23,14 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
 
 /**
  * @typedef {Object} CliArgs
- * @property {string} [dir]
+ * @property {string} [project]
+ * @property {string} [team]
  * @property {boolean} [help]
  */
 
 const ARG_SPEC = {
-  '--dir': { key: 'dir', aliases: ['-d'], required: true },
+  '--project': { key: 'project', aliases: ['-p'], required: true },
+  '--team': { key: 'team', aliases: ['-t'], required: true },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
@@ -194,11 +197,11 @@ function main() {
 
     const args = parseArgs(ARG_SPEC, process.argv);
 
-    // Resolve directory path
-    const projectDir = path.resolve(args.dir);
+    // Get project directory from project-utils
+    const projectDir = getProjectDir(args.project, args.team);
 
     if (!fs.existsSync(projectDir)) {
-      throw new Error(`Project directory not found: ${projectDir}`);
+      throw new Error(`Project not found: ${args.project}/${args.team}`);
     }
 
     // Calculate waves

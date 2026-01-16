@@ -3,12 +3,13 @@
  * wave-status.js - Display wave progress and current status
  * Shows wave execution progress with task details
  *
- * Usage: wave-status.js --dir <project_dir> [--format json|table]
+ * Usage: wave-status.js --project <name> --team <name> [--format json|table]
  */
 
 const fs = require('fs');
 const path = require('path');
 const { parseArgs, generateHelp } = require('../lib/args.js');
+const { getProjectDir } = require('../lib/project-utils.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -22,13 +23,15 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
 
 /**
  * @typedef {Object} CliArgs
- * @property {string} [dir]
+ * @property {string} [project]
+ * @property {string} [team]
  * @property {'json' | 'table'} [format]
  * @property {boolean} [help]
  */
 
 const ARG_SPEC = {
-  '--dir': { key: 'dir', aliases: ['-d'], required: true },
+  '--project': { key: 'project', aliases: ['-p'], required: true },
+  '--team': { key: 'team', aliases: ['-t'], required: true },
   '--format': { key: 'format', aliases: ['-f'], default: 'table' },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
@@ -205,10 +208,10 @@ function formatJSON(projectDir, wavesState) {
  * @returns {void}
  */
 function displayWaveStatus(args) {
-  const projectDir = path.resolve(args.dir);
+  const projectDir = getProjectDir(args.project, args.team);
 
   if (!fs.existsSync(projectDir)) {
-    throw new Error(`Project directory not found: ${projectDir}`);
+    throw new Error(`Project not found: ${args.project}/${args.team}`);
   }
 
   // Read waves state

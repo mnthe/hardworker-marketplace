@@ -2,13 +2,13 @@
 /**
  * task-update.js - Update teamwork task
  *
- * Usage: task-update.js --dir <path> --id <task_id> [--status open|resolved] [--add-evidence "..."] [--owner <id>] [--release]
+ * Usage: task-update.js --project <name> --team <name> --id <task_id> [--status open|resolved] [--add-evidence "..."] [--owner <id>] [--release]
  */
 
 const fs = require('fs');
-const path = require('path');
 const { acquireLock, releaseLock } = require('../lib/file-lock.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
+const { getTaskFile } = require('../lib/project-utils.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -21,7 +21,8 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
 
 /**
  * @typedef {Object} ParsedArgs
- * @property {string} [dir]
+ * @property {string} [project]
+ * @property {string} [team]
  * @property {string} [id]
  * @property {TaskStatus} [status]
  * @property {string} [addEvidence]
@@ -41,7 +42,8 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
 // ============================================================================
 
 const ARG_SPEC = {
-  '--dir': { key: 'dir', aliases: ['-d'], required: true },
+  '--project': { key: 'project', aliases: ['-p'], required: true },
+  '--team': { key: 'team', aliases: ['-t'], required: true },
   '--id': { key: 'id', aliases: ['-i', '--task', '--task-id'], required: true },
   '--status': { key: 'status', aliases: ['-s'] },
   '--add-evidence': { key: 'addEvidence', aliases: ['-e'] },
@@ -71,7 +73,7 @@ async function main() {
 
   try {
     // Get task file path
-    const taskFile = path.join(args.dir, 'tasks', `${args.id}.json`);
+    const taskFile = getTaskFile(args.project, args.team, args.id);
 
     // Check if task exists
     if (!fs.existsSync(taskFile)) {

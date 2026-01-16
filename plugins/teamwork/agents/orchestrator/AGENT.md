@@ -72,25 +72,29 @@ Options:
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/plugins/teamwork/src/scripts"
 
 # Project management
-bun $SCRIPTS/project-create.js --dir {TEAMWORK_DIR} \
-  --project {PROJECT} --team {SUB_TEAM} --goal "..."
+bun $SCRIPTS/project-create.js --project {PROJECT} --team {SUB_TEAM} --goal "..."
 
-bun $SCRIPTS/project-get.js --dir {TEAMWORK_DIR} --field stats
+bun $SCRIPTS/project-get.js --project {PROJECT} --team {SUB_TEAM}
 
 # Task management
-bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
+bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
   --id "1" --title "..." --role backend --blocked-by "2,3"
 
-bun $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --format json
+bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --format json
 
-bun $SCRIPTS/task-get.js --dir {TEAMWORK_DIR} --id {TASK_ID}
+bun $SCRIPTS/task-get.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
+
+bun $SCRIPTS/task-claim.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
+
+bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
+  --status resolved --add-evidence "..."
 
 # Wave management
-bun $SCRIPTS/wave-calculate.js --dir {TEAMWORK_DIR}
+bun $SCRIPTS/wave-calculate.js --project {PROJECT} --team {SUB_TEAM}
 
-bun $SCRIPTS/wave-status.js --dir {TEAMWORK_DIR} --format json
+bun $SCRIPTS/wave-status.js --project {PROJECT} --team {SUB_TEAM} --format json
 
-bun $SCRIPTS/wave-update.js --dir {TEAMWORK_DIR} \
+bun $SCRIPTS/wave-update.js --project {PROJECT} --team {SUB_TEAM} \
   --wave {WAVE_ID} --status {STATUS}
 ```
 
@@ -186,8 +190,7 @@ Use Glob/Grep/Read to understand:
 **Step 4a: Create project**
 
 ```bash
-bun $SCRIPTS/project-create.js --dir {TEAMWORK_DIR} \
-  --project {PROJECT} --team {SUB_TEAM} \
+bun $SCRIPTS/project-create.js --project {PROJECT} --team {SUB_TEAM} \
   --goal "{goal}"
 ```
 
@@ -196,7 +199,7 @@ bun $SCRIPTS/project-create.js --dir {TEAMWORK_DIR} \
 For EACH task:
 
 ```bash
-bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
+bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
   --id "1" \
   --title "Clear, actionable title" \
   --description "Specific deliverable with context" \
@@ -207,7 +210,7 @@ bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
 With dependencies:
 
 ```bash
-bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
+bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
   --id "3" \
   --title "Build API endpoints" \
   --role backend \
@@ -227,7 +230,7 @@ Update task files with `blockedBy` arrays:
 **Calculate waves:**
 
 ```bash
-bun $SCRIPTS/wave-calculate.js --dir {TEAMWORK_DIR}
+bun $SCRIPTS/wave-calculate.js --project {PROJECT} --team {SUB_TEAM}
 ```
 
 **Wave calculation output:**
@@ -309,7 +312,7 @@ while (!isProjectComplete() && iteration < MAX_ITERATIONS) {
 
 ```bash
 # Get current wave status
-bun $SCRIPTS/wave-status.js --dir {TEAMWORK_DIR} --format json
+bun $SCRIPTS/wave-status.js --project {PROJECT} --team {SUB_TEAM} --format json
 ```
 
 **Parse status:**
@@ -392,16 +395,16 @@ cat {TEAMWORK_DIR}/verification/wave-{current_wave}.json
 
 ```bash
 # Mark wave as verified
-bun $SCRIPTS/wave-update.js --dir {TEAMWORK_DIR} \
+bun $SCRIPTS/wave-update.js --project {PROJECT} --team {SUB_TEAM} \
   --wave {current_wave} --status verified
 
 # Check if more waves exist
-WAVE_STATUS=$(bun $SCRIPTS/wave-status.js --dir {TEAMWORK_DIR} --format json)
+WAVE_STATUS=$(bun $SCRIPTS/wave-status.js --project {PROJECT} --team {SUB_TEAM} --format json)
 
 # If next wave exists, start it
 if [ {current_wave} -lt {total_waves} ]; then
   NEXT_WAVE=$((current_wave + 1))
-  bun $SCRIPTS/wave-update.js --dir {TEAMWORK_DIR} \
+  bun $SCRIPTS/wave-update.js --project {PROJECT} --team {SUB_TEAM} \
     --wave $NEXT_WAVE --status in_progress
 fi
 ```
@@ -468,10 +471,10 @@ Starting Wave {next_wave}...
 
 ```bash
 # Get next available task ID
-NEXT_ID=$(bun $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --format json | jq '.tasks | length + 1')
+NEXT_ID=$(bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --format json | jq '.tasks | length + 1')
 
 # Create fix task for conflict
-bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
+bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
   --id "$NEXT_ID" \
   --title "Resolve auth.ts conflict between task-3 and task-4" \
   --description "Merge conflicting changes in authenticate() function. Task-3 added JWT validation, Task-4 added rate limiting. Need to integrate both features." \
@@ -479,7 +482,7 @@ bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
   --blocked-by "3,4"
 
 # Create fix task for test failures
-bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
+bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
   --id "$((NEXT_ID + 1))" \
   --title "Fix auth.test.ts failures (5 tests)" \
   --description "Investigate and fix 5 failing tests in auth.test.ts. Expected 200 responses but getting 500 errors." \
@@ -490,7 +493,7 @@ bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
 **Recalculate waves:**
 
 ```bash
-bun $SCRIPTS/wave-calculate.js --dir {TEAMWORK_DIR}
+bun $SCRIPTS/wave-calculate.js --project {PROJECT} --team {SUB_TEAM}
 ```
 
 **Report failure and recovery:**
@@ -515,12 +518,12 @@ Resuming monitoring...
 
 ```bash
 # Get all resolved tasks in current wave
-WAVE_TASKS=$(bun $SCRIPTS/wave-status.js --dir {TEAMWORK_DIR} --format json \
+WAVE_TASKS=$(bun $SCRIPTS/wave-status.js --project {PROJECT} --team {SUB_TEAM} --format json \
   | jq ".waves[] | select(.id == $CURRENT_WAVE) | .tasks[]")
 
 # For each task, extract file modifications from evidence
 for TASK_ID in $WAVE_TASKS; do
-  TASK=$(bun $SCRIPTS/task-get.js --dir {TEAMWORK_DIR} --id $TASK_ID)
+  TASK=$(bun $SCRIPTS/task-get.js --project {PROJECT} --team {SUB_TEAM} --id $TASK_ID)
   # Parse evidence for "Created/Modified/Updated {file}" patterns
 done
 ```
@@ -596,7 +599,7 @@ Checking again in {MONITOR_INTERVAL} seconds...
 1. **Verify all tasks resolved**
 
 ```bash
-TASK_STATUS=$(bun $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --format json)
+TASK_STATUS=$(bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --format json)
 ALL_RESOLVED=$(echo $TASK_STATUS | jq '[.tasks[] | select(.status != "resolved")] | length == 0')
 ```
 

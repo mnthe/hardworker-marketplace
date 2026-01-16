@@ -64,20 +64,20 @@ Options:
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # List available tasks
-bun $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --available --format json
+bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --available --format json
 
 # List by role
-bun $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --available --role backend
+bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --available --role backend
 
 # Claim a task
-bun $SCRIPTS/task-claim.js --dir {TEAMWORK_DIR} --id 1
+bun $SCRIPTS/task-claim.js --project {PROJECT} --team {SUB_TEAM} --id 1
 
 # Update task
-bun $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id 1 \
+bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id 1 \
   --status resolved --add-evidence "npm test: 15/15 passed"
 
 # Release task (on failure)
-bun $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id 1 --release
+bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id 1 --release
 ```
 
 ## Process
@@ -86,10 +86,10 @@ bun $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id 1 --release
 
 ```bash
 # List available tasks (open, unblocked, unclaimed)
-bun $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --available --format json
+bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --available --format json
 
 # Or filter by role
-bun $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --available --role {role_filter}
+bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --available --role {role_filter}
 ```
 
 **If no task found:** Report "No available tasks" and exit.
@@ -97,7 +97,7 @@ bun $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --available --role {role_filter}
 ### Phase 2: Claim Task
 
 ```bash
-bun $SCRIPTS/task-claim.js --dir {TEAMWORK_DIR} --id {TASK_ID}
+bun $SCRIPTS/task-claim.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
 ```
 
 **If claim fails (conflict):** Find another task.
@@ -149,7 +149,7 @@ All command evidence MUST include exit code:
 **On Success:**
 
 ```bash
-bun $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id {TASK_ID} \
+bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
   --status resolved \
   --add-evidence "Created src/models/User.ts" \
   --add-evidence "npm test: 15/15 passed, exit 0"
@@ -159,11 +159,11 @@ bun $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id {TASK_ID} \
 
 ```bash
 # Add evidence of what went wrong
-bun $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id {TASK_ID} \
+bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
   --add-evidence "FAILED: npm test exited with code 1"
 
 # Release the task for another worker
-bun $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id {TASK_ID} --release
+bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} --release
 ```
 
 Do NOT mark as resolved if failed - release the task for retry.
@@ -269,7 +269,7 @@ When using --strict mode, use structured evidence:
 Set task verification status in task metadata:
 
 ```bash
-bun $SCRIPTS/task-update.js --dir {TEAMWORK_DIR} --id {TASK_ID} \
+bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
   --verification-status pass \
   --verification-notes "All 3 criteria met with concrete evidence"
 ```

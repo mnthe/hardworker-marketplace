@@ -10,12 +10,12 @@
  *
  * Backward compatible: tasks without version field are treated as version 0
  *
- * Usage: task-claim.js --dir <path> --id <task_id> [--owner <owner_id>]
+ * Usage: task-claim.js --project <name> --team <name> --id <task_id> [--owner <owner_id>]
  */
 
-const path = require('path');
 const { parseArgs, generateHelp } = require('../lib/args.js');
 const { claimTaskOptimistic } = require('../lib/optimistic-lock.js');
+const { getTaskFile } = require('../lib/project-utils.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -27,14 +27,16 @@ const { claimTaskOptimistic } = require('../lib/optimistic-lock.js');
 
 /**
  * @typedef {Object} ParsedArgs
- * @property {string} [dir]
+ * @property {string} [project]
+ * @property {string} [team]
  * @property {string} [id]
  * @property {string} [owner]
  * @property {boolean} [help]
  */
 
 const ARG_SPEC = {
-  '--dir': { key: 'dir', aliases: ['-d'], required: true },
+  '--project': { key: 'project', aliases: ['-p'], required: true },
+  '--team': { key: 'team', aliases: ['-t'], required: true },
   '--id': { key: 'id', aliases: ['-i', '--task', '--task-id'], required: true },
   '--owner': { key: 'owner', aliases: ['-o'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
@@ -60,7 +62,7 @@ async function main() {
   // Default owner to CLAUDE_SESSION_ID or worker-PID
   const owner = args.owner || process.env.CLAUDE_SESSION_ID || `worker-${process.pid}`;
 
-  const taskFile = path.join(args.dir, 'tasks', `${args.id}.json`);
+  const taskFile = getTaskFile(args.project, args.team, args.id);
 
   // Retry configuration
   const MAX_RETRIES = 3;

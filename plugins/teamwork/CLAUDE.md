@@ -66,21 +66,21 @@ plugins/teamwork/
 
 ## Script Inventory
 
-All scripts use Bun runtime with flag-based parameters.
+All scripts use Bun runtime with flag-based parameters. All task/project scripts use `--project <name> --team <name>` pattern.
 
 | Script | Purpose | Key Parameters |
 |--------|---------|----------------|
-| **setup-teamwork.js** | Initialize teamwork environment | (no parameters) |
-| **project-create.js** | Create new project with metadata | `--dir <path>` `--project <name>` `--team <name>` `--goal "..."` |
-| **project-get.js** | Get project metadata | `--dir <path>` `--field <field_name>` |
-| **task-create.js** | Create new task file | `--project <name>` `--team <name>` `--id <id>` `--title "..."` `--description "..."` `--role <role>` |
-| **task-get.js** | Get single task details | `--dir <path>` `--id <id>` `--field <field_name>` |
-| **task-list.js** | List all tasks in project | `--dir <path>` `--available` `--role <role>` `--format json\|table` |
-| **task-claim.js** | Atomically claim a task | `--dir <path>` `--id <id>` `--owner <session_id>` |
-| **task-update.js** | Update task status/evidence | `--dir <path>` `--id <id>` `--status open\|in_progress\|resolved` `--add-evidence "..."` `--release` |
-| **wave-calculate.js** | Calculate wave groups from task DAG | `--dir <path>` `--output waves.json` |
-| **wave-update.js** | Update wave status | `--dir <path>` `--wave <id>` `--status pending\|in_progress\|verifying\|verified\|failed` |
-| **wave-status.js** | Query wave progress | `--dir <path>` `--wave <id>` `--format json\|table` |
+| **setup-teamwork.js** | Initialize teamwork environment | `--project <name>` `--team <name>` |
+| **project-create.js** | Create new project with metadata | `--project <name>` `--team <name>` `--goal "..."` |
+| **project-get.js** | Get project metadata | `--project <name>` `--team <name>` |
+| **task-create.js** | Create new task file | `--project <name>` `--team <name>` `--id <id>` `--title "..."` `--description "..."` `--role <role>` `--blocked-by "1,2"` |
+| **task-get.js** | Get single task details | `--project <name>` `--team <name>` `--id <id>` |
+| **task-list.js** | List all tasks in project | `--project <name>` `--team <name>` `--available` `--role <role>` `--format json\|table` |
+| **task-claim.js** | Atomically claim a task | `--project <name>` `--team <name>` `--id <id>` `--owner <session_id>` |
+| **task-update.js** | Update task status/evidence | `--project <name>` `--team <name>` `--id <id>` `--status open\|in_progress\|resolved` `--add-evidence "..."` `--release` |
+| **wave-calculate.js** | Calculate wave groups from task DAG | `--project <name>` `--team <name>` |
+| **wave-update.js** | Update wave status | `--project <name>` `--team <name>` `--wave <id>` `--status planning\|in_progress\|completed\|verified\|failed` |
+| **wave-status.js** | Query wave progress | `--project <name>` `--team <name>` `--format json\|table` |
 | **loop-state.js** | Manage worker loop state | `--get` `--set --project <name> --team <name> --role <role>` `--clear` |
 | **worker-setup.js** | Setup worker session context | `--project <name>` `--team <name>` `--role <role>` |
 
@@ -250,7 +250,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 }
 ```
 
-**Wave status values**: `pending` | `in_progress` | `verifying` | `verified` | `failed`
+**Wave status values**: `planning` | `in_progress` | `completed` | `verified` | `failed`
 
 ### Verification Result Format (v2)
 

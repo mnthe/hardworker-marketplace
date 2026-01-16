@@ -41,6 +41,7 @@ const ARG_SPEC = {
   '--description': { key: 'description', aliases: ['-d'] },
   '--role': { key: 'role', aliases: ['-r'], default: 'worker' },
   '--wave': { key: 'wave', aliases: ['-w'] },
+  '--blocked-by': { key: 'blocked_by', aliases: ['-b'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
@@ -70,6 +71,12 @@ function createTask(args) {
 
   // Build task object
   const now = new Date().toISOString();
+
+  // Parse blocked_by: comma-separated string to array
+  const blockedBy = args.blocked_by
+    ? args.blocked_by.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+
   /** @type {Task} */
   const task = {
     id: args.id,
@@ -77,6 +84,7 @@ function createTask(args) {
     description: args.description || args.title,
     role: args.role || 'worker',
     status: 'open',
+    blocked_by: blockedBy,
     version: 0,
     created_at: now,
     updated_at: now,

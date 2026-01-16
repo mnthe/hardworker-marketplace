@@ -2,11 +2,13 @@
 /**
  * Project Create Script
  * Creates teamwork project.json file
+ *
+ * Usage: project-create.js --project <name> --team <name> --goal "..."
  */
 
 const fs = require('fs');
-const path = require('path');
 const { parseArgs, generateHelp } = require('../lib/args.js');
+const { getProjectDir, getProjectFile, getTasksDir } = require('../lib/project-utils.js');
 
 // ============================================================================
 // CLI Arguments Parsing
@@ -18,7 +20,6 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
 
 /**
  * @typedef {Object} CliArgs
- * @property {string} dir
  * @property {string} project
  * @property {string} team
  * @property {string} goal
@@ -26,7 +27,6 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  */
 
 const ARG_SPEC = {
-  '--dir': { key: 'dir', aliases: ['-d'], required: true },
   '--project': { key: 'project', aliases: ['-p'], required: true },
   '--team': { key: 'team', aliases: ['-t'], required: true },
   '--goal': { key: 'goal', aliases: ['-g'], required: true },
@@ -50,9 +50,13 @@ function main() {
 
   const args = parseArgs(ARG_SPEC);
 
-  // Create directory
-  const tasksDir = path.join(args.dir, 'tasks');
-  fs.mkdirSync(args.dir, { recursive: true });
+  // Get paths from project-utils
+  const projectDir = getProjectDir(args.project, args.team);
+  const tasksDir = getTasksDir(args.project, args.team);
+  const projectFile = getProjectFile(args.project, args.team);
+
+  // Create directories
+  fs.mkdirSync(projectDir, { recursive: true });
   fs.mkdirSync(tasksDir, { recursive: true });
 
   // Generate timestamp
@@ -75,7 +79,6 @@ function main() {
   };
 
   // Write project.json
-  const projectFile = path.join(args.dir, 'project.json');
   fs.writeFileSync(projectFile, JSON.stringify(projectData, null, 2), 'utf-8');
 
   // Output success message and project data

@@ -2,11 +2,13 @@
 /**
  * Project Get Script
  * Reads and outputs teamwork project.json file
+ *
+ * Usage: project-get.js --project <name> --team <name>
  */
 
 const fs = require('fs');
-const path = require('path');
 const { parseArgs, generateHelp } = require('../lib/args.js');
+const { getProjectFile } = require('../lib/project-utils.js');
 
 // ============================================================================
 // CLI Arguments Parsing
@@ -14,12 +16,14 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
 
 /**
  * @typedef {Object} CliArgs
- * @property {string} dir
+ * @property {string} project
+ * @property {string} team
  * @property {boolean} help
  */
 
 const ARG_SPEC = {
-  '--dir': { key: 'dir', aliases: ['-d'], required: true },
+  '--project': { key: 'project', aliases: ['-p'], required: true },
+  '--team': { key: 'team', aliases: ['-t'], required: true },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
@@ -40,11 +44,11 @@ function main() {
 
   const args = parseArgs(ARG_SPEC);
 
-  // Check project file exists
-  const projectFile = path.join(args.dir, 'project.json');
+  // Get project file path
+  const projectFile = getProjectFile(args.project, args.team);
 
   if (!fs.existsSync(projectFile)) {
-    console.error(`Error: Project file not found: ${projectFile}`);
+    console.error(`Error: Project not found: ${args.project}/${args.team}`);
     process.exit(1);
   }
 

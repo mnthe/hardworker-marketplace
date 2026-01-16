@@ -3,12 +3,13 @@
  * wave-update.js - Update wave status in waves.json
  * Manages wave lifecycle state transitions
  *
- * Usage: wave-update.js --dir <project_dir> --wave <wave_id> --status <status>
+ * Usage: wave-update.js --project <name> --team <name> --wave <wave_id> --status <status>
  */
 
 const fs = require('fs');
 const path = require('path');
 const { parseArgs, generateHelp } = require('../lib/args.js');
+const { getProjectDir } = require('../lib/project-utils.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -21,14 +22,16 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
 
 /**
  * @typedef {Object} CliArgs
- * @property {string} [dir]
+ * @property {string} [project]
+ * @property {string} [team]
  * @property {string} [wave]
  * @property {WaveStatus} [status]
  * @property {boolean} [help]
  */
 
 const ARG_SPEC = {
-  '--dir': { key: 'dir', aliases: ['-d'], required: true },
+  '--project': { key: 'project', aliases: ['-p'], required: true },
+  '--team': { key: 'team', aliases: ['-t'], required: true },
   '--wave': { key: 'wave', aliases: ['-w'], required: true },
   '--status': { key: 'status', aliases: ['-s'], required: true },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
@@ -81,10 +84,10 @@ function writeWavesFile(projectDir, wavesState) {
  * @returns {WavesState} Updated waves state
  */
 function updateWave(args) {
-  const projectDir = path.resolve(args.dir);
+  const projectDir = getProjectDir(args.project, args.team);
 
   if (!fs.existsSync(projectDir)) {
-    throw new Error(`Project directory not found: ${projectDir}`);
+    throw new Error(`Project not found: ${args.project}/${args.team}`);
   }
 
   // Validate status
