@@ -15,7 +15,8 @@ const STALE_LOCK_THRESHOLD = 60000; // 1 minute - lock considered stale if holde
 /**
  * @typedef {Object} LockHolder
  * @property {string} owner - Owner identifier (e.g., session ID)
- * @property {number} pid - Process ID that acquired the lock
+ * @property {string} [session_id] - CLAUDE_SESSION_ID if available
+ * @property {number} pid - Process ID that acquired the lock (for alive check)
  * @property {string} acquired_at - ISO timestamp when lock was acquired
  */
 
@@ -31,12 +32,14 @@ function getHolderPath(lockPath) {
 /**
  * Write lock holder information
  * @param {string} lockPath - Lock directory path
- * @param {string} owner - Owner identifier
+ * @param {string} [owner] - Owner identifier (defaults to CLAUDE_SESSION_ID or pid)
  */
 function writeHolder(lockPath, owner) {
   const holderPath = getHolderPath(lockPath);
+  const sessionId = process.env.CLAUDE_SESSION_ID;
   const holder = {
-    owner,
+    owner: owner || sessionId || `pid-${process.pid}`,
+    session_id: sessionId || null,
     pid: process.pid,
     acquired_at: new Date().toISOString()
   };
