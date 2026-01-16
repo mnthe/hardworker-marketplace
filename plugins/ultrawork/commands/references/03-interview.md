@@ -107,9 +107,9 @@ Ask in this order (skip if already clear):
 ```python
 # After reading: "Found src/repositories/UserRepository.ts using Prisma"
 "options": [
-  {"label": "Prisma Repository (Recommended)", "description": "UserRepository 패턴 따름, src/repositories/ProductRepository 생성"},
-  {"label": "Prisma Direct", "description": "Repository 없이 app/api/products/route.ts에서 직접 사용"},
-  {"label": "새 패턴 도입", "description": "다른 방식 (Other에서 설명)"}
+  {"label": "Prisma Repository (Recommended)", "description": "Follows UserRepository pattern, creates src/repositories/ProductRepository"},
+  {"label": "Prisma Direct", "description": "Direct use in app/api/products/route.ts without Repository"},
+  {"label": "Introduce new pattern", "description": "Different approach (explain in Other)"}
 ]
 ```
 
@@ -177,19 +177,19 @@ After completing each round, ask if user wants to continue:
 
 ```python
 AskUserQuestion(questions=[{
-  "question": f"Round {n} 완료. 계속할까요?",
+  "question": f"Round {n} complete. Continue?",
   "header": "Continue",
   "options": [
-    {"label": "충분함", "description": "Plan 작성으로 진행"},
-    {"label": "계속", "description": "다음 라운드 진행"}
+    {"label": "Enough", "description": "Proceed to write Plan"},
+    {"label": "Continue", "description": "Proceed to next round"}
   ],
   "multiSelect": False
 }])
 ```
 
 **Behavior**:
-- **"충분함"** → Exit interview, proceed to Design Document
-- **"계속"** → Next round (no upper limit)
+- **"Enough"** → Exit interview, proceed to Design Document
+- **"Continue"** → Next round (no upper limit)
 
 ---
 
