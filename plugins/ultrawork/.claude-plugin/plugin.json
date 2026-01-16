@@ -1,6 +1,6 @@
 {
   "name": "ultrawork",
-  "version": "0.18.2",
+  "version": "0.18.3",
   "description": "Strict verification-first development mode with Session ID-based isolation (Bun cross-platform version).",
   "author": {
     "name": "mnthe"

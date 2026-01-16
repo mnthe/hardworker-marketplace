@@ -21,10 +21,9 @@ const os = require('os');
  */
 
 /**
+ * SessionStart hook output format (top-level properties, no hookSpecificOutput)
  * @typedef {Object} HookOutput
- * @property {Object} hookSpecificOutput
- * @property {string} hookSpecificOutput.hookEventName
- * @property {string} [hookSpecificOutput.additionalContext]
+ * @property {string} [systemMessage] - Message shown to Claude
  */
 
 /**
@@ -121,11 +120,7 @@ async function main() {
 
     // Output session ID for AI to use
     /** @type {HookOutput} */
-    const output = {
-      hookSpecificOutput: {
-        hookEventName: 'SessionStart'
-      }
-    };
+    const output = {};
 
     if (sessionId) {
       let contextMessage = `═══════════════════════════════════════════════════════════
@@ -144,18 +139,14 @@ async function main() {
         contextMessage += `\n Agent Type: ${agentType}`;
       }
 
-      output.hookSpecificOutput.additionalContext = contextMessage;
+      output.systemMessage = contextMessage;
     }
 
     console.log(JSON.stringify(output));
     process.exit(0);
   } catch (err) {
     // Even on error, output minimal valid JSON and exit 0
-    console.log(JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'SessionStart'
-      }
-    }));
+    console.log('{}');
     process.exit(0);
   }
 }
@@ -163,22 +154,14 @@ async function main() {
 // Handle stdin
 if (process.stdin.isTTY) {
   // No stdin available, output minimal response
-  console.log(JSON.stringify({
-    hookSpecificOutput: {
-      hookEventName: 'SessionStart'
-    }
-  }));
+  console.log('{}');
   process.exit(0);
 } else {
   // Read stdin and process
   process.stdin.setEncoding('utf8');
   main().catch(() => {
     // On error, output minimal valid JSON and exit 0
-    console.log(JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'SessionStart'
-      }
-    }));
+    console.log('{}');
     process.exit(0);
   });
 }
