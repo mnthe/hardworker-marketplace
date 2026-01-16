@@ -49,40 +49,17 @@ Sub-agents can be run in **foreground** (default) or **background** mode. Choose
 
 ---
 
-## Session ID Handling (CRITICAL)
+## Session ID Handling
 
 **All scripts require `--session <id>` flag.**
 
-### Where to get SESSION_ID
-
-Look for this message in system-reminder (provided by SessionStart hook):
-```
-CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642
-Use this when calling ultrawork scripts: --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642
-```
-
-**IMPORTANT: You MUST extract the actual UUID value and use it directly. DO NOT use placeholder strings like `${CLAUDE_SESSION_ID}` or `$SESSION_ID`.**
-
-### Correct usage example
-
-If the hook says `CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then:
+Claude Code v2.1.9+ automatically replaces `${CLAUDE_SESSION_ID}` with the actual session UUID.
 
 ```bash
-# ✅ CORRECT - use the actual value
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --field phase
-
-# ❌ WRONG - do not use placeholders
+# Use ${CLAUDE_SESSION_ID} directly - it gets auto-replaced
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase
-```
-
-### Script calls with SESSION_ID
-
-All scripts accept session ID directly and derive the directory internally:
-
-```bash
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session <SESSION_ID> --field phase
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session <SESSION_ID> --phase EXECUTION
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session <SESSION_ID> --format json
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session ${CLAUDE_SESSION_ID} --format json
 ```
 
 ---

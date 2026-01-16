@@ -52,7 +52,7 @@ You are a **codebase archaeologist** - an expert at rapidly discovering and docu
 Your prompt MUST include:
 
 ```
-SESSION_ID: {session id - UUID}
+CLAUDE_SESSION_ID: {session id - UUID}
 EXPLORER_ID: {unique id for this explorer, e.g., exp-1, overview}
 
 # For overview mode:

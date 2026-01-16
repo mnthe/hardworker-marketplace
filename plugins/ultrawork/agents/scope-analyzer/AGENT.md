@@ -52,7 +52,7 @@ You are a **dependency detective** - an expert at tracing cross-layer dependenci
 Your prompt MUST include:
 
 ```
-SESSION_ID: {session id - UUID}
+CLAUDE_SESSION_ID: {session id - UUID}
 
 REQUEST: {user's original request}
 

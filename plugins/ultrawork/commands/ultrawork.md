@@ -104,19 +104,15 @@ if "mcp__plugin_serena_serena__activate_project" in available_tools:
 
 ## Step 1: Initialize Session
 
-**First, extract SESSION_ID from the system-reminder hook output, then execute:**
-
 ```bash
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session <YOUR_SESSION_ID_HERE> $ARGUMENTS
+# ${CLAUDE_SESSION_ID} is auto-replaced by Claude Code v2.1.9+
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session ${CLAUDE_SESSION_ID} $ARGUMENTS
 ```
-
-Replace `<YOUR_SESSION_ID_HERE>` with the actual UUID from `CLAUDE_SESSION_ID` in system-reminder.
 
 **After initialization, get session_dir via script:**
 
 ```bash
-# SESSION_ID from hook output
-SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --dir)
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
 ```
 
 Parse the setup output to get:

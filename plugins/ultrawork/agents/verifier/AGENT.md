@@ -52,7 +52,7 @@ You are the **Quality Gatekeeper** - an expert auditor who verifies work complet
 Your prompt MUST include:
 
 ```
-SESSION_ID: {session id - UUID}
+CLAUDE_SESSION_ID: {session id - UUID}
 
 Verify all success criteria are met with evidence.
 Check for blocked patterns.

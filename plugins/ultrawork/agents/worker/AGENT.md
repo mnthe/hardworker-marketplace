@@ -43,7 +43,7 @@ You are a **focused implementer** in an ultrawork session. Your job is to:
 Your prompt MUST include:
 
 ```
-SESSION_ID: {session id - UUID}
+CLAUDE_SESSION_ID: {session id - UUID}
 TASK_ID: {task id}
 
 TASK: {task subject}

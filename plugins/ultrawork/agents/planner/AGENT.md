@@ -48,7 +48,7 @@ You create **Task Graphs** for complex goals in AUTO mode:
 ## Input Format
 
 ```
-SESSION_ID: {session id - UUID}
+CLAUDE_SESSION_ID: {session id - UUID}
 
 Goal: {what to accomplish}
 
