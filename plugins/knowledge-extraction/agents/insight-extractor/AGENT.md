@@ -110,11 +110,11 @@ For each insight:
 ```
 
 **Skip reasons:**
-- `이미 CLAUDE.md에 있음` - Content exists in project/global CLAUDE.md
-- `이미 rules 파일에 있음` - Content exists in project/global rules files
-- `기존 skill과 중복` - Similar skill already exists
-- `관찰만` - Observation without actionable guidance
-- `너무 구체적` - Too specific to current context, not reusable
+- `already-in-claude-md` - Content exists in project/global CLAUDE.md
+- `already-in-rules` - Content exists in project/global rules files
+- `duplicate-skill` - Similar skill already exists
+- `observation-only` - Observation without actionable guidance
+- `too-specific` - Too specific to current context, not reusable
 
 ### Step 3: Analyze Remaining Insights
 
@@ -150,42 +150,42 @@ Present proposals with table summary + content preview:
 
 **Format:**
 ```markdown
-⏺ Insight Extraction 제안
+⏺ Insight Extraction Proposals
 
-추출 대상 {n}개:
+{n} Extraction Target(s):
 ┌─────┬───────────────────────────────┬───────────┬───────────────────┐
-│  #  │            Insight            │  Target   │       위치        │
+│  #  │            Insight            │  Target   │     Location      │
 ├─────┼───────────────────────────────┼───────────┼───────────────────┤
-│ 1   │ {제목}                        │ CLAUDE.md │ project           │
+│ 1   │ {title}                       │ CLAUDE.md │ project           │
 ├─────┼───────────────────────────────┼───────────┼───────────────────┤
-│ 2   │ {제목}                        │ Skill     │ ~/.claude/skills/ │
+│ 2   │ {title}                       │ Skill     │ ~/.claude/skills/ │
 ├─────┼───────────────────────────────┼───────────┼───────────────────┤
-│ 3   │ {제목}                        │ Rules     │ .claude/rules/    │
+│ 3   │ {title}                       │ Rules     │ .claude/rules/    │
 └─────┴───────────────────────────────┴───────────┴───────────────────┘
 
-건너뜀 {n}개: #{번호} ({skip reason}), ...
+Skipped {n}: #{number} ({skip reason}), ...
 
 ---
 
-### 내용 요약
+### Content Summary
 
-**#1 {제목}**
-{사용자가 이해할 수 있도록 insight 내용을 1-2문장으로 요약 정리}
+**#1 {title}**
+{1-2 sentence summary of insight content for user understanding}
 
-**#2 {제목}**
-{핵심 내용 요약 - 원문 인용이 아닌 정리된 설명}
+**#2 {title}**
+{Key content summary - organized explanation, not verbatim quote}
 
 ---
-어떻게 진행할까요?
-- 전체 승인: {n}개 모두 생성
-- 선택 승인: 번호 지정 (예: "1,2")
-- 수정 요청: 특정 항목 내용/위치 변경
+How would you like to proceed?
+- Approve all: Create all {n} items
+- Selective approval: Specify numbers (e.g., "1,2")
+- Request changes: Modify specific item content/location
 ```
 
 **Key points:**
-- 테이블로 한눈에 파악할 수 있는 요약 제공
-- 아래에 각 insight의 **내용 요약** 추가 (원문 인용이 아닌 사용자가 이해할 수 있는 정리된 설명)
-- 건너뛴 항목은 이유와 함께 간략히 표시 (검증 단계에서 걸러진 것들)
+- Table provides at-a-glance summary
+- Content summary for each insight below (organized explanation for user understanding, not verbatim quotes)
+- Skipped items shown briefly with reasons (filtered during validation)
 
 ### Step 6: Execute Approved Extractions
 

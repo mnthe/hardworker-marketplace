@@ -359,20 +359,20 @@ Display plan summary:
 
 ```python
 AskUserQuestion(questions=[{
-  "question": "이 계획으로 진행할까요?",
+  "question": "Proceed with this plan?",
   "header": "Plan approval",
   "options": [
-    {"label": "승인", "description": "이 계획대로 실행합니다"},
-    {"label": "수정 요청", "description": "계획을 수정합니다"},
-    {"label": "취소", "description": "작업을 취소합니다"}
+    {"label": "Approve", "description": "Execute according to this plan"},
+    {"label": "Request changes", "description": "Modify the plan"},
+    {"label": "Cancel", "description": "Cancel the work"}
   ],
   "multiSelect": False
 }])
 ```
 
-- "승인" → proceed to Step 5
-- "수정 요청" → get feedback, re-run planning
-- "취소" → end session
+- "Approve" → proceed to Step 5
+- "Request changes" → get feedback, re-run planning
+- "Cancel" → end session
 
 **If `--plan-only` was set:** Stop here, report plan summary.
 
