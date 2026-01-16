@@ -9,7 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { isSessionActive, readSession, getSessionDir } = require('../lib/session-utils.js');
+const { isSessionActive, readSessionField, getSessionDir } = require('../lib/session-utils.js');
 
 /**
  * @typedef {import('../lib/types.js').Session} Session
@@ -300,11 +300,11 @@ async function main() {
     // Get session file path for error message
     const sessionFile = getSessionFile(sessionId);
 
-    // Get session data
-    /** @type {Session} */
-    let session;
+    // Get session phase (optimized: only reads phase field, not full JSON)
+    /** @type {string} */
+    let phase;
     try {
-      session = readSession(sessionId);
+      phase = readSessionField(sessionId, 'phase') || 'unknown';
     } catch {
       // Session file error - allow
       console.log(JSON.stringify(createAllowResponse()));
@@ -317,7 +317,7 @@ async function main() {
     // =========================================================================
     // Phase 1: PLANNING phase enforcement
     // =========================================================================
-    if (session.phase === 'PLANNING') {
+    if (phase === 'PLANNING') {
       // Check if file is allowed during PLANNING
       if (isFileAllowed(filePath)) {
         console.log(JSON.stringify(createAllowResponse()));
@@ -332,7 +332,7 @@ async function main() {
     // =========================================================================
     // Phase 2: TDD enforcement during EXECUTION phase
     // =========================================================================
-    if (session.phase === 'EXECUTION') {
+    if (phase === 'EXECUTION') {
       // Check for current TDD task
       const tddTask = getCurrentTddTask(sessionId);
 

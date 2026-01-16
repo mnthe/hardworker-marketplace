@@ -91,10 +91,17 @@ function isSessionActive(sessionId) {
   }
 
   try {
-    const content = fs.readFileSync(sessionFile, 'utf-8');
-    /** @type {Session} */
-    const session = JSON.parse(content);
-    const phase = session.phase || 'unknown';
+    // Optimized: read only first 1KB to extract phase field
+    const fd = fs.openSync(sessionFile, 'r');
+    const buffer = Buffer.alloc(1024);
+    const bytesRead = fs.readSync(fd, buffer, 0, 1024, 0);
+    fs.closeSync(fd);
+
+    const partialContent = buffer.toString('utf-8', 0, bytesRead);
+
+    // Extract phase using regex
+    const match = partialContent.match(/"phase"\s*:\s*"([^"]+)"/);
+    const phase = match ? match[1] : 'unknown';
 
     // Active phases
     /** @type {Phase[]} */
@@ -145,6 +152,74 @@ function readSession(sessionId) {
   const sessionFile = resolveSessionId(sessionId);
   const content = fs.readFileSync(sessionFile, 'utf-8');
   return JSON.parse(content);
+}
+
+/**
+ * Optimized field extraction from session JSON
+ * For simple top-level fields, uses partial file read + regex
+ * @param {string} sessionId - Session ID
+ * @param {string} fieldPath - Field path (dot notation for nested)
+ * @returns {any} Field value or undefined
+ */
+function readSessionField(sessionId, fieldPath) {
+  const sessionFile = resolveSessionId(sessionId);
+
+  // Top-level fields that can be extracted via regex
+  const topLevelSimpleFields = new Set([
+    'version', 'session_id', 'working_dir', 'goal', 'phase',
+    'exploration_stage', 'iteration', 'started_at', 'updated_at', 'cancelled_at'
+  ]);
+
+  const isTopLevel = !fieldPath.includes('.');
+  const fieldName = isTopLevel ? fieldPath : fieldPath.split('.')[0];
+
+  // Optimization: for known simple top-level fields, read partial file
+  if (isTopLevel && topLevelSimpleFields.has(fieldName)) {
+    const fd = fs.openSync(sessionFile, 'r');
+    const buffer = Buffer.alloc(2048);
+    const bytesRead = fs.readSync(fd, buffer, 0, 2048, 0);
+    fs.closeSync(fd);
+
+    const partialContent = buffer.toString('utf-8', 0, bytesRead);
+
+    // Extract field using regex
+    const pattern = new RegExp(
+      `"${fieldName}"\\s*:\\s*("([^"\\\\]*(\\\\.[^"\\\\]*)*)"|(-?\\d+\\.?\\d*)|true|false|null)`,
+      'm'
+    );
+
+    const match = partialContent.match(pattern);
+    if (match) {
+      const rawValue = match[1];
+      if (rawValue.startsWith('"')) {
+        return rawValue.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+      } else if (rawValue === 'true') {
+        return true;
+      } else if (rawValue === 'false') {
+        return false;
+      } else if (rawValue === 'null') {
+        return null;
+      } else {
+        return parseFloat(rawValue);
+      }
+    }
+    // Fall through to full parse if not found
+  }
+
+  // Full parse for nested or complex fields
+  const content = fs.readFileSync(sessionFile, 'utf-8');
+  const session = JSON.parse(content);
+
+  const parts = fieldPath.split('.');
+  let value = session;
+  for (const part of parts) {
+    if (value === null || value === undefined || typeof value !== 'object') {
+      return undefined;
+    }
+    value = value[part];
+  }
+
+  return value;
 }
 
 /**
@@ -272,6 +347,7 @@ module.exports = {
   isSessionActive,
   listActiveSessions,
   readSession,
+  readSessionField,
   updateSession,
   getClaudeSessionId,
   getCurrentSessionFile,

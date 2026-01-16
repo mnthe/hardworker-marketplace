@@ -27,19 +27,23 @@ plugins/ultrawork/
 │   │   ├── types.js           # JSDoc type definitions (@typedef)
 │   │   ├── file-lock.js       # Cross-platform file locking
 │   │   └── session-utils.js   # Session management utilities
-│   ├── scripts/               # CLI scripts (12 files)
+│   ├── scripts/               # CLI scripts (16 files)
 │   │   ├── setup-ultrawork.js
 │   │   ├── session-get.js
+│   │   ├── session-field.js     # NEW: Optimized single field extraction
 │   │   ├── session-update.js
 │   │   ├── task-create.js
 │   │   ├── task-get.js
 │   │   ├── task-list.js
 │   │   ├── task-update.js
+│   │   ├── task-summary.js      # NEW: AI-friendly task markdown
 │   │   ├── context-init.js
 │   │   ├── context-add.js
 │   │   ├── ultrawork-status.js
 │   │   ├── ultrawork-cancel.js
-│   │   └── ultrawork-evidence.js
+│   │   ├── ultrawork-evidence.js
+│   │   ├── evidence-summary.js  # NEW: AI-friendly evidence index
+│   │   └── evidence-query.js    # NEW: Filter & query evidence
 │   └── hooks/                 # Lifecycle hooks (8 files)
 │       ├── session-start-hook.js
 │       ├── session-context-hook.js
@@ -80,6 +84,10 @@ All scripts use Bun runtime with flag-based parameters.
 | **ultrawork-status.js** | Display session status dashboard | `--session <ID>` `--all` |
 | **ultrawork-cancel.js** | Cancel active session | `--session <ID>` |
 | **ultrawork-evidence.js** | View collected evidence log | `--session <ID>` |
+| **session-field.js** | Optimized single field extraction (partial file read) | `--session <ID>` `--field phase` `--json` |
+| **task-summary.js** | Generate AI-friendly task markdown | `--session <ID>` `--task <ID>` `--save` |
+| **evidence-summary.js** | Generate AI-friendly evidence index | `--session <ID>` `--save` `--format md\|json` |
+| **evidence-query.js** | Query evidence with filters | `--session <ID>` `--type test_result` `--last 5` `--search "npm"` `--task 1` |
 
 ## Hook Inventory
 
@@ -113,16 +121,20 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 ```
 ~/.claude/ultrawork/sessions/{SESSION_ID}/
-├── session.json           # Session state
+├── session.json           # Session state (minimal metadata)
 ├── context.json           # Exploration summary (lightweight index)
+├── evidence/              # Evidence files (NEW: separated from session.json)
+│   ├── log.jsonl          # Append-only evidence log
+│   └── index.md           # AI-friendly summary (generated)
 ├── exploration/           # Detailed exploration files (*.md)
 │   ├── overview.md
 │   ├── exp-1.md
 │   └── exp-2.md
-└── tasks/                 # Task files (*.json)
+└── tasks/                 # Task files (*.json + summary.md)
     ├── 1.json
     ├── 2.json
-    └── verify.json
+    ├── verify.json
+    └── summary.md         # AI-friendly task overview (generated)
 ```
 
 ### Session State Format

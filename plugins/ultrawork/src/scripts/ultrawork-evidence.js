@@ -6,7 +6,8 @@
  */
 
 const fs = require('fs');
-const { getSessionDir, getSessionFile, readSession } = require('../lib/session-utils.js');
+const path = require('path');
+const { getSessionDir, getSessionFile, readSessionField } = require('../lib/session-utils.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
@@ -91,42 +92,53 @@ function showEvidenceLog(sessionId) {
     process.exit(1);
   }
 
-  /** @type {Session} */
-  let session;
+  // Read session fields (optimized: only reads needed fields)
+  let goal, phase;
   try {
-    session = readSession(sessionId);
+    goal = readSessionField(sessionId, 'goal') || 'Unknown';
+    phase = readSessionField(sessionId, 'phase') || 'Unknown';
   } catch (error) {
     console.error(`❌ Failed to read session: ${error}`);
     process.exit(1);
   }
 
   const sessionDir = getSessionDir(sessionId);
+  const evidenceLog = path.join(sessionDir, 'evidence', 'log.jsonl');
 
   // Output header
   console.log('═══════════════════════════════════════════════════════════');
   console.log(' ULTRAWORK EVIDENCE LOG');
   console.log('═══════════════════════════════════════════════════════════');
   console.log('');
-  console.log(` Session ID: ${session.session_id}`);
-  console.log(` Goal: ${session.goal}`);
-  console.log(` Phase: ${session.phase}`);
+  console.log(` Session ID: ${sessionId}`);
+  console.log(` Goal: ${goal}`);
+  console.log(` Phase: ${phase}`);
   console.log('');
   console.log('───────────────────────────────────────────────────────────');
   console.log(' EVIDENCE');
   console.log('───────────────────────────────────────────────────────────');
   console.log('');
 
-  // Display evidence_log entries
-  if (!session.evidence_log || session.evidence_log.length === 0) {
+  // Read evidence from JSONL file
+  /** @type {EvidenceEntry[]} */
+  let entries = [];
+  if (fs.existsSync(evidenceLog)) {
+    const content = fs.readFileSync(evidenceLog, 'utf-8');
+    const lines = content.trim().split('\n').filter(line => line.length > 0);
+    entries = lines.map(line => JSON.parse(line));
+  }
+
+  // Display evidence entries
+  if (entries.length === 0) {
     console.log('  (no evidence collected yet)');
   } else {
-    session.evidence_log.forEach((entry, index) => {
+    entries.forEach((entry, index) => {
       console.log(formatEvidenceEntry(entry, index));
       console.log('');
     });
 
     console.log('───────────────────────────────────────────────────────────');
-    console.log(` Total Evidence Items: ${session.evidence_log.length}`);
+    console.log(` Total Evidence Items: ${entries.length}`);
   }
 
   console.log('');
@@ -137,11 +149,13 @@ function showEvidenceLog(sessionId) {
   console.log(` ${sessionDir}/`);
   console.log('   ├── session.json');
   console.log('   ├── context.json');
+  console.log('   ├── evidence/');
+  console.log('   │   └── log.jsonl');
   console.log('   ├── exploration/');
   console.log('   └── tasks/');
   console.log('');
-  console.log(' To view full session data:');
-  console.log(`   cat "${sessionFile}" | jq '.'`);
+  console.log(' To view raw evidence:');
+  console.log(`   cat "${evidenceLog}"`);
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
 }

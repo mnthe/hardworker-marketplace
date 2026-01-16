@@ -5,10 +5,11 @@
  */
 
 const fs = require('fs');
+const path = require('path');
 const {
+  getSessionDir,
   getSessionFile,
-  updateSession,
-  readSession,
+  readSessionField,
 } = require('../lib/session-utils.js');
 
 /**
@@ -251,9 +252,8 @@ async function main() {
       process.exit(0);
     }
 
-    // Read session to check phase
-    const session = readSession(sessionId);
-    const phase = session.phase || 'unknown';
+    // Read phase (optimized: only reads phase field, not full JSON)
+    const phase = readSessionField(sessionId, 'phase') || 'unknown';
 
     // Only capture evidence during EXECUTION and VERIFICATION phases
     /** @type {Phase[]} */
@@ -316,19 +316,20 @@ async function main() {
         break;
     }
 
-    // If we have evidence, append it to session
+    // If we have evidence, append to evidence/log.jsonl (append-only)
     if (evidence) {
-      await updateSession(sessionId, (session) => {
-        // Ensure evidence_log exists
-        if (!session.evidence_log) {
-          session.evidence_log = [];
-        }
+      const sessionDir = getSessionDir(sessionId);
+      const evidenceDir = path.join(sessionDir, 'evidence');
+      const evidenceLog = path.join(evidenceDir, 'log.jsonl');
 
-        // Append evidence
-        session.evidence_log.push(evidence);
+      // Ensure evidence directory exists
+      if (!fs.existsSync(evidenceDir)) {
+        fs.mkdirSync(evidenceDir, { recursive: true });
+      }
 
-        return session;
-      });
+      // Append evidence as single JSON line (no file locking needed)
+      const line = JSON.stringify(evidence) + '\n';
+      fs.appendFileSync(evidenceLog, line, 'utf-8');
     }
 
     // Output required hook response
