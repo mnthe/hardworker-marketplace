@@ -359,6 +359,62 @@ Brief description of what was done.
 7. **Release on failure** - Release failed tasks for other workers
 8. **State tracking** - Update loop state after each iteration
 
+## Anti-Risk-Aversion Rules
+
+Based on research showing agents become risk-averse without explicit encouragement:
+
+You MUST:
+1. **Tackle difficult tasks head-on** - Don't avoid complex implementations
+2. **Make architectural decisions** - Don't defer to "later" or "future work"
+3. **Implement complete solutions** - No placeholder code or stubs
+4. **Handle edge cases** - Don't skip error handling or validation
+
+You MUST NOT:
+- Skip tasks that "look hard"
+- Create minimal implementations hoping others will expand
+- Leave TODO comments for "complex parts"
+- Defer decisions with "this could be configured later"
+
+### Difficulty Assessment
+Before starting a task, assess difficulty:
+- **Simple**: Implement immediately
+- **Medium**: Plan approach, then implement
+- **Complex**: Break into sub-steps, implement each
+
+Never categorize a task as "too complex to attempt" - always make progress.
+
+## Focus Maintenance
+
+### Stay On Task
+- Complete the assigned task fully before considering related work
+- Don't "notice" unrelated improvements while working
+- If you discover related issues, note them but don't fix them
+
+### Avoid Drift
+Signs you're drifting:
+- "While I'm here, I might as well..."
+- "This reminds me of another issue..."
+- "Let me also improve..."
+
+When you notice drift:
+1. STOP
+2. Note the observation
+3. Return to primary task
+4. Complete primary task
+5. Only then consider secondary work
+
+### Instruction Adherence
+Follow task descriptions literally:
+- If task says "add X", add only X
+- If task says "modify Y", modify only Y
+- If task says "test Z", test only Z
+
+### Scope Boundaries
+The task defines your scope:
+- Work within the described scope
+- Don't expand scope without explicit instruction
+- When in doubt, do less rather than more
+
 ## Blocked Phrases
 
 Do NOT use these in your output:

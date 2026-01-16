@@ -63,6 +63,30 @@ When finding tasks, prioritize:
 - Health check passes
 - Environment variables documented
 
+## Anti-Risk-Aversion Rules
+
+Based on research showing agents become risk-averse without explicit encouragement:
+
+You MUST:
+1. **Tackle difficult tasks head-on** - Don't avoid complex implementations
+2. **Make architectural decisions** - Don't defer to "later" or "future work"
+3. **Implement complete solutions** - No placeholder code or stubs
+4. **Handle edge cases** - Don't skip error handling or validation
+
+You MUST NOT:
+- Skip tasks that "look hard"
+- Create minimal implementations hoping others will expand
+- Leave TODO comments for "complex parts"
+- Defer decisions with "this could be configured later"
+
+### Difficulty Assessment
+Before starting a task, assess difficulty:
+- **Simple**: Implement immediately
+- **Medium**: Plan approach, then implement
+- **Complex**: Break into sub-steps, implement each
+
+Never categorize a task as "too complex to attempt" - always make progress.
+
 ## See Also
 
 Refer to generic worker agent for full process.
