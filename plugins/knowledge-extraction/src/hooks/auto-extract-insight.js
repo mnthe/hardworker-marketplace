@@ -415,13 +415,17 @@ async function main() {
       const threshold = getThreshold();
 
       if (insightCount >= threshold) {
+        const message = [
+          `📝 ${newCount} new insight(s) extracted! Total: ${insightCount} (threshold: ${threshold}).`,
+          "Consider running '/insights extract' to convert them into reusable components.",
+          "Or continue your current work if you prefer to extract later."
+        ].join('\n');
+
         const output = {
-          decision: "block",
-          reason: [
-            `📝 ${newCount} new insight(s) extracted! Total: ${insightCount} (threshold: ${threshold}).`,
-            "Consider running '/insights extract' to convert them into reusable components.",
-            "Or continue your current work if you prefer to extract later."
-          ].join('\n')
+          hookSpecificOutput: {
+            hookEventName: "Stop",
+            additionalContext: message
+          }
         };
         console.log(JSON.stringify(output));
       }
