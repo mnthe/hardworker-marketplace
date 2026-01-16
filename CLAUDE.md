@@ -92,7 +92,8 @@ Command files (`commands/*.md`) must include:
 ---
 name: command-name
 description: One-line description
-args: "optional arguments spec"
+argument-hint: "optional arguments spec"
+allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
 
 # Command Title
@@ -112,6 +113,12 @@ What this command does.
 Step-by-step execution flow.
 ```
 
+**Frontmatter fields:**
+- `name`: Command identifier (lowercase, hyphen-separated)
+- `description`: One-line description shown in help
+- `argument-hint`: Optional hint text for command arguments
+- `allowed-tools`: List of tools the command's agent can use
+
 ### Agent Specification
 
 Agent files (`agents/*/AGENT.md`) must include:
@@ -120,6 +127,8 @@ Agent files (`agents/*/AGENT.md`) must include:
 ---
 name: agent-name
 description: Agent role description
+model: claude-sonnet-4-5
+color: blue
 tools: [list, of, allowed, tools]
 ---
 
@@ -138,6 +147,42 @@ Expected inputs and outputs.
 ## Workflow
 Step-by-step agent behavior.
 ```
+
+**Frontmatter fields:**
+- `name`: Agent identifier (lowercase, hyphen-separated)
+- `description`: Agent role description (can use rich XML format, see below)
+- `model`: Claude model to use (e.g., `claude-sonnet-4-5`, `claude-opus-4-5`)
+- `color`: Terminal display color (e.g., `blue`, `green`, `yellow`)
+- `tools`: List of allowed tools the agent can use
+
+**Rich description format:**
+
+Agent descriptions support XML markup for structured information:
+
+```markdown
+---
+description: |
+  <role>Worker Agent</role>
+  <purpose>Complete ONE specific task with evidence-based verification</purpose>
+  <context>
+    <session>CLAUDE_SESSION_ID: {session-id}</session>
+    <task>TASK_ID: {task-id}</task>
+    <constraints>
+      <item>Surgical changes only</item>
+      <item>Concrete evidence required</item>
+      <item>No partial completion claims</item>
+    </constraints>
+  </context>
+---
+```
+
+XML tags commonly used:
+- `<role>`: Agent's primary role
+- `<purpose>`: Main objective
+- `<context>`: Environmental/session context
+- `<constraints>`: Hard limitations
+- `<workflow>`: Step-by-step process
+- `<output>`: Expected output format
 
 ### Hook Specification
 
