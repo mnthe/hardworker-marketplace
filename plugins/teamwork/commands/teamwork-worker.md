@@ -82,10 +82,48 @@ Project complete or all tasks claimed.
 Use /teamwork-status to check progress.
 ```
 
+## Step 2.5: Detect Task Role (if --role not specified)
+
+**If user did NOT specify `--role` flag:**
+
+Query available tasks to detect role from first available task:
+
+```bash
+AVAILABLE_TASKS=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" \
+  --project {PROJECT} \
+  --team {SUB_TEAM} \
+  --available \
+  --format json)
+```
+
+Parse first task's role field:
+
+```bash
+DETECTED_ROLE=$(echo "$AVAILABLE_TASKS" | bun -e "
+  const tasks = JSON.parse(require('fs').readFileSync(0, 'utf-8'));
+  if (tasks.length > 0 && tasks[0].role) {
+    console.log(tasks[0].role);
+  } else {
+    console.log('worker');
+  }
+")
+```
+
+**Variable values:**
+- `DETECTED_ROLE`: Role from first available task, or "worker" if no tasks or no role field
+
+**If user specified `--role` flag:**
+Skip this step. Use user-specified role directly.
+
 ## Step 3: Spawn Worker Agent
 
+**Determine agent type:**
+1. If user specified `--role`: Use `"teamwork:{role}"`
+2. If role was detected in Step 2.5: Use `"teamwork:{DETECTED_ROLE}"`
+3. Default: Use `"teamwork:worker"`
+
 **ACTION REQUIRED - Call Task tool with:**
-- subagent_type: "teamwork:worker" (or "teamwork:{role}" if role specified)
+- subagent_type: Determined agent type (see above)
 - model: "sonnet"
 - prompt:
   ```
@@ -94,7 +132,7 @@ Use /teamwork-status to check progress.
   SUB_TEAM: {sub_team}
 
   Options:
-  - role_filter: {role or null}
+  - role_filter: {role or DETECTED_ROLE or null}
   - strict_mode: {true or false}
   - fresh_start_interval: {N or 10}
   ```

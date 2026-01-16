@@ -97,7 +97,7 @@ bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --available --ro
 ### Phase 2: Claim Task
 
 ```bash
-bun $SCRIPTS/task-claim.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
+bun $SCRIPTS/task-claim.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} --owner ${CLAUDE_SESSION_ID}
 ```
 
 **If claim fails (conflict):** Find another task.
