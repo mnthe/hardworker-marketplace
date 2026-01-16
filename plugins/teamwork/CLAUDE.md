@@ -14,7 +14,7 @@ Key features:
 - Project-based task management with wave-based execution
 - Role-based worker specialization (frontend, backend, devops, test, docs, security, review)
 - Three-tier verification (task-level, wave-level, final verification)
-- Optimistic concurrency control (OCC) for conflict-free parallel execution
+- File-based locking with owner identification for conflict-free parallel execution
 - Fresh start mechanism for stuck workers
 - Loop detection for continuous worker execution
 - Multi-terminal coordination via shared state
@@ -27,7 +27,8 @@ plugins/teamwork/
 ├── src/
 │   ├── lib/
 │   │   ├── types.js           # JSDoc type definitions (@typedef)
-│   │   ├── file-lock.js       # Cross-platform file locking
+│   │   ├── file-lock.js       # Cross-platform file locking with owner identification
+│   │   ├── optimistic-lock.js # Task claim/release with file lock protection
 │   │   ├── project-utils.js   # Project and task path utilities
 │   │   └── args.js            # Common argument parsing
 │   ├── scripts/               # CLI scripts (13 files)
@@ -101,7 +102,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **wave-verifier** | sonnet | Wave-level verification | Cross-task dependency checking, file conflict detection, wave-scoped build/test execution |
 | **final-verifier** | opus | Project-level verification | Full build/test, blocked pattern scanning, evidence completeness, cross-wave dependency validation |
 | **coordinator** | opus | DEPRECATED - Planning (v1 compatibility) | **Deprecated in v2**: Use orchestrator instead. Kept for backward compatibility only. |
-| **worker** | inherit | General purpose task execution | Find available tasks, claim with OCC, implement, collect structured evidence, mark resolved |
+| **worker** | inherit | General purpose task execution | Find available tasks, claim with file lock, implement, collect structured evidence, mark resolved |
 | **frontend** | inherit | Frontend development specialist | UI components, styling, state management, user interactions, responsive design, accessibility |
 | **backend** | inherit | Backend development specialist | API endpoints, services, database, business logic, data validation |
 | **devops** | inherit | DevOps and infrastructure specialist | CI/CD, deployment, infrastructure, containerization, monitoring |
@@ -328,7 +329,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 ### Phase 2: EXECUTION
 
-1. **Workers**: Run autonomous loops, claim and execute tasks with OCC
+1. **Workers**: Run autonomous loops, claim and execute tasks with file lock
 2. **Orchestrator**: Monitors wave completion, detects stuck workers
 3. **Wave Complete**: All tasks in wave resolved → trigger verification
 
@@ -427,24 +428,37 @@ process.exit(1); // error
 
 ### Concurrency Safety (v2)
 
-**Optimistic Concurrency Control (OCC):**
-- Workers use timestamp-based conflict detection (no file locks)
-- Task updates include `updated_at` timestamp check
-- Conflicts detected via stale timestamp, worker retries with fresh data
-- Multiple workers can read and attempt claims simultaneously
-- First successful write wins, others retry
+**File Lock with Owner Identification:**
+- Workers use mkdir-based atomic file locks for task claims
+- Lock holder info stored in `holder.json` (owner, pid, timestamp)
+- Reentrant locks: same owner can re-acquire without waiting
+- Stale lock detection: auto-cleanup if holder process is dead (>1 min)
+- Version tracking maintained for audit trail
 
-**OCC Benefits:**
-- No lock contention or deadlocks
-- Better performance under high parallelism
-- Works reliably across all filesystems (no NFS issues)
-- Simpler error recovery (no stale locks)
+**Lock Flow:**
+```
+Session A: acquireLock(task.json, "session-a")
+           → mkdir task.json.lock/
+           → write holder.json {owner: "session-a", pid: 12345, ...}
+           → [CRITICAL SECTION: read→check→write]
+           → releaseLock(task.json, "session-a")
+
+Session B: acquireLock(task.json, "session-b")
+           → EEXIST → read holder.json → owner != "session-b"
+           → wait and retry until Session A releases
+```
+
+**Benefits:**
+- No race conditions (atomic mkdir + holder identification)
+- Reentrant: same session can claim multiple tasks
+- Stale lock recovery: auto-cleanup crashed sessions
+- Cross-platform: works on Windows, macOS, Linux
 
 ### Worker Coordination
 
 - Each worker runs in separate terminal/session
 - Workers claim tasks based on role matching
-- Workers communicate through shared task files with OCC
+- Workers coordinate through file locks with session ID identification
 - Orchestrator monitors progress through task status
 
 ## Hook Configuration
