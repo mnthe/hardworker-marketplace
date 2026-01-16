@@ -69,8 +69,8 @@ bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --available --fo
 # List by role
 bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --available --role backend
 
-# Claim a task
-bun $SCRIPTS/task-claim.js --project {PROJECT} --team {SUB_TEAM} --id 1
+# Claim a task (--owner uses session ID for lock identification)
+bun $SCRIPTS/task-claim.js --project {PROJECT} --team {SUB_TEAM} --id 1 --owner ${CLAUDE_SESSION_ID}
 
 # Update task
 bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id 1 \
