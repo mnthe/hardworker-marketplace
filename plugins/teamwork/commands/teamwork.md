@@ -28,7 +28,7 @@ if "mcp__plugin_serena_serena__activate_project" in available_tools:
 ```
 
 **Benefits when Serena is active:**
-- Coordinator: `get_symbols_overview`, `find_symbol` for precise code structure analysis
+- Orchestrator: `get_symbols_overview`, `find_symbol` for precise code structure analysis
 - Workers: Symbol-based editing tools for safe refactoring
 
 **If Serena is not available, agents will use standard tools (Read, Edit, Grep).**
@@ -73,20 +73,13 @@ cat {plan_file_2}
 - Acceptance criteria
 - Architecture decisions
 
-## Step 3: Spawn Orchestrator or Coordinator
-
-**Decision logic:**
-
-- **If `--plans` provided** → Spawn **orchestrator** (wave-based execution with monitoring)
-- **If no plans** → Spawn **coordinator** (simple task decomposition)
-
-### Option A: Spawn Orchestrator (with --plans)
+## Step 3: Spawn Orchestrator
 
 <CRITICAL>
 **SPAWN THE ORCHESTRATOR AGENT NOW.**
 
-The orchestrator will:
-1. Load plan documents
+The orchestrator handles the full project lifecycle:
+1. Load plan documents (if --plans provided)
 2. Explore the codebase
 3. Create task breakdown with dependencies
 4. Calculate waves for parallel execution
@@ -108,40 +101,14 @@ The orchestrator will:
   Goal: {goal}
 
   Options:
-  - plans: {comma_separated_plan_files}
+  - plans: {comma_separated_plan_files or "none"}
   - monitor_interval: 10
   - max_iterations: 1000
   ```
 
 Wait for orchestrator to complete using TaskOutput.
 
-**Note:** Orchestrator runs a monitoring loop, so this may take longer than coordinator.
-
-### Option B: Spawn Coordinator (no plans - simple mode)
-
-<CRITICAL>
-**SPAWN THE COORDINATOR AGENT NOW.**
-
-The coordinator will:
-1. Explore the codebase
-2. Create task breakdown
-3. Assign roles to tasks
-4. Write task files
-</CRITICAL>
-
-**ACTION REQUIRED - Call Task tool with:**
-- subagent_type: "teamwork:coordinator"
-- model: "opus"
-- prompt:
-  ```
-  TEAMWORK_DIR: {teamwork_dir}
-  PROJECT: {project}
-  SUB_TEAM: {sub_team}
-
-  Goal: {goal}
-  ```
-
-Wait for coordinator to complete using TaskOutput.
+**Note:** The orchestrator runs a monitoring loop and handles both planning and execution phases. If no plans are provided, it will decompose the goal into tasks directly.
 
 ## Step 4: Display Results
 
@@ -184,7 +151,7 @@ Display summary:
 |--------|-------------|
 | `--project NAME` | Override project name (default: git repo name) |
 | `--team NAME` | Override sub-team name (default: branch name) |
-| `--plans FILE1,FILE2,...` | Load plan documents for wave-based execution (spawns orchestrator instead of coordinator) |
+| `--plans FILE1,FILE2,...` | Load plan documents for orchestrator to create wave-based execution (optional) |
 
 ---
 

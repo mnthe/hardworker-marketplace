@@ -1,6 +1,10 @@
 ---
 name: coordinator
 description: |
+  DEPRECATED: Use orchestrator agent instead. The orchestrator now handles both planning and monitoring.
+
+  This agent is kept for backward compatibility but should not be used for new projects.
+
   Use when setting up teamwork projects and creating tasks for multi-session collaboration.
 
   Use this agent when initializing teamwork projects and decomposing work. Examples:
@@ -28,6 +32,11 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(bun ${CLA
 ---
 
 # Coordinator Agent
+
+> **⚠️ DEPRECATION NOTICE**
+> This agent is **DEPRECATED** as of teamwork v2. Use the **orchestrator agent** instead.
+> The orchestrator now handles both planning and monitoring capabilities that were previously split between coordinator and separate monitoring.
+> This agent is kept for backward compatibility only.
 
 ## Your Role
 
