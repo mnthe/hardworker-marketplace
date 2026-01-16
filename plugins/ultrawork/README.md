@@ -157,20 +157,24 @@ Shows collected evidence for all tasks with verification status.
 #### /ultrawork-clean
 
 ```bash
-# Interactive cleanup (prompts for confirmation)
+# Default: Delete sessions older than 7 days in terminal states
 /ultrawork-clean
 
-# Clean all sessions (no confirmation)
-/ultrawork-clean --all
+# Delete sessions older than N days in terminal states
+/ultrawork-clean --older-than 30
 
-# Clean stale sessions only (7+ days old in terminal states)
-/ultrawork-clean --stale
+# Delete all completed sessions (terminal states)
+/ultrawork-clean --completed
+
+# Delete ALL sessions (including active ones)
+/ultrawork-clean --all
 ```
 
-Cleans up ultrawork sessions with three modes:
-- **Interactive**: Prompts to delete current session
-- **All**: Deletes all sessions without confirmation
-- **Stale**: Deletes sessions >7 days old in COMPLETE/CANCELLED/FAILED states
+Cleans up ultrawork sessions based on age and status:
+- **Default**: Deletes sessions >7 days old in COMPLETE/CANCELLED/FAILED states
+- **--older-than N**: Deletes sessions older than N days in terminal states
+- **--completed**: Deletes all sessions in terminal states regardless of age
+- **--all**: Deletes ALL sessions including active ones (PLANNING/EXECUTION/VERIFICATION)
 
 ## Commands
 
@@ -181,7 +185,7 @@ Cleans up ultrawork sessions with three modes:
 | `/ultrawork-exec`        | Execute existing plan          | `--max-iterations N`, `--skip-verify`                                             |
 | `/ultrawork-status`      | Check session status           | `--all`                                                                           |
 | `/ultrawork-evidence`    | Show collected evidence        | -                                                                                 |
-| `/ultrawork-clean`       | Clean up sessions              | `--all`, `--stale`                                                                |
+| `/ultrawork-clean`       | Clean up sessions              | `--older-than N`, `--completed`, `--all`                                          |
 | `/ultrawork-help`        | Show help documentation        | -                                                                                 |
 
 ## Agents
