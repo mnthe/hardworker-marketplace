@@ -11,6 +11,12 @@ const {
   getSessionFile,
   readSessionField,
 } = require('../lib/session-utils.js');
+const {
+  readStdin,
+  createPostToolUse,
+  outputAndExit,
+  runHook
+} = require('../lib/hook-utils.js');
 
 /**
  * @typedef {import('../lib/types.js').EvidenceEntry} EvidenceEntry
@@ -214,134 +220,117 @@ function buildFileEvidence(operation, filePath) {
 // ============================================================================
 
 async function main() {
+  // Read stdin
+  const stdinContent = await readStdin();
+
+  // Parse hook input
+  /** @type {HookInput} */
+  let hookInput;
   try {
-    // Read stdin
-    const stdinBuffer = [];
-    for await (const chunk of process.stdin) {
-      stdinBuffer.push(chunk);
-    }
-    const stdinContent = Buffer.concat(stdinBuffer).toString('utf-8');
-
-    // Parse hook input
-    /** @type {HookInput} */
-    let hookInput;
-    try {
-      hookInput = JSON.parse(stdinContent);
-    } catch {
-      // Invalid JSON - exit silently
-      console.log('{"hookSpecificOutput": {"hookEventName": "PostToolUse"}}');
-      process.exit(0);
-    }
-
-    // Extract session_id
-    const sessionId = hookInput.session_id;
-    if (!sessionId) {
-      // No session - exit silently
-      console.log('{"hookSpecificOutput": {"hookEventName": "PostToolUse"}}');
-      process.exit(0);
-    }
-
-    // Set environment variable for session-utils
-    process.env.ULTRAWORK_STDIN_SESSION_ID = sessionId;
-
-    // Check if session exists
-    const sessionFile = getSessionFile(sessionId);
-    if (!fs.existsSync(sessionFile)) {
-      // Session doesn't exist - exit silently
-      console.log('{"hookSpecificOutput": {"hookEventName": "PostToolUse"}}');
-      process.exit(0);
-    }
-
-    // Read phase (optimized: only reads phase field, not full JSON)
-    const phase = readSessionField(sessionId, 'phase') || 'unknown';
-
-    // Only capture evidence during EXECUTION and VERIFICATION phases
-    /** @type {Phase[]} */
-    const activePhases = ['EXECUTION', 'VERIFICATION'];
-    if (!activePhases.includes(phase)) {
-      console.log('{"hookSpecificOutput": {"hookEventName": "PostToolUse"}}');
-      process.exit(0);
-    }
-
-    // Extract tool_name
-    const toolName = hookInput.tool_name;
-    if (!toolName) {
-      // No tool name - exit silently
-      console.log('{"hookSpecificOutput": {"hookEventName": "PostToolUse"}}');
-      process.exit(0);
-    }
-
-    // Process based on tool type
-    /** @type {EvidenceEntry | null} */
-    let evidence = null;
-
-    const toolNameLower = toolName.toLowerCase();
-
-    switch (toolNameLower) {
-      case 'bash': {
-        // Extract command and output
-        const command = hookInput.tool_input?.command;
-        if (!command) break;
-
-        const response = toolResponseToString(hookInput.tool_response);
-        const exitCode = hookInput.tool_response &&
-          typeof hookInput.tool_response === 'object'
-          ? hookInput.tool_response.exit_code ?? 0
-          : 0;
-
-        evidence = buildBashEvidence(command, response, exitCode);
-        break;
-      }
-
-      case 'write': {
-        // Extract file path
-        const filePath = hookInput.tool_input?.file_path;
-        if (!filePath) break;
-
-        evidence = buildFileEvidence('write', filePath);
-        break;
-      }
-
-      case 'edit': {
-        // Extract file path
-        const filePath = hookInput.tool_input?.file_path;
-        if (!filePath) break;
-
-        evidence = buildFileEvidence('edit', filePath);
-        break;
-      }
-
-      default:
-        // Unknown tool - exit silently
-        break;
-    }
-
-    // If we have evidence, append to evidence/log.jsonl (append-only)
-    if (evidence) {
-      const sessionDir = getSessionDir(sessionId);
-      const evidenceDir = path.join(sessionDir, 'evidence');
-      const evidenceLog = path.join(evidenceDir, 'log.jsonl');
-
-      // Ensure evidence directory exists
-      if (!fs.existsSync(evidenceDir)) {
-        fs.mkdirSync(evidenceDir, { recursive: true });
-      }
-
-      // Append evidence as single JSON line (no file locking needed)
-      const line = JSON.stringify(evidence) + '\n';
-      fs.appendFileSync(evidenceLog, line, 'utf-8');
-    }
-
-    // Output required hook response
-    console.log('{"hookSpecificOutput": {"hookEventName": "PostToolUse"}}');
-    process.exit(0);
-  } catch (error) {
-    // Log error but still exit 0 (hooks should never fail the tool)
-    console.error('Evidence hook error:', error);
-    console.log('{"hookSpecificOutput": {"hookEventName": "PostToolUse"}}');
-    process.exit(0);
+    hookInput = JSON.parse(stdinContent);
+  } catch {
+    // Invalid JSON - exit silently
+    outputAndExit(createPostToolUse());
   }
+
+  // Extract session_id
+  const sessionId = hookInput.session_id;
+  if (!sessionId) {
+    // No session - exit silently
+    outputAndExit(createPostToolUse());
+  }
+
+  // Set environment variable for session-utils
+  process.env.ULTRAWORK_STDIN_SESSION_ID = sessionId;
+
+  // Check if session exists
+  const sessionFile = getSessionFile(sessionId);
+  if (!fs.existsSync(sessionFile)) {
+    // Session doesn't exist - exit silently
+    outputAndExit(createPostToolUse());
+  }
+
+  // Read phase (optimized: only reads phase field, not full JSON)
+  const phase = readSessionField(sessionId, 'phase') || 'unknown';
+
+  // Only capture evidence during EXECUTION and VERIFICATION phases
+  /** @type {Phase[]} */
+  const activePhases = ['EXECUTION', 'VERIFICATION'];
+  if (!activePhases.includes(phase)) {
+    outputAndExit(createPostToolUse());
+  }
+
+  // Extract tool_name
+  const toolName = hookInput.tool_name;
+  if (!toolName) {
+    // No tool name - exit silently
+    outputAndExit(createPostToolUse());
+  }
+
+  // Process based on tool type
+  /** @type {EvidenceEntry | null} */
+  let evidence = null;
+
+  const toolNameLower = toolName.toLowerCase();
+
+  switch (toolNameLower) {
+    case 'bash': {
+      // Extract command and output
+      const command = hookInput.tool_input?.command;
+      if (!command) break;
+
+      const response = toolResponseToString(hookInput.tool_response);
+      const exitCode = hookInput.tool_response &&
+        typeof hookInput.tool_response === 'object'
+        ? hookInput.tool_response.exit_code ?? 0
+        : 0;
+
+      evidence = buildBashEvidence(command, response, exitCode);
+      break;
+    }
+
+    case 'write': {
+      // Extract file path
+      const filePath = hookInput.tool_input?.file_path;
+      if (!filePath) break;
+
+      evidence = buildFileEvidence('write', filePath);
+      break;
+    }
+
+    case 'edit': {
+      // Extract file path
+      const filePath = hookInput.tool_input?.file_path;
+      if (!filePath) break;
+
+      evidence = buildFileEvidence('edit', filePath);
+      break;
+    }
+
+    default:
+      // Unknown tool - exit silently
+      break;
+  }
+
+  // If we have evidence, append to evidence/log.jsonl (append-only)
+  if (evidence) {
+    const sessionDir = getSessionDir(sessionId);
+    const evidenceDir = path.join(sessionDir, 'evidence');
+    const evidenceLog = path.join(evidenceDir, 'log.jsonl');
+
+    // Ensure evidence directory exists
+    if (!fs.existsSync(evidenceDir)) {
+      fs.mkdirSync(evidenceDir, { recursive: true });
+    }
+
+    // Append evidence as single JSON line (no file locking needed)
+    const line = JSON.stringify(evidence) + '\n';
+    fs.appendFileSync(evidenceLog, line, 'utf-8');
+  }
+
+  // Output required hook response
+  outputAndExit(createPostToolUse());
 }
 
-// Run main
-main();
+// Entry point
+runHook(main, createPostToolUse);

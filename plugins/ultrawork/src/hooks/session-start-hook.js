@@ -80,47 +80,26 @@ function cleanupOldSessions() {
  * @returns {Promise<void>}
  */
 async function main() {
-  try {
-    // Read stdin JSON
-    const input = await readStdin();
-    /** @type {HookInput} */
-    const hookInput = JSON.parse(input);
+  // Read stdin JSON
+  const input = await readStdin();
+  /** @type {HookInput} */
+  const hookInput = JSON.parse(input);
 
-    // Extract session_id
-    const sessionId = hookInput.session_id;
+  // Extract session_id
+  const sessionId = hookInput.session_id;
 
-    // Cleanup old sessions
-    cleanupOldSessions();
+  // Cleanup old sessions
+  cleanupOldSessions();
 
-    // Output session ID for AI to use
-    /** @type {HookOutput} */
-    const output = {};
+  // Output session ID for AI to use
+  const systemMessage = sessionId
+    ? `CLAUDE_SESSION_ID: ${sessionId}`
+    : undefined;
 
-    if (sessionId) {
-      // Simple confirmation - Claude Code v2.1.9+ replaces ${CLAUDE_SESSION_ID} automatically
-      output.systemMessage = `CLAUDE_SESSION_ID: ${sessionId}`;
-    }
-
-    console.log(JSON.stringify(output));
-    process.exit(0);
-  } catch (err) {
-    // Even on error, output minimal valid JSON and exit 0
-    console.log('{}');
-    process.exit(0);
-  }
-}
-
-// Handle stdin
-if (process.stdin.isTTY) {
-  // No stdin available, output minimal response
-  console.log('{}');
+  const output = createSessionStart(systemMessage);
+  console.log(JSON.stringify(output));
   process.exit(0);
-} else {
-  // Read stdin and process
-  process.stdin.setEncoding('utf8');
-  main().catch(() => {
-    // On error, output minimal valid JSON and exit 0
-    console.log('{}');
-    process.exit(0);
-  });
 }
+
+// Entry point
+runHook(main, () => ({}));

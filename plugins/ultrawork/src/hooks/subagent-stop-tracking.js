@@ -13,6 +13,10 @@ const {
   getSessionDir,
   updateSession,
 } = require('../lib/session-utils.js');
+const {
+  readStdin,
+  runHook
+} = require('../lib/hook-utils.js');
 
 /**
  * @typedef {import('../lib/types.js').Session} Session
@@ -32,10 +36,6 @@ const {
  */
 
 /**
- * SubagentStop hooks output empty object (no hookSpecificOutput required)
- */
-
-/**
  * @typedef {Object} Worker
  * @property {string} agent_id
  * @property {string} task_id
@@ -50,30 +50,15 @@ const {
  */
 
 // ============================================================================
-// Stdin/Stdout Functions
+// Output Functions
 // ============================================================================
 
 /**
- * Read all stdin data
- * @returns {Promise<string>}
- */
-async function readStdin() {
-  const chunks = [];
-
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
-  }
-
-  return chunks.join('');
-}
-
-/**
- * Output hook response
- * @returns {void}
+ * Output hook response (SubagentStop hooks output empty object)
+ * @returns {Object}
  */
 function outputResponse() {
-  // SubagentStop hooks should output empty object (no hookSpecificOutput)
-  console.log('{}');
+  return {};
 }
 
 // ============================================================================
@@ -157,11 +142,10 @@ function extractTaskId(output) {
 // ============================================================================
 
 async function main() {
-  try {
-    // Read stdin JSON
-    const input = await readStdin();
-    /** @type {HookInput} */
-    const hookInput = JSON.parse(input);
+  // Read stdin JSON
+  const input = await readStdin();
+  /** @type {HookInput} */
+  const hookInput = JSON.parse(input);
 
     // Parse hook input fields
     const agentId = hookInput.agent_id || '';
@@ -173,14 +157,16 @@ async function main() {
 
     // No active ultrawork session - not an ultrawork worker
     if (!sessionId) {
-      outputResponse();
+      console.log(JSON.stringify(outputResponse()));
+      process.exit(0);
       return;
     }
 
     // Check if session file exists
     const sessionFile = getSessionFile(sessionId);
     if (!fs.existsSync(sessionFile)) {
-      outputResponse();
+      console.log(JSON.stringify(outputResponse()));
+      process.exit(0);
       return;
     }
 
@@ -292,30 +278,9 @@ async function main() {
     }
 
     // Output response
-    outputResponse();
-  } catch {
-    // Even on error, output response and exit 0
-    outputResponse();
-  }
+    console.log(JSON.stringify(outputResponse()));
+    process.exit(0);
 }
 
-// ============================================================================
-// Entry Point
-// ============================================================================
-
-// Handle stdin
-if (process.stdin.isTTY) {
-  // No stdin available, output response
-  outputResponse();
-  process.exit(0);
-} else {
-  // Read stdin and process
-  process.stdin.setEncoding('utf8');
-  main()
-    .then(() => process.exit(0))
-    .catch(() => {
-      // On error, output response and exit 0
-      outputResponse();
-      process.exit(0);
-    });
-}
+// Entry point
+runHook(main, outputResponse);

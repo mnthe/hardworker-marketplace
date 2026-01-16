@@ -9,6 +9,11 @@
 const fs = require('fs');
 const path = require('path');
 const { getSessionDir, getSessionFile } = require('../lib/session-utils.js');
+const {
+  readStdin,
+  createUserPromptSubmit,
+  runHook
+} = require('../lib/hook-utils.js');
 
 /**
  * @typedef {import('../lib/types.js').Session} Session
@@ -22,31 +27,10 @@ const { getSessionDir, getSessionFile } = require('../lib/session-utils.js');
  */
 
 /**
- * @typedef {Object} HookOutput
- * @property {Object} hookSpecificOutput
- * @property {string} hookSpecificOutput.hookEventName
- * @property {string} [hookSpecificOutput.additionalContext]
- */
-
-/**
  * @typedef {Object} TaskFile
  * @property {string} id
  * @property {string} status
  */
-
-/**
- * Read all stdin data
- * @returns {Promise<string>}
- */
-async function readStdin() {
-  const chunks = [];
-
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
-  }
-
-  return chunks.join('');
-}
 
 /**
  * Count tasks in session tasks directory
@@ -258,115 +242,67 @@ COMMANDS:
  * @returns {Promise<void>}
  */
 async function main() {
-  try {
-    // Read stdin JSON
-    const input = await readStdin();
-    /** @type {HookInput} */
-    const hookInput = JSON.parse(input);
+  // Read stdin JSON
+  const input = await readStdin();
+  /** @type {HookInput} */
+  const hookInput = JSON.parse(input);
 
-    // Extract session_id
-    const sessionId = hookInput.session_id;
+  // Extract session_id
+  const sessionId = hookInput.session_id;
 
-    // No session_id in stdin - no injection needed
-    if (!sessionId) {
-      console.log(JSON.stringify({
-        hookSpecificOutput: {
-          hookEventName: 'UserPromptSubmit'
-        }
-      }));
-      process.exit(0);
-      return;
-    }
+  // No session_id in stdin - no injection needed
+  if (!sessionId) {
+    console.log(JSON.stringify(createUserPromptSubmit()));
+    process.exit(0);
+    return;
+  }
 
-    // Get session file
-    const sessionDir = getSessionDir(sessionId);
-    const sessionFile = getSessionFile(sessionId);
+  // Get session file
+  const sessionDir = getSessionDir(sessionId);
+  const sessionFile = getSessionFile(sessionId);
 
-    // Session file doesn't exist - provide session_id for new sessions
-    if (!fs.existsSync(sessionFile)) {
-      /** @type {HookOutput} */
-      const output = {
-        hookSpecificOutput: {
-          hookEventName: 'UserPromptSubmit',
-          additionalContext: `CLAUDE_SESSION_ID: ${sessionId}\nUse this when calling ultrawork scripts: --session ${sessionId}`
-        }
-      };
-      console.log(JSON.stringify(output));
-      process.exit(0);
-      return;
-    }
-
-    // Parse session state
-    const sessionContent = fs.readFileSync(sessionFile, 'utf-8');
-    /** @type {Session} */
-    const session = JSON.parse(sessionContent);
-
-    const phase = session.phase || 'unknown';
-
-    // Terminal states - no injection needed
-    if (phase === 'COMPLETE' || phase === 'CANCELLED' || phase === 'FAILED') {
-      console.log(JSON.stringify({
-        hookSpecificOutput: {
-          hookEventName: 'UserPromptSubmit'
-        }
-      }));
-      process.exit(0);
-      return;
-    }
-
-    // Count tasks and evidence
-    const taskCount = countTasks(sessionDir);
-    const evidenceCount = countEvidence(session);
-
-    // Build and output context message
-    const contextMsg = buildContextMessage(
-      sessionId,
-      session,
-      taskCount,
-      evidenceCount,
-      sessionFile
-    );
-
-    /** @type {HookOutput} */
-    const output = {
-      hookSpecificOutput: {
-        hookEventName: 'UserPromptSubmit',
-        additionalContext: contextMsg
-      }
-    };
-
+  // Session file doesn't exist - provide session_id for new sessions
+  if (!fs.existsSync(sessionFile)) {
+    const output = createUserPromptSubmit({
+      additionalContext: `CLAUDE_SESSION_ID: ${sessionId}\nUse this when calling ultrawork scripts: --session ${sessionId}`
+    });
     console.log(JSON.stringify(output));
     process.exit(0);
-  } catch (err) {
-    // Even on error, output minimal valid JSON and exit 0
-    console.log(JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'UserPromptSubmit'
-      }
-    }));
-    process.exit(0);
+    return;
   }
+
+  // Parse session state
+  const sessionContent = fs.readFileSync(sessionFile, 'utf-8');
+  /** @type {Session} */
+  const session = JSON.parse(sessionContent);
+
+  const phase = session.phase || 'unknown';
+
+  // Terminal states - no injection needed
+  if (phase === 'COMPLETE' || phase === 'CANCELLED' || phase === 'FAILED') {
+    console.log(JSON.stringify(createUserPromptSubmit()));
+    process.exit(0);
+    return;
+  }
+
+  // Count tasks and evidence
+  const taskCount = countTasks(sessionDir);
+  const evidenceCount = countEvidence(session);
+
+  // Build and output context message
+  const contextMsg = buildContextMessage(
+    sessionId,
+    session,
+    taskCount,
+    evidenceCount,
+    sessionFile
+  );
+
+  const output = createUserPromptSubmit({ additionalContext: contextMsg });
+
+  console.log(JSON.stringify(output));
+  process.exit(0);
 }
 
-// Handle stdin
-if (process.stdin.isTTY) {
-  // No stdin available, output minimal response
-  console.log(JSON.stringify({
-    hookSpecificOutput: {
-      hookEventName: 'UserPromptSubmit'
-    }
-  }));
-  process.exit(0);
-} else {
-  // Read stdin and process
-  process.stdin.setEncoding('utf8');
-  main().catch(() => {
-    // On error, output minimal valid JSON and exit 0
-    console.log(JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'UserPromptSubmit'
-      }
-    }));
-    process.exit(0);
-  });
-}
+// Entry point
+runHook(main, createUserPromptSubmit);
