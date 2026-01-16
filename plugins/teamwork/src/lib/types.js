@@ -26,6 +26,7 @@
  * @property {string} description - Detailed task description
  * @property {Role} role - Required worker role for this task
  * @property {TaskStatus} status - Current task status
+ * @property {number} [version] - Task version number (defaults to 0 for backward compatibility)
  * @property {string} created_at - ISO8601 timestamp
  * @property {string} updated_at - ISO8601 timestamp
  * @property {string | null} claimed_by - Session ID of worker that claimed this task

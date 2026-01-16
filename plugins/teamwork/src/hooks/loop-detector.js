@@ -36,11 +36,13 @@ const STATE_DIR = path.join(TEAMWORK_DIR, '.loop-state');
  * @property {string} [role]
  * @property {string} [started_at]
  * @property {string} [terminal_id]
+ * @property {string} [fresh_start_at]
+ * @property {number} [iteration_since_fresh_start]
  */
 
 /**
  * @typedef {Object} HookOutput
- * @property {'continue' | 'allow'} [decision]
+ * @property {'continue' | 'restart_fresh' | 'allow'} [decision]
  * @property {string} [command]
  * @property {Object} [context]
  * @property {string} [systemMessage]
@@ -83,6 +85,28 @@ function getLoopState() {
     return JSON.parse(content);
   } catch {
     return { active: false };
+  }
+}
+
+/**
+ * Save loop state for current terminal
+ * @param {LoopState} state - Loop state to save
+ * @returns {void}
+ */
+function saveLoopState(state) {
+  const stateFile = getStateFile();
+
+  try {
+    // Ensure state directory exists
+    const stateDir = path.dirname(stateFile);
+    if (!fs.existsSync(stateDir)) {
+      fs.mkdirSync(stateDir, { recursive: true });
+    }
+
+    // Write state to file
+    fs.writeFileSync(stateFile, JSON.stringify(state, null, 2), 'utf-8');
+  } catch {
+    // Ignore errors during save
   }
 }
 
@@ -149,6 +173,47 @@ async function main() {
     // Extract transcript from hook input
     // Try transcript field first, then output, then use raw input
     const transcript = hookInput.transcript || hookInput.output || input;
+
+    // Check for fresh-start marker
+    if (transcript.includes('__TEAMWORK_FRESH_START__')) {
+      // Fresh start requested - update loop state and trigger restart
+      state.fresh_start_at = new Date().toISOString();
+      state.iteration_since_fresh_start = 0;
+
+      // Save updated state
+      saveLoopState(state);
+
+      // Get loop context from state file
+      const project = state.project || '';
+      const team = state.team || '';
+      const role = state.role || '';
+
+      // Build command
+      let cmd = '/teamwork-worker --loop';
+      if (project && project !== 'null') {
+        cmd += ` --project ${project}`;
+      }
+      if (team && team !== 'null') {
+        cmd += ` --team ${team}`;
+      }
+      if (role && role !== 'null') {
+        cmd += ` --role ${role}`;
+      }
+
+      // Output JSON to trigger fresh restart
+      outputAndExit({
+        decision: 'restart_fresh',
+        command: cmd,
+        context: {
+          project,
+          team,
+          role,
+          fresh_start_at: state.fresh_start_at,
+        },
+        systemMessage: 'Teamwork loop: fresh start triggered',
+      });
+      return;
+    }
 
     // Check for continue marker
     if (!transcript.includes('__TEAMWORK_CONTINUE__')) {

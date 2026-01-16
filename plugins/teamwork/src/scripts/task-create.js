@@ -77,6 +77,7 @@ function createTask(args) {
     description: args.description || args.title,
     role: args.role || 'worker',
     status: 'open',
+    version: 0,
     created_at: now,
     updated_at: now,
     claimed_by: null,
