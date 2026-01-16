@@ -117,13 +117,30 @@ Skip this step. Use user-specified role directly.
 
 ## Step 3: Spawn Worker Agent
 
-**Determine agent type:**
-1. If user specified `--role`: Use `"teamwork:{role}"`
-2. If role was detected in Step 2.5: Use `"teamwork:{DETECTED_ROLE}"`
-3. Default: Use `"teamwork:worker"`
+**Determine agent type using precedence order:**
+
+Use the following logic to select `subagent_type`:
+
+```python
+# Precedence: user --role > detected task.role > default 'worker'
+if user_specified_role:
+    # User explicitly specified --role flag (highest priority)
+    subagent_type = f"teamwork:{user_specified_role}"
+    role_filter = user_specified_role
+elif DETECTED_ROLE and DETECTED_ROLE != "worker":
+    # Role detected from task in Step 2.5 (medium priority)
+    subagent_type = f"teamwork:{DETECTED_ROLE}"
+    role_filter = DETECTED_ROLE
+else:
+    # Default fallback (lowest priority)
+    subagent_type = "teamwork:worker"
+    role_filter = None
+```
+
+**Valid role values**: `frontend`, `backend`, `test`, `devops`, `docs`, `security`, `review`, `worker`
 
 **ACTION REQUIRED - Call Task tool with:**
-- subagent_type: Determined agent type (see above)
+- subagent_type: `{subagent_type}` (determined using logic above)
 - model: "sonnet"
 - prompt:
   ```
@@ -132,7 +149,7 @@ Skip this step. Use user-specified role directly.
   SUB_TEAM: {sub_team}
 
   Options:
-  - role_filter: {role or DETECTED_ROLE or null}
+  - role_filter: {role_filter}
   - strict_mode: {true or false}
   - fresh_start_interval: {N or 10}
   ```
