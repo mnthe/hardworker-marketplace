@@ -171,7 +171,7 @@ function main() {
  NEXT STEPS
 ───────────────────────────────────────────────────────────
 
- Spawning coordinator to create tasks...
+ Spawning orchestrator to create tasks...
 
 ═══════════════════════════════════════════════════════════
 

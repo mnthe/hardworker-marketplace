@@ -162,7 +162,7 @@ claude --plugin-dir /path/to/teamwork
 | **orchestrator**    | opus    | Monitoring & Orchestration | (v2) Monitors waves, triggers verification, handles conflicts  |
 | **wave-verifier**   | sonnet  | Wave Verification         | (v2) Cross-task checks, conflict detection, wave-level tests    |
 | **final-verifier**  | opus    | Project Verification      | (v2) Full project build/test, evidence completeness validation  |
-| **coordinator**     | opus    | Planning                  | Breaks down goals into tasks, assigns roles, creates task files |
+| **coordinator**     | opus    | Planning (DEPRECATED)     | **Deprecated:** Use orchestrator instead. Kept for backward compatibility. |
 | **frontend**        | inherit | UI Implementation         | UI components, styling, user interactions                       |
 | **backend**         | inherit | API Implementation        | API endpoints, services, database, business logic               |
 | **test**            | inherit | Testing                   | Unit tests, integration tests, fixtures, mocks                  |

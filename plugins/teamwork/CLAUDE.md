@@ -349,7 +349,8 @@ process.exit(1); // error
 | `teamwork.md` | `commands/teamwork.md` | Coordination command (planning phase) |
 | `teamwork-worker.md` | `commands/teamwork-worker.md` | Worker command (execution phase) |
 | `teamwork-status.md` | `commands/teamwork-status.md` | Status dashboard command |
-| `coordinator/AGENT.md` | `agents/coordinator/AGENT.md` | Main orchestration agent |
+| `orchestrator/AGENT.md` | `agents/orchestrator/AGENT.md` | Main orchestration agent (v2) |
+| `coordinator/AGENT.md` | `agents/coordinator/AGENT.md` | DEPRECATED - Use orchestrator instead |
 | `worker/AGENT.md` | `agents/worker/AGENT.md` | General purpose worker agent |
 | Role agents | `agents/{role}/AGENT.md` | Specialized worker agents (frontend, backend, etc.) |
 
