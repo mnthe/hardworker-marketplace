@@ -24,7 +24,7 @@ description: |
   </example>
 model: inherit
 color: green
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__replace_symbol_body", "mcp__plugin_serena_serena__get_symbols_overview"]
+tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__replace_symbol_body", "mcp__plugin_serena_serena__get_symbols_overview"]
 ---
 
 # Frontend Worker Agent

@@ -1,5 +1,8 @@
 # Testing Standards
 
+**Source of Truth**: Both (this file for detailed standards, CLAUDE.md for overview)
+**Last Updated**: 2026-01-16
+
 ## Test Discipline
 
 Tests must verify actual behavior, not just pass.

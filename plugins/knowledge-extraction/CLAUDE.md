@@ -39,7 +39,9 @@ plugins/knowledge-extraction/
 
 ## Script Inventory
 
-All scripts use Bun runtime with flag-based parameters.
+**Note**: This plugin is **hooks-only** - it has no standalone scripts in `src/scripts/`. All functionality is implemented as lifecycle hooks in `src/hooks/`.
+
+All hook scripts use Bun runtime and read JSON input from stdin.
 
 | Script | Purpose | Key Parameters |
 |--------|---------|----------------|

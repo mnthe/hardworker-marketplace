@@ -106,10 +106,20 @@ Ultrawork stores session data in:
 
 ```
 ~/.claude/ultrawork/sessions/{session-id}/
-├── session.json        # Session state, phase, tasks
-├── plan.md            # Task graph from planner
-├── CLAUDE.md          # Session context for agents
-└── evidence/          # Verification artifacts
+├── session.json           # Session state (minimal metadata)
+├── context.json           # Exploration summary (lightweight index)
+├── evidence/              # Evidence files
+│   ├── log.jsonl          # Append-only evidence log
+│   └── index.md           # AI-friendly summary (generated)
+├── exploration/           # Detailed exploration files (*.md)
+│   ├── overview.md
+│   ├── exp-1.md
+│   └── exp-2.md
+└── tasks/                 # Task files (*.json + summary.md)
+    ├── 1.json
+    ├── 2.json
+    ├── verify.json
+    └── summary.md
 ```
 
 You can inspect these files to understand session state.
