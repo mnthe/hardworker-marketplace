@@ -248,7 +248,7 @@ To read current state:
 COMMANDS:
   /ultrawork-status   - Check detailed progress
   /ultrawork-evidence - View collected evidence
-  /ultrawork-cancel   - Cancel session
+  /ultrawork-clean   - Cancel session
 
 </ultrawork-session>`;
 }

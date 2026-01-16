@@ -64,8 +64,8 @@ claude --plugin-dir /path/to/hardworker-marketplace/plugins/ultrawork
 # Show collected evidence
 /ultrawork-evidence
 
-# Cancel current session
-/ultrawork-cancel
+# Clean up sessions
+/ultrawork-clean
 
 # Show help
 /ultrawork-help
@@ -154,13 +154,23 @@ Displays:
 
 Shows collected evidence for all tasks with verification status.
 
-#### /ultrawork-cancel
+#### /ultrawork-clean
 
 ```bash
-/ultrawork-cancel
+# Interactive cleanup (prompts for confirmation)
+/ultrawork-clean
+
+# Clean all sessions (no confirmation)
+/ultrawork-clean --all
+
+# Clean stale sessions only (7+ days old in terminal states)
+/ultrawork-clean --stale
 ```
 
-Cancels current session, preserves all history and evidence.
+Cleans up ultrawork sessions with three modes:
+- **Interactive**: Prompts to delete current session
+- **All**: Deletes all sessions without confirmation
+- **Stale**: Deletes sessions >7 days old in COMPLETE/CANCELLED/FAILED states
 
 ## Commands
 
@@ -171,7 +181,7 @@ Cancels current session, preserves all history and evidence.
 | `/ultrawork-exec`        | Execute existing plan          | `--max-iterations N`, `--skip-verify`                                             |
 | `/ultrawork-status`      | Check session status           | `--all`                                                                           |
 | `/ultrawork-evidence`    | Show collected evidence        | -                                                                                 |
-| `/ultrawork-cancel`      | Cancel current session         | -                                                                                 |
+| `/ultrawork-clean`       | Clean up sessions              | `--all`, `--stale`                                                                |
 | `/ultrawork-help`        | Show help documentation        | -                                                                                 |
 
 ## Agents

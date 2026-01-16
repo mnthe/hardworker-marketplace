@@ -267,7 +267,7 @@ ZERO TOLERANCE RULES:
 Commands:
   /ultrawork-status   - Check progress
   /ultrawork-evidence - View evidence
-  /ultrawork-cancel   - Cancel session`,
+  /ultrawork-clean   - Cancel session`,
         systemMessage: `⚠️ ULTRAWORK [${sessionId}]: Incomplete work detected`
       });
       return;
@@ -300,7 +300,7 @@ Every completed task requires evidence:
 Commands:
   /ultrawork-status   - Check progress
   /ultrawork-evidence - View evidence
-  /ultrawork-cancel   - Cancel session`,
+  /ultrawork-clean   - Cancel session`,
           systemMessage: `⚠️ ULTRAWORK [${sessionId}]: Insufficient evidence`
         });
         return;
@@ -314,22 +314,22 @@ Commands:
     switch (phase) {
       case 'PLANNING':
         // Only reaches here if AUTO_MODE is true (planner agent running in background)
-        reason = 'Planner agent is creating task graph. Wait for planning to complete or use /ultrawork-cancel.';
+        reason = 'Planner agent is creating task graph. Wait for planning to complete or use /ultrawork-clean.';
         systemMsg = `⚠️ ULTRAWORK [${sessionId}]: Planning in progress for '${goal}'`;
         break;
 
       case 'EXECUTION':
-        reason = 'Workers are implementing tasks. Wait for execution to complete or use /ultrawork-cancel.';
+        reason = 'Workers are implementing tasks. Wait for execution to complete or use /ultrawork-clean.';
         systemMsg = `⚠️ ULTRAWORK [${sessionId}]: Execution in progress for '${goal}'`;
         break;
 
       case 'VERIFICATION':
-        reason = 'Verifier is checking evidence. Wait for verification to complete or use /ultrawork-cancel.';
+        reason = 'Verifier is checking evidence. Wait for verification to complete or use /ultrawork-clean.';
         systemMsg = `⚠️ ULTRAWORK [${sessionId}]: Verification in progress for '${goal}'`;
         break;
 
       default:
-        reason = `Ultrawork session is active (phase: ${phase}). Complete the session or use /ultrawork-cancel.`;
+        reason = `Ultrawork session is active (phase: ${phase}). Complete the session or use /ultrawork-clean.`;
         systemMsg = `⚠️ ULTRAWORK [${sessionId}]: Session active for '${goal}'`;
         break;
     }
@@ -350,7 +350,7 @@ ${reason}
 Commands:
   /ultrawork-status   - Check progress
   /ultrawork-evidence - View evidence
-  /ultrawork-cancel   - Cancel session`,
+  /ultrawork-clean   - Cancel session`,
       systemMessage: systemMsg
     });
 

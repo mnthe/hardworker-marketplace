@@ -121,10 +121,10 @@ Direct file modifications are prohibited during PLANNING phase. This ensures you
 
 WHAT TO DO:
 1. Complete planning → transition to EXECUTION phase
-2. Or cancel session: /ultrawork-cancel
+2. Or cancel session: /ultrawork-clean
 
 If this is unexpected (orphaned session), cancel with:
-  /ultrawork-cancel
+  /ultrawork-clean
 
 ALLOWED FILES DURING PLANNING:
 - *-design.md, session.json, context.json, exploration/*.md, docs/plans/*.md`;
