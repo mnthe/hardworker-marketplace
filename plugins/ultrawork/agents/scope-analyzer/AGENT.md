@@ -117,8 +117,8 @@ Read project CLAUDE.md for explicit rules:
 
 ```markdown
 ## Scope Expansion Rules (example)
-- DB Schema 변경 시 Migration 필수
-- API DTO 변경 시 Codegen 필수
+- DB Schema changes require Migration
+- API DTO changes require Codegen
 ```
 
 Apply these rules to classify dependencies.
