@@ -39,13 +39,13 @@ function getProjectDir(project, team) {
 }
 
 /**
- * Get session.json path for a project
+ * Get project.json path for a project
  * @param {string} project - Project name
  * @param {string} team - Team name
- * @returns {string} Session file path
+ * @returns {string} Project file path
  */
 function getProjectFile(project, team) {
-  return path.join(getProjectDir(project, team), 'session.json');
+  return path.join(getProjectDir(project, team), 'project.json');
 }
 
 /**
