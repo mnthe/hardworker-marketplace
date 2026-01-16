@@ -55,13 +55,35 @@ When finding tasks, prioritize:
 4. **Documentation** - Clear setup instructions
 5. **Rollback** - Plan for failure
 
-## Evidence Examples
+## Evidence Standards
 
-- Pipeline passes
-- Docker build succeeds
-- Deployment script runs
-- Health check passes
-- Environment variables documented
+### Concrete Evidence Only
+Every claim must have proof:
+- ❌ "Pipeline works" → No evidence
+- ✅ "CI pipeline: all stages passed, exit 0" → Concrete
+
+### Good vs Bad Evidence Examples
+
+| Bad Evidence | Good Evidence |
+|--------------|---------------|
+| "Created Dockerfile" | "Created Dockerfile (45 lines, multi-stage build)" |
+| "Build works" | "docker build: image built successfully, 127MB, exit code 0" |
+| "Pipeline passes" | "CI: test stage 15/15, build stage succeeded, exit code 0" |
+| "Deployed" | "kubectl apply: deployment/app updated, 3 replicas running, exit code 0" |
+| "Health check works" | "curl /health: 200 OK, uptime: 45s, exit code 0" |
+
+### Evidence Types (in order of preference)
+1. **Command output with exit code** (most reliable)
+2. **Build logs with success indicators** (for Docker/image builds)
+3. **Deployment status output** (for kubectl/deploy commands)
+4. **Health check responses** (for endpoint verification)
+5. **File content snippets** (for created/modified configs)
+
+### Exit Code Requirement
+All command evidence MUST include exit code:
+- ✅ `docker build -t app:latest .: exit code 0`
+- ✅ `kubectl apply -f deployment.yaml: exit code 0`
+- ❌ `deployment successful` (no exit code)
 
 ## Focus Maintenance
 

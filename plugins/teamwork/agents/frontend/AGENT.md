@@ -55,13 +55,35 @@ When finding tasks, prioritize:
 4. **A11y** - Include aria labels, keyboard nav
 5. **Testing** - Add component tests if applicable
 
-## Evidence Examples
+## Evidence Standards
 
-- Screenshot comparison
-- Component renders without errors
-- Storybook story added
-- Lighthouse accessibility score
-- Mobile responsive verified
+### Concrete Evidence Only
+Every claim must have proof:
+- ❌ "Component works" → No evidence
+- ✅ "npm run dev: component renders without errors, exit 0" → Concrete
+
+### Good vs Bad Evidence Examples
+
+| Bad Evidence | Good Evidence |
+|--------------|---------------|
+| "Created component" | "Created src/components/UserProfile.tsx (85 lines)" |
+| "Styles work" | "npm run build:css: compiled 12 stylesheets, exit code 0" |
+| "Component renders" | "npm run dev: UserProfile renders without console errors, exit code 0" |
+| "Tests pass" | "npm test -- UserProfile.test.tsx: 8/8 passed, exit code 0" |
+| "Mobile responsive" | "Verified breakpoints: 320px, 768px, 1024px render correctly" |
+
+### Evidence Types (in order of preference)
+1. **Command output with exit code** (most reliable)
+2. **File content snippets** (for created/modified components)
+3. **Build/dev server output** (for compilation verification)
+4. **Test results with counts** (pass/fail numbers)
+5. **Browser console output** (for runtime verification)
+
+### Exit Code Requirement
+All command evidence MUST include exit code:
+- ✅ `npm run build: exit code 0`
+- ✅ `npm test: exit code 0`
+- ❌ `build succeeded` (no exit code)
 
 ## Focus Maintenance
 

@@ -55,13 +55,35 @@ When finding tasks, prioritize:
 4. **Secure defaults** - Safe by default
 5. **Audit logging** - Track security events
 
-## Evidence Examples
+## Evidence Standards
 
-- Auth flow works correctly
-- Unauthorized access blocked
-- SQL injection attempt fails
-- XSS payload sanitized
-- Security headers present
+### Concrete Evidence Only
+Every claim must have proof:
+- ❌ "Security fixed" → No evidence
+- ✅ "Auth flow: valid token accepted, invalid token rejected (401), exit 0" → Concrete
+
+### Good vs Bad Evidence Examples
+
+| Bad Evidence | Good Evidence |
+|--------------|---------------|
+| "Added auth middleware" | "Created src/middleware/auth.ts (78 lines, JWT validation)" |
+| "Auth works" | "curl -H 'Auth: invalid': 401 Unauthorized, exit code 0" |
+| "SQL injection blocked" | "Tested payload: '; DROP TABLE--: query failed safely, exit code 0" |
+| "Input sanitized" | "XSS payload <script>alert(1)</script>: escaped to &lt;script&gt;, exit code 0" |
+| "Security headers added" | "curl -I /: X-Frame-Options: DENY, CSP present, exit code 0" |
+
+### Evidence Types (in order of preference)
+1. **Command output with exit code** (most reliable)
+2. **Security test results** (for vulnerability verification)
+3. **API response codes** (for auth/authz verification)
+4. **Payload sanitization output** (for input validation)
+5. **File content snippets** (for created/modified security code)
+
+### Exit Code Requirement
+All command evidence MUST include exit code:
+- ✅ `curl -X POST /admin: 403 Forbidden, exit code 0`
+- ✅ `npm run security-audit: 0 vulnerabilities, exit code 0`
+- ❌ `unauthorized access blocked` (no exit code)
 
 ## Focus Maintenance
 

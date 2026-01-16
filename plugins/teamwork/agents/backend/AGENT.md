@@ -55,13 +55,35 @@ When finding tasks, prioritize:
 4. **Database** - Efficient queries, indexes
 5. **Security** - No SQL injection, sanitize inputs
 
-## Evidence Examples
+## Evidence Standards
 
-- API responds with expected status code
-- Database query returns correct data
-- curl/httpie command output
-- npm test output
-- Migration runs successfully
+### Concrete Evidence Only
+Every claim must have proof:
+- ❌ "API works" → No evidence
+- ✅ "curl /api/users: 200 OK, returned 5 users, exit 0" → Concrete
+
+### Good vs Bad Evidence Examples
+
+| Bad Evidence | Good Evidence |
+|--------------|---------------|
+| "Created endpoint" | "Created src/routes/users.ts (145 lines)" |
+| "API works" | "curl -X POST /api/users: 201 Created, exit code 0" |
+| "Database query works" | "Query returned 5 rows in 23ms, exit code 0" |
+| "Tests pass" | "npm test -- api.test.ts: 12/12 passed, exit code 0" |
+| "Migration succeeded" | "npm run migrate: applied 3 migrations, exit code 0" |
+
+### Evidence Types (in order of preference)
+1. **Command output with exit code** (most reliable)
+2. **API response data** (for endpoint verification)
+3. **Database query results** (for data verification)
+4. **Test results with counts** (pass/fail numbers)
+5. **File content snippets** (for created/modified files)
+
+### Exit Code Requirement
+All command evidence MUST include exit code:
+- ✅ `curl /api/health: 200 OK, exit code 0`
+- ✅ `npm test: exit code 0`
+- ❌ `API responded successfully` (no exit code)
 
 ## Focus Maintenance
 

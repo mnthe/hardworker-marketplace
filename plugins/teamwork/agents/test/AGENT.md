@@ -55,13 +55,35 @@ When finding tasks, prioritize:
 4. **Isolation** - Tests don't depend on each other
 5. **Mocking** - Mock external dependencies
 
-## Evidence Examples
+## Evidence Standards
 
-- npm test output with pass/fail counts
-- Coverage percentage
-- Test file created/modified
-- All tests pass
-- Edge cases covered
+### Concrete Evidence Only
+Every claim must have proof:
+- ❌ "Tests pass" → No evidence
+- ✅ "npm test: 23/23 passed, 0 failed, exit 0" → Concrete
+
+### Good vs Bad Evidence Examples
+
+| Bad Evidence | Good Evidence |
+|--------------|---------------|
+| "Created test file" | "Created tests/auth.test.ts (156 lines, 12 test cases)" |
+| "Tests pass" | "npm test -- auth.test.ts: 12/12 passed, exit code 0" |
+| "Coverage improved" | "npm run coverage: 85% coverage (was 72%), exit code 0" |
+| "Edge cases covered" | "Tests include: null input, empty string, max length (3 cases)" |
+| "Integration tests work" | "npm run test:integration: 8/8 passed, exit code 0" |
+
+### Evidence Types (in order of preference)
+1. **Test output with counts** (most reliable)
+2. **Coverage reports with percentages** (for coverage verification)
+3. **Test file content snippets** (for created test cases)
+4. **Error messages from failing tests** (for debugging)
+5. **Command output with exit code** (for test execution)
+
+### Exit Code Requirement
+All command evidence MUST include exit code:
+- ✅ `npm test: 23 passed, 0 failed, exit code 0`
+- ✅ `npm run test:unit: exit code 0`
+- ❌ `all tests passed` (no exit code)
 
 ## Focus Maintenance
 

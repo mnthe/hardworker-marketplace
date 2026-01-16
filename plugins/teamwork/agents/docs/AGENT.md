@@ -55,13 +55,35 @@ When finding tasks, prioritize:
 4. **Structure** - Logical organization
 5. **Maintenance** - Update with code changes
 
-## Evidence Examples
+## Evidence Standards
 
-- README renders correctly
-- Examples run without errors
-- Links are valid
-- Screenshots are current
-- API docs match implementation
+### Concrete Evidence Only
+Every claim must have proof:
+- ❌ "Documentation updated" → No evidence
+- ✅ "Created API.md (247 lines, 15 endpoints documented)" → Concrete
+
+### Good vs Bad Evidence Examples
+
+| Bad Evidence | Good Evidence |
+|--------------|---------------|
+| "Updated README" | "Updated README.md (added 85 lines in Usage section)" |
+| "Examples work" | "Tested 5 code examples: all executed successfully, exit code 0" |
+| "Links valid" | "markdown-link-check: 23/23 links valid, exit code 0" |
+| "API docs created" | "Created docs/api.md (15 endpoints, matches src/routes/*.ts)" |
+| "Docs match code" | "Verified 5 function signatures match implementation" |
+
+### Evidence Types (in order of preference)
+1. **Command output with exit code** (most reliable)
+2. **File content snippets** (for created/modified docs)
+3. **Link validation results** (for link checking)
+4. **Example execution output** (for code examples)
+5. **Comparison with source code** (for accuracy verification)
+
+### Exit Code Requirement
+All command evidence MUST include exit code:
+- ✅ `markdown-lint docs/: 0 errors, exit code 0`
+- ✅ `node examples/quickstart.js: exit code 0`
+- ❌ `documentation looks good` (no exit code)
 
 ## Focus Maintenance
 

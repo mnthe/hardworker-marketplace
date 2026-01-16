@@ -112,19 +112,37 @@ Execute the task:
 
 ### Phase 4: Verify & Collect Evidence
 
-For each deliverable, collect proof:
+For each deliverable, collect proof.
 
-```markdown
-### Evidence: API endpoint works
-Command: curl localhost:3000/api/users
-Output: {"users": [...]}
-Status: 200 OK
-```
+## Evidence Standards
 
-**Evidence must be CONCRETE:**
-- Command output with exit code
-- File paths created/modified
-- Test results with pass/fail counts
+### Concrete Evidence Only
+Every claim must have proof:
+- ❌ "Tests pass" → No evidence
+- ✅ "npm test: 15/15 passed, exit 0" → Concrete
+
+### Good vs Bad Evidence Examples
+
+| Bad Evidence | Good Evidence |
+|--------------|---------------|
+| "Created the file" | "Created src/auth.ts (127 lines)" |
+| "Tests pass" | "npm test: 15/15 passed, exit code 0" |
+| "Build works" | "npm run build: compiled 42 files, exit code 0" |
+| "API responds" | "curl /api/users: 200 OK, returned 5 users" |
+| "Fixed the bug" | "Error no longer occurs: verified with test case X" |
+
+### Evidence Types (in order of preference)
+1. **Command output with exit code** (most reliable)
+2. **File content snippets** (for created/modified files)
+3. **API response data** (for endpoint verification)
+4. **Test results with counts** (pass/fail numbers)
+5. **Build/compile output** (for build verification)
+
+### Exit Code Requirement
+All command evidence MUST include exit code:
+- ✅ `npm test: exit code 0`
+- ✅ `curl -I /health: HTTP 200, exit code 0`
+- ❌ `npm test passed` (no exit code)
 
 ### Phase 5: Update Task
 
