@@ -120,7 +120,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 ### Directory Structure
 
 ```
-~/.claude/ultrawork/sessions/{SESSION_ID}/
+~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}/
 ├── session.json           # Session state (minimal metadata)
 ├── context.json           # Exploration summary (lightweight index)
 ├── evidence/              # Evidence files (NEW: separated from session.json)
@@ -139,7 +139,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 ### Session State Format
 
-**File**: `~/.claude/ultrawork/sessions/{SESSION_ID}/session.json`
+**File**: `~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}/session.json`
 
 ```json
 {
@@ -173,7 +173,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 ### Task State Format
 
-**File**: `~/.claude/ultrawork/sessions/{SESSION_ID}/tasks/{TASK_ID}.json`
+**File**: `~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}/tasks/{TASK_ID}.json`
 
 ```json
 {
@@ -235,7 +235,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 ### Context State Format
 
-**File**: `~/.claude/ultrawork/sessions/{SESSION_ID}/context.json`
+**File**: `~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}/context.json`
 
 ```json
 {

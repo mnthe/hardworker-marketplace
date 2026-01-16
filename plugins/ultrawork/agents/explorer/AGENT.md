@@ -73,14 +73,14 @@ Use these scripts for session operations:
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Get session directory path
-SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
 
 # Get session data
-bun "$SCRIPTS/session-get.js" --session {SESSION_ID}               # Full JSON
-bun "$SCRIPTS/session-get.js" --session {SESSION_ID} --field goal  # Specific field
+bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
+bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --field goal  # Specific field
 
 # Add exploration results to context
-bun "$SCRIPTS/context-add.js" --session {SESSION_ID} \
+bun "$SCRIPTS/context-add.js" --session ${CLAUDE_SESSION_ID} \
   --explorer-id "{EXPLORER_ID}" \
   --summary "..." --key-files "..." --patterns "..."
 ```
@@ -93,13 +93,13 @@ bun "$SCRIPTS/context-add.js" --session {SESSION_ID} \
 
 | Path | Location | Purpose |
 |------|----------|---------|
-| `$SESSION_DIR` | `~/.claude/ultrawork/sessions/{SESSION_ID}/` | Session metadata (exploration, context, tasks) |
+| `$SESSION_DIR` | `~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}/` | Session metadata (exploration, context, tasks) |
 | `$WORKING_DIR` | Project directory (from session.working_dir) | Project deliverables (code, docs) |
 
 **Exploration files MUST go to SESSION_DIR:**
 
 ```bash
-SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
 
 # ✅ CORRECT: Write to session directory
 Write(file_path="$SESSION_DIR/exploration/{EXPLORER_ID}.md")
@@ -139,7 +139,7 @@ Examples:
 ### Phase 1: Read Session
 
 ```bash
-bun "$SCRIPTS/session-get.js" --session {SESSION_ID}
+bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID}
 ```
 
 ### Phase 2: Explore
@@ -171,7 +171,7 @@ Read(file_path="src/index.ts")
 
 ```bash
 # First, get session directory
-SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
 ```
 
 **Overview Template:**
@@ -215,7 +215,7 @@ SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session {SESSION_ID} --dir)
 ### Phase 4: Update Context Summary
 
 ```bash
-bun "$SCRIPTS/context-add.js" --session {SESSION_ID} \
+bun "$SCRIPTS/context-add.js" --session ${CLAUDE_SESSION_ID} \
   --explorer-id "{EXPLORER_ID}" \
   --hint "{SEARCH_HINT}" \
   --file "exploration/{EXPLORER_ID}.md" \

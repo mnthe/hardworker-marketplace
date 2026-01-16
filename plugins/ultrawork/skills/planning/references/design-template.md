@@ -6,7 +6,7 @@
 
 ```bash
 # Get working directory from session
-WORKING_DIR=$(bun $SCRIPTS/session-get.js --session {SESSION_ID} --field working_dir)
+WORKING_DIR=$(bun $SCRIPTS/session-get.js --session ${CLAUDE_SESSION_ID} --field working_dir)
 
 # Design document path
 # Format: {working_dir}/docs/plans/YYYY-MM-DD-{goal-slug}-design.md

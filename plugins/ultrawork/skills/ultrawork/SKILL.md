@@ -97,7 +97,7 @@ See `references/verification-protocol.md` for detailed verification requirements
 
 ## Session State
 
-Each session has isolated state in `~/.claude/ultrawork/sessions/{SESSION_ID}/`.
+Each session has isolated state in `~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}/`.
 
 See `references/state-schema.md` for complete schema documentation.
 

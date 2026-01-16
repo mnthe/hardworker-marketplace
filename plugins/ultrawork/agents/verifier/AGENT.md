@@ -67,24 +67,24 @@ Run final tests.
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Get session directory path
-SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
 
 # Get session data
-bun "$SCRIPTS/session-get.js" --session {SESSION_ID}               # Full JSON
-bun "$SCRIPTS/session-get.js" --session {SESSION_ID} --field phase # Specific field
+bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
+bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase # Specific field
 
 # List tasks
-bun "$SCRIPTS/task-list.js" --session {SESSION_ID} --format json
+bun "$SCRIPTS/task-list.js" --session ${CLAUDE_SESSION_ID} --format json
 
 # Get single task
-bun "$SCRIPTS/task-get.js" --session {SESSION_ID} --id 1
+bun "$SCRIPTS/task-get.js" --session ${CLAUDE_SESSION_ID} --id 1
 
 # Update task
-bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id verify \
+bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
   --status resolved --add-evidence "VERDICT: PASS"
 
 # Update session
-bun "$SCRIPTS/session-update.js" --session {SESSION_ID} --phase COMPLETE
+bun "$SCRIPTS/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
 ```
 
 ---
@@ -133,8 +133,8 @@ Each piece of evidence MUST include:
 ### Phase 1: Read Session & Tasks
 
 ```bash
-bun "$SCRIPTS/task-list.js" --session {SESSION_ID} --format json
-bun "$SCRIPTS/task-get.js" --session {SESSION_ID} --id 1
+bun "$SCRIPTS/task-list.js" --session ${CLAUDE_SESSION_ID} --format json
+bun "$SCRIPTS/task-get.js" --session ${CLAUDE_SESSION_ID} --id 1
 # ... read each task
 ```
 
@@ -216,29 +216,29 @@ Record ALL outputs as final evidence.
 **On PASS:**
 
 ```bash
-bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id verify \
+bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
   --status resolved \
   --add-evidence "VERDICT: PASS" \
   --add-evidence "All tasks verified with evidence"
 
-bun "$SCRIPTS/session-update.js" --session {SESSION_ID} --phase COMPLETE
+bun "$SCRIPTS/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
 ```
 
 **On FAIL (Ralph Loop):**
 
 ```bash
 # Create fix tasks
-bun "$SCRIPTS/task-create.js" --session {SESSION_ID} \
+bun "$SCRIPTS/task-create.js" --session ${CLAUDE_SESSION_ID} \
   --subject "Fix: [Specific issue]" \
   --description "Verification failed: [reason]. Action: [fix]." \
   --criteria '["Issue resolved with evidence"]'
 
 # Update verify task
-bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id verify \
+bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
   --add-evidence "VERDICT: FAIL - Created fix tasks"
 
 # Return to EXECUTION phase
-bun "$SCRIPTS/session-update.js" --session {SESSION_ID} --phase EXECUTION
+bun "$SCRIPTS/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
 ```
 
 ---
@@ -269,7 +269,7 @@ bun "$SCRIPTS/session-update.js" --session {SESSION_ID} --phase EXECUTION
 2. Task 3: Found "TODO" in evidence
 
 ## Session Updated
-- Session ID: {SESSION_ID}
+- Session ID: ${CLAUDE_SESSION_ID}
 - Verify task status: resolved (PASS) / open (FAIL)
 - Phase: COMPLETE (if PASS)
 ```

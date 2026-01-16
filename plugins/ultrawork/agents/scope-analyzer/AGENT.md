@@ -136,7 +136,7 @@ Apply these rules to classify dependencies.
 ```bash
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
-bun "$SCRIPTS/scope-set.js" --session {SESSION_ID} --data '{
+bun "$SCRIPTS/scope-set.js" --session ${CLAUDE_SESSION_ID} --data '{
   "originalRequest": "Add PPT options to Feed form",
   "detectedLayers": ["frontend", "backend", "database", "codegen"],
   "dependencies": [

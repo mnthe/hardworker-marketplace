@@ -32,8 +32,9 @@ const { isSessionActive, readSessionField, getSessionDir } = require('../lib/ses
  * @typedef {Object} PreToolUseOutput
  * @property {Object} hookSpecificOutput
  * @property {string} hookSpecificOutput.hookEventName
- * @property {'allow' | 'deny'} hookSpecificOutput.permissionDecision
- * @property {string} [hookSpecificOutput.permissionDecisionReason]
+ * @property {'allow' | 'block'} hookSpecificOutput.decision
+ * @property {string} [hookSpecificOutput.reason]
+ * @property {string} [hookSpecificOutput.additionalContext]
  */
 
 /**
@@ -103,7 +104,9 @@ function isFileAllowed(filePath) {
  * @returns {PreToolUseOutput}
  */
 function createDenialResponse(tool, filePath, sessionId, sessionFile) {
-  const reason = `⛔ GATE VIOLATION: ${tool} blocked in PLANNING phase.
+  const reason = `${tool} blocked during PLANNING phase`;
+
+  const additionalContext = `⛔ GATE VIOLATION: File modifications blocked in PLANNING phase
 
 Current Phase: PLANNING
 Blocked Tool: ${tool}
@@ -112,23 +115,25 @@ Target File: ${filePath}
 Session ID: ${sessionId}
 Session File: ${sessionFile}
 
-Direct file modifications are prohibited during PLANNING phase.
+WHY BLOCKED:
+Direct file modifications are prohibited during PLANNING phase. This ensures you complete codebase exploration and task decomposition before making changes.
 
-To proceed, either:
+WHAT TO DO:
 1. Complete planning → transition to EXECUTION phase
-2. Cancel session: /ultrawork-cancel
+2. Or cancel session: /ultrawork-cancel
 
 If this is unexpected (orphaned session), cancel with:
   /ultrawork-cancel
 
-Allowed files during PLANNING:
+ALLOWED FILES DURING PLANNING:
 - *-design.md, session.json, context.json, exploration/*.md, docs/plans/*.md`;
 
   return {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
-      permissionDecision: 'deny',
-      permissionDecisionReason: reason
+      decision: 'block',
+      reason: reason,
+      additionalContext: additionalContext
     }
   };
 }
@@ -141,7 +146,7 @@ function createAllowResponse() {
   return {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
-      permissionDecision: 'allow'
+      decision: 'allow'
     }
   };
 }

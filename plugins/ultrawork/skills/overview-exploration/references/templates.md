@@ -164,7 +164,7 @@ Glob(pattern="**/__tests__/**/*")
 
 ```bash
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" \
-  --session {SESSION_ID} \
+  --session ${CLAUDE_SESSION_ID} \
   --exploration-stage overview
 ```
 
@@ -172,7 +172,7 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" \
 
 ```bash
 # Get session directory
-SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
 
 # Write overview.md
 Write(
@@ -185,7 +185,7 @@ Write(
 
 ```bash
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-add.js" \
-  --session {SESSION_ID} \
+  --session ${CLAUDE_SESSION_ID} \
   --explorer-id "overview" \
   --file "exploration/overview.md" \
   --summary "{brief summary of overview findings}" \
@@ -197,6 +197,6 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-add.js" \
 
 ```bash
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" \
-  --session {SESSION_ID} \
+  --session ${CLAUDE_SESSION_ID} \
   --exploration-stage analyzing
 ```

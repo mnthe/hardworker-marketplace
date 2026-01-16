@@ -83,7 +83,7 @@ See `references/interview-rounds.md` for:
 **IMPORTANT: Design documents go to PROJECT directory.**
 
 ```bash
-WORKING_DIR=$(bun $SCRIPTS/session-get.js --session {SESSION_ID} --field working_dir)
+WORKING_DIR=$(bun $SCRIPTS/session-get.js --session ${CLAUDE_SESSION_ID} --field working_dir)
 DESIGN_PATH="$WORKING_DIR/docs/plans/$(date +%Y-%m-%d)-{goal-slug}-design.md"
 ```
 

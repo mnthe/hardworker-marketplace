@@ -63,17 +63,17 @@ Use these scripts for session/task management:
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Get session directory path
-SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
 
 # Get session data
-bun "$SCRIPTS/session-get.js" --session {SESSION_ID}               # Full JSON
-bun "$SCRIPTS/session-get.js" --session {SESSION_ID} --field phase # Specific field
+bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
+bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase # Specific field
 
 # Get task details
-bun "$SCRIPTS/task-get.js" --session {SESSION_ID} --id {TASK_ID}
+bun "$SCRIPTS/task-get.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID}
 
 # Update task
-bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
+bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --status resolved --add-evidence "npm test: 15/15 passed"
 ```
 
@@ -84,7 +84,7 @@ bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
 ### Phase 1: Read Task
 
 ```bash
-bun "$SCRIPTS/task-get.js" --session {SESSION_ID} --id {TASK_ID}
+bun "$SCRIPTS/task-get.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID}
 ```
 
 Check the `approach` field:
@@ -94,7 +94,7 @@ Check the `approach` field:
 ### Phase 2: Mark In Progress
 
 ```bash
-bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
+bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "Starting implementation at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
@@ -128,7 +128,7 @@ Exit code: 0
 **On Success:**
 
 ```bash
-bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
+bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --status resolved \
   --add-evidence "Created src/models/User.ts" \
   --add-evidence "npm test: 15/15 passed, exit 0"
@@ -137,7 +137,7 @@ bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
 **On Failure:**
 
 ```bash
-bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
+bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "FAILED: npm test exited with code 1" \
   --add-evidence "Error: Cannot find module './db'"
 ```
@@ -156,7 +156,7 @@ git add -A
 git commit -m "$(cat <<'EOF'
 <type>(<scope>): <short description>
 
-[ultrawork] Session: {SESSION_ID} | Task: {TASK_ID}
+[ultrawork] Session: ${CLAUDE_SESSION_ID} | Task: {TASK_ID}
 
 {TASK_SUBJECT}
 
@@ -193,7 +193,7 @@ EOF
 - **Record commit in evidence**:
 
 ```bash
-bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
+bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "Committed: $(git rev-parse --short HEAD)"
 ```
 
@@ -251,14 +251,14 @@ Document why tests are not applicable in your evidence.
 
 ```bash
 # Record test creation
-bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
+bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "TDD-RED: Created test file tests/validateUser.test.ts"
 
 # Run test - MUST FAIL
 npm test -- tests/validateUser.test.ts
 
 # Record failure (expected)
-bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
+bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "TDD-RED: Test fails as expected (exit code 1)"
 ```
 
@@ -275,14 +275,14 @@ bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
 
 ```bash
 # Record implementation
-bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
+bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "TDD-GREEN: Implemented src/validateUser.ts"
 
 # Run test - MUST PASS
 npm test -- tests/validateUser.test.ts
 
 # Record success
-bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
+bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "TDD-GREEN: Test passes (exit code 0)"
 ```
 
@@ -298,7 +298,7 @@ bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
 3. Record any refactoring done
 
 ```bash
-bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
+bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "TDD-REFACTOR: Renamed variables for clarity, tests still pass"
 ```
 
@@ -322,7 +322,7 @@ A complete TDD task MUST have this evidence sequence:
 ### TDD Task Completion
 
 ```bash
-bun "$SCRIPTS/task-update.js" --session {SESSION_ID} --id {TASK_ID} \
+bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --status resolved \
   --add-evidence "TDD complete: RED→GREEN→REFACTOR cycle finished"
 ```
@@ -374,7 +374,7 @@ Brief description of what was done.
 - Exit code: {code}
 
 ## Session Updated
-- Session ID: {SESSION_ID}
+- Session ID: ${CLAUDE_SESSION_ID}
 - Task ID: {TASK_ID}
 - Status: resolved / open (if failed)
 

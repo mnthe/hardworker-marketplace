@@ -105,22 +105,22 @@ When running within an ultrawork session:
 3. **Add** summary to `context.json`
 4. **Advance** stage to `analyzing`
 
-**Note**: `SESSION_DIR` is the session metadata directory (e.g., `~/.claude/ultrawork/sessions/{SESSION_ID}`), not the project working directory. All exploration artifacts are stored in the session directory to maintain session isolation.
+**Note**: `SESSION_DIR` is the session metadata directory (e.g., `~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}`), not the project working directory. All exploration artifacts are stored in the session directory to maintain session isolation.
 
 ```bash
 # For ultrawork, use scripts written in Javascript/Bun
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Update stage
-bun $SCRIPTS/session-update.js --session {SESSION_ID} --exploration-stage overview
+bun $SCRIPTS/session-update.js --session ${CLAUDE_SESSION_ID} --exploration-stage overview
 
 # Get session directory and write findings
-SESSION_DIR=$(bun $SCRIPTS/session-get.js --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun $SCRIPTS/session-get.js --session ${CLAUDE_SESSION_ID} --dir)
 mkdir -p "$SESSION_DIR/exploration"
 # Write findings to $SESSION_DIR/exploration/overview.md using Write tool
 
 # Add to context (file path is relative to SESSION_DIR)
-bun $SCRIPTS/context-add.js --session {SESSION_ID} \
+bun $SCRIPTS/context-add.js --session ${CLAUDE_SESSION_ID} \
   --explorer-id "overview" \
   --file "exploration/overview.md" \
   --summary "{summary}" \
@@ -128,7 +128,7 @@ bun $SCRIPTS/context-add.js --session {SESSION_ID} \
   --patterns "{patterns}"
 
 # Advance stage
-bun $SCRIPTS/session-update.js --session {SESSION_ID} --exploration-stage analyzing
+bun $SCRIPTS/session-update.js --session ${CLAUDE_SESSION_ID} --exploration-stage analyzing
 ```
 
 ---

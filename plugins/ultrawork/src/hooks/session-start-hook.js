@@ -12,6 +12,7 @@ const os = require('os');
 /**
  * @typedef {Object} HookInput
  * @property {string} [session_id]
+ * @property {string} [agent_type] - NEW in Claude Code v2.1.4 (e.g., "ultrawork:worker")
  */
 
 /**
@@ -106,8 +107,14 @@ async function main() {
     /** @type {HookInput} */
     const hookInput = JSON.parse(input);
 
-    // Extract session_id
+    // Extract session_id and agent_type
     const sessionId = hookInput.session_id;
+    const agentType = hookInput.agent_type;
+
+    // Log agent type for tracking/debugging (to stderr)
+    if (agentType) {
+      console.error(`[ultrawork] SessionStart: agent_type=${agentType}`);
+    }
 
     // Cleanup old sessions
     cleanupOldSessions();
@@ -121,8 +128,7 @@ async function main() {
     };
 
     if (sessionId) {
-      output.hookSpecificOutput.additionalContext =
-        `═══════════════════════════════════════════════════════════
+      let contextMessage = `═══════════════════════════════════════════════════════════
  ULTRAWORK SESSION ID (USE THIS VALUE DIRECTLY)
 ═══════════════════════════════════════════════════════════
  CLAUDE_SESSION_ID: ${sessionId}
@@ -132,6 +138,13 @@ async function main() {
 
  DO NOT use placeholders like {SESSION_ID} or $SESSION_ID
 ═══════════════════════════════════════════════════════════`;
+
+      // Add agent type info if present
+      if (agentType) {
+        contextMessage += `\n Agent Type: ${agentType}`;
+      }
+
+      output.hookSpecificOutput.additionalContext = contextMessage;
     }
 
     console.log(JSON.stringify(output));
