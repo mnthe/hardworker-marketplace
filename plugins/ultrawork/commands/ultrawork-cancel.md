@@ -31,7 +31,7 @@ AskUserQuestion(questions=[{
 If confirmed, execute the cancel script with `--session`:
 
 ```!
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-cancel.js" --session {SESSION_ID}
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-cancel.js" --session ${CLAUDE_SESSION_ID}
 ```
 
 The script will:

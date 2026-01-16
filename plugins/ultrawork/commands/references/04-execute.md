@@ -11,7 +11,7 @@
 Update session phase before starting execution:
 
 ```bash
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase EXECUTION
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
 ```
 
 ---
@@ -19,11 +19,11 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID}
 ## Execution Loop
 
 ```python
-# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
+# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
 
 while True:
     # Find unblocked pending tasks
-    tasks_output = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID} --format json')
+    tasks_output = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session ${CLAUDE_SESSION_ID} --format json')
     tasks = json.loads(tasks_output.output)
 
     unblocked = [t for t in tasks if t["status"] == "pending" and all_deps_complete(t, tasks)]
@@ -40,7 +40,7 @@ while True:
             subagent_type="ultrawork:worker:worker",
             model=model,
             prompt=f"""
-SESSION_ID: {SESSION_ID}
+SESSION_ID: ${CLAUDE_SESSION_ID}
 TASK_ID: {task["id"]}
 
 TASK: {task["subject"]}
@@ -160,21 +160,21 @@ For tasks with `"approach": "tdd"`:
 
 1. **TDD-RED**: Worker creates test file first, runs it, confirms failure (exit code 1)
    ```bash
-   bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --task-id "1" \
+   bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session ${CLAUDE_SESSION_ID} --task-id "1" \
      --add-evidence "TDD-RED: Created tests/feature.test.ts" \
      --add-evidence "TDD-RED: npm test -- feature.test.ts (exit 1, test fails as expected)"
    ```
 
 2. **TDD-GREEN**: Worker implements feature, runs test, confirms pass (exit code 0)
    ```bash
-   bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --task-id "1" \
+   bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session ${CLAUDE_SESSION_ID} --task-id "1" \
      --add-evidence "TDD-GREEN: Implemented src/feature.ts" \
      --add-evidence "TDD-GREEN: npm test -- feature.test.ts (exit 0, all tests pass)"
    ```
 
 3. **TDD-REFACTOR** (optional): Worker improves implementation, tests still pass
    ```bash
-   bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --task-id "1" \
+   bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session ${CLAUDE_SESSION_ID} --task-id "1" \
      --add-evidence "TDD-REFACTOR: Refactored for readability" \
      --add-evidence "TDD-REFACTOR: npm test -- feature.test.ts (exit 0, still passing)"
    ```
@@ -196,7 +196,7 @@ Evidence is automatically collected by hooks:
 Workers must update task evidence explicitly:
 
 ```bash
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --task-id "1" \
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session ${CLAUDE_SESSION_ID} --task-id "1" \
   --status resolved \
   --add-evidence "npm test: 5/5 passed, exit 0"
 ```
@@ -222,7 +222,7 @@ git add -A
 # 2. Commit with Angular format
 git commit -m "<type>(<scope>): <short description>
 
-[ultrawork] Session: {SESSION_ID} | Task: {TASK_ID}
+[ultrawork] Session: ${CLAUDE_SESSION_ID} | Task: {TASK_ID}
 
 {TASK_SUBJECT}
 
@@ -235,7 +235,7 @@ Files changed:
 - src/feature.test.ts"
 
 # 3. Record commit hash in evidence
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --task-id "{TASK_ID}" \
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session ${CLAUDE_SESSION_ID} --task-id "{TASK_ID}" \
   --add-evidence "Committed: $(git rev-parse --short HEAD)"
 ```
 
@@ -273,7 +273,7 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --
 ```
 <type>(<scope>): <short description>
 
-[ultrawork] Session: {SESSION_ID} | Task: {TASK_ID}
+[ultrawork] Session: ${CLAUDE_SESSION_ID} | Task: {TASK_ID}
 
 {TASK_SUBJECT}
 
@@ -321,12 +321,12 @@ Wave 3 (1 task unblocked after Wave 2):
 
 ```python
 # Check if all tasks are resolved
-tasks = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID} --format json')
+tasks = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session ${CLAUDE_SESSION_ID} --format json')
 all_resolved = all(t["status"] == "resolved" for t in json.loads(tasks.output))
 
 if all_resolved:
     # Move to verification phase
-    Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase VERIFICATION')
+    Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase VERIFICATION')
 ```
 
 ---

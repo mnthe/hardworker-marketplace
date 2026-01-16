@@ -11,7 +11,7 @@
 When all tasks are resolved, move to verification:
 
 ```bash
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase VERIFICATION
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase VERIFICATION
 ```
 
 ---
@@ -21,14 +21,14 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID}
 ### Step 1: Spawn Verifier
 
 ```python
-# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
+# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
 
 # Spawn verifier (foreground - waits for completion)
 Task(
     subagent_type="ultrawork:verifier:verifier",
     model="opus",  # Use opus for thorough verification
     prompt=f"""
-SESSION_ID: {SESSION_ID}
+SESSION_ID: ${CLAUDE_SESSION_ID}
 
 Verify all success criteria are met with evidence.
 Check for blocked patterns.
@@ -57,7 +57,7 @@ The verifier must:
 
 1. **Task status is `resolved`**
    ```bash
-   bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-get.js" --session {SESSION_ID} --task-id "1" --field status
+   bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-get.js" --session ${CLAUDE_SESSION_ID} --task-id "1" --field status
    ```
 
 2. **Every criterion has evidence**
@@ -171,12 +171,12 @@ Exit code: 0
 
 ```bash
 # Update verify task
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --task-id "verify" \
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session ${CLAUDE_SESSION_ID} --task-id "verify" \
   --status resolved \
   --add-evidence "✅ PASS: All criteria met with verified evidence"
 
 # Mark session complete
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase COMPLETE
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
 ```
 
 ---
@@ -197,7 +197,7 @@ The verifier creates fix tasks and triggers another execution iteration:
 
 ```bash
 # Create fix tasks for each issue found
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-create.js" --session {SESSION_ID} \
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-create.js" --session ${CLAUDE_SESSION_ID} \
   --id "fix-1" \
   --subject "Fix failing test: auth middleware" \
   --description "Test 'invalid token' is failing. Error: Expected 401, got 500" \
@@ -205,17 +205,17 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-create.js" --session {SESSION_ID} \
   --criteria "Test passes|Exit code 0"
 
 # Increment iteration counter
-current_iteration=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field iteration)
+current_iteration=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field iteration)
 next_iteration=$((current_iteration + 1))
 
 # Check max iterations
-max_iterations=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field options.max_iterations)
+max_iterations=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field options.max_iterations)
 if [ $next_iteration -gt $max_iterations ]; then
   # Max iterations reached - fail session
-  bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase FAILED
+  bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase FAILED
 else
   # Return to execution with fix tasks
-  bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase EXECUTION --iteration $next_iteration
+  bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION --iteration $next_iteration
 fi
 ```
 
@@ -234,7 +234,7 @@ fi
 ```bash
 # NO verifier spawn
 # Orchestrator marks complete after all tasks resolved
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase COMPLETE
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
 ```
 
 **Use cases**:
@@ -257,7 +257,7 @@ Task(
     subagent_type="ultrawork:reviewer:reviewer",
     model="opus",
     prompt=f"""
-SESSION_ID: {SESSION_ID}
+SESSION_ID: ${CLAUDE_SESSION_ID}
 
 Deep code review:
 - Read actual implementation code
@@ -303,7 +303,7 @@ All verification evidence is recorded in session.json:
 **View evidence:**
 
 ```bash
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-evidence.js" --session {SESSION_ID}
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-evidence.js" --session ${CLAUDE_SESSION_ID}
 ```
 
 ---

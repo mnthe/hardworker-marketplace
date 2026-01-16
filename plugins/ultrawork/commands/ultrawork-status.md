@@ -17,7 +17,7 @@ You MUST pass it to the script via `--session` flag.
 Execute the status script with `--session`:
 
 ```!
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-status.js" --session {SESSION_ID}
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-status.js" --session ${CLAUDE_SESSION_ID}
 ```
 
 Or list all sessions:

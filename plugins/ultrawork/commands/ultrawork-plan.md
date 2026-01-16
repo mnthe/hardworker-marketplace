@@ -48,7 +48,7 @@ To allow user interruption during exploration, use **background execution with p
 # Poll pattern for all Task waits
 while True:
     # Check if session was cancelled
-    phase = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field phase')
+    phase = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase')
     if phase.output.strip() == "CANCELLED":
         return  # Exit cleanly
 
@@ -71,7 +71,7 @@ while True:
 # Get SESSION_ID from system-reminder hook output
 # Example: CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642
 
-# Use actual UUID (NOT placeholders like {SESSION_ID})
+# Use actual UUID (NOT placeholders like ${CLAUDE_SESSION_ID})
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --plan-only "goal"
 
 # Get session directory
@@ -112,7 +112,7 @@ Parse the setup output to get:
 **Quick reference:**
 ```python
 # Read session state
-exploration_stage = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field exploration_stage')
+exploration_stage = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field exploration_stage')
 
 # Resume based on stage
 # not_started → Begin overview
@@ -148,7 +148,7 @@ Task(
   subagent_type="ultrawork:scope-analyzer:scope-analyzer",
   model="haiku",
   prompt=f"""
-SESSION_ID: {SESSION_ID}
+SESSION_ID: ${CLAUDE_SESSION_ID}
 
 REQUEST: {goal}
 
@@ -162,23 +162,23 @@ The scope analyzer runs in parallel with targeted exploration. It writes results
 **Stage 2: Analyze & Plan Targeted**
 ```bash
 # Update stage
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage analyzing
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --exploration-stage analyzing
 
 # Analyze overview + goal → generate hints
 # Set expected explorers BEFORE spawning
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-init.js" --session {SESSION_ID} --expected "overview,exp-1,exp-2"
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-init.js" --session ${CLAUDE_SESSION_ID} --expected "overview,exp-1,exp-2"
 ```
 
 **Stage 3: Targeted Exploration**
 ```bash
 # Update stage
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage targeted
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --exploration-stage targeted
 
 # Spawn explorers (parallel, in single message)
 # Task(subagent_type="ultrawork:explorer:explorer", ...) for each hint
 
 # After completion
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage complete
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --exploration-stage complete
 ```
 
 **Output**: `exploration/*.md`, `context.json` with exploration_complete=true
@@ -196,13 +196,13 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID}
 Spawn Planner sub-agent:
 
 ```python
-# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
+# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
 
 Task(
   subagent_type="ultrawork:planner:planner",
   model="opus",
   prompt=f"""
-SESSION_ID: {SESSION_ID}
+SESSION_ID: ${CLAUDE_SESSION_ID}
 
 Goal: {goal}
 
@@ -228,7 +228,7 @@ Reference: `skills/planning/SKILL.md`
 
 ```bash
 # Get session directory
-SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
 
 # Read lightweight summary
 Read("$SESSION_DIR/context.json")
@@ -347,7 +347,7 @@ AskUserQuestion(questions=[{
 
 ```bash
 # Get working directory from session
-WORKING_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field working_dir)
+WORKING_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir)
 
 # Create docs/plans directory if needed
 mkdir -p "$WORKING_DIR/docs/plans"
@@ -370,7 +370,7 @@ See `skills/planning/SKILL.md` Phase 4 for template.
 Decompose design into tasks. Write each task:
 
 ```bash
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-create.js" --session {SESSION_ID} \
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-create.js" --session ${CLAUDE_SESSION_ID} \
   --id "1" \
   --subject "Setup NextAuth provider" \
   --description "Configure NextAuth with credentials" \
@@ -383,7 +383,7 @@ Always include verify task at end.
 #### 3g. Update Session Phase
 
 ```bash
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase PLANNING_COMPLETE
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase PLANNING_COMPLETE
 ```
 
 ---
@@ -394,11 +394,11 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID}
 
 ```bash
 # Get working directory and session directory
-WORKING_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field working_dir)
-SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
+WORKING_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir)
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
 
 # List tasks
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID}
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session ${CLAUDE_SESSION_ID}
 
 # Read design (from PROJECT directory)
 Read("$WORKING_DIR/docs/plans/YYYY-MM-DD-{goal-slug}-design.md")
@@ -463,7 +463,7 @@ Run `/ultrawork-exec` to execute the plan.
 ## Directory Structure
 
 **Session Directory** (internal metadata):
-`bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir`
+`bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir`
 
 ```
 $SESSION_DIR/
@@ -481,7 +481,7 @@ $SESSION_DIR/
 ```
 
 **Project Directory** (user deliverables):
-`bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field working_dir`
+`bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir`
 
 ```
 $WORKING_DIR/

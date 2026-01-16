@@ -17,7 +17,7 @@ You MUST pass it to the script via `--session` flag.
 Execute the evidence script with `--session`:
 
 ```!
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-evidence.js" --session {SESSION_ID}
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-evidence.js" --session ${CLAUDE_SESSION_ID}
 ```
 
 After displaying raw evidence, interpret and summarize:

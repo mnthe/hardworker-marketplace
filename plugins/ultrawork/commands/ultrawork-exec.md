@@ -61,7 +61,7 @@ CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642
 Use this when calling ultrawork scripts: --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642
 ```
 
-**IMPORTANT: You MUST extract the actual UUID value and use it directly. DO NOT use placeholder strings like `{SESSION_ID}` or `$SESSION_ID`.**
+**IMPORTANT: You MUST extract the actual UUID value and use it directly. DO NOT use placeholder strings like `${CLAUDE_SESSION_ID}` or `$SESSION_ID`.**
 
 ### Correct usage example
 
@@ -72,7 +72,7 @@ If the hook says `CLAUDE_SESSION_ID: 37b6a60f-8e3e-4631-8f62-8eaf3d235642`, then
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --field phase
 
 # ❌ WRONG - do not use placeholders
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field phase
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase
 ```
 
 ### Script calls with SESSION_ID
@@ -94,10 +94,10 @@ Find and load the existing session:
 ```bash
 # Get SESSION_ID from hook output (see "Session ID Handling" section)
 # Get session directory via script
-SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir)
+SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
 
 # Verify session exists and has tasks
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID}
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session ${CLAUDE_SESSION_ID}
 ```
 
 Read session state:
@@ -105,13 +105,13 @@ Read session state:
 ```bash
 # SESSION_ID from hook output
 # Get session data via script
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID}                    # Full JSON
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field phase      # Specific field
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field goal
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID}                    # Full JSON
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase      # Specific field
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field goal
 
 # Get specific options
-goal=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field goal)
-phase=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field phase)
+goal=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field goal)
+phase=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase)
 ```
 
 **Validate session is ready for execution:**
@@ -164,7 +164,7 @@ Starting workers...
 ```python
 while iteration <= max_iterations:
     # Update phase and iteration
-    Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase EXECUTION --iteration {iteration}')
+    Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION --iteration {iteration}')
 
     print(f"## Iteration {iteration}/{max_iterations}")
 
@@ -176,7 +176,7 @@ while iteration <= max_iterations:
 
     # Skip verify if requested
     if skip_verify:
-        Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase COMPLETE')
+        Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE')
         print("## Execution Complete (verification skipped)")
         return
 
@@ -186,7 +186,7 @@ while iteration <= max_iterations:
     if verification_result == "CANCELLED":
         return
     elif verification_result == "PASS":
-        Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase COMPLETE')
+        Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE')
         print("## Execution Complete - All criteria verified")
         return
     else:
@@ -196,7 +196,7 @@ while iteration <= max_iterations:
             reset_failed_tasks(SESSION_ID)
             iteration += 1
         else:
-            Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase FAILED')
+            Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase FAILED')
             print("## Execution Failed - Max iterations reached")
             return
 ```
@@ -209,11 +209,11 @@ while iteration <= max_iterations:
 
 ```python
 def run_execution_phase(SESSION_ID, max_workers):
-    # Get session_dir via: Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
+    # Get session_dir via: Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
 
     while True:
         # Get current task states
-        tasks_output = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID} --format json')
+        tasks_output = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session ${CLAUDE_SESSION_ID} --format json')
         tasks = json.loads(tasks_output.output)
 
         # Categorize tasks (exclude verify task for now)
@@ -229,14 +229,14 @@ def run_execution_phase(SESSION_ID, max_workers):
         batch = unblocked[:max_workers] if max_workers > 0 else unblocked
         for task in batch:
             # Mark task as in_progress
-            Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --status in_progress')
+            Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session ${CLAUDE_SESSION_ID} --id {task["id"]} --status in_progress')
 
             model = "opus" if task["complexity"] == "complex" else "sonnet"
             Task(
                 subagent_type="ultrawork:worker:worker",
                 model=model,
                 prompt=f"""
-SESSION_ID: {SESSION_ID}
+SESSION_ID: ${CLAUDE_SESSION_ID}
 TASK_ID: {task["id"]}
 
 TASK: {task["subject"]}
@@ -258,10 +258,10 @@ SUCCESS CRITERIA:
 
 ```python
 def run_verification_phase(SESSION_ID):
-    # Get session_dir via: Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
+    # Get session_dir via: Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
 
     # Update phase
-    Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase VERIFICATION')
+    Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase VERIFICATION')
 
     print("## Running Verification...")
 
@@ -270,7 +270,7 @@ def run_verification_phase(SESSION_ID):
         subagent_type="ultrawork:verifier:verifier",
         model="opus",
         prompt=f"""
-SESSION_ID: {SESSION_ID}
+SESSION_ID: ${CLAUDE_SESSION_ID}
 
 Verify all success criteria are met with evidence.
 Check for blocked patterns.
@@ -295,22 +295,22 @@ Return: PASS or FAIL with details
 def reset_failed_tasks(SESSION_ID):
     """Reset failed tasks for retry iteration"""
 
-    tasks_output = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session {SESSION_ID} --format json')
+    tasks_output = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session ${CLAUDE_SESSION_ID} --format json')
     tasks = json.loads(tasks_output.output)
 
     for task in tasks:
         if task["status"] == "failed":
             # Reset to pending
-            Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --status pending')
+            Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session ${CLAUDE_SESSION_ID} --id {task["id"]} --status pending')
 
             # Increment retry count
             retry_count = task.get("retry_count", 0) + 1
-            Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id {task["id"]} --retry-count {retry_count}')
+            Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session ${CLAUDE_SESSION_ID} --id {task["id"]} --retry-count {retry_count}')
 
             print(f"↻ Reset for retry: {task['id']} (attempt {retry_count + 1})")
 
     # Also reset verify task
-    Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session {SESSION_ID} --id verify --status pending')
+    Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify --status pending')
 ```
 
 ---
@@ -421,7 +421,7 @@ Session ID: {session_id}
 
 ## Directory Structure
 
-Get session directory: `bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir`
+Get session directory: `bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir`
 
 ```
 $SESSION_DIR/

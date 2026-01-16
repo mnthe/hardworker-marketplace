@@ -78,7 +78,7 @@ Create design document in project directory:
 
 ```bash
 # Get working directory from session
-WORKING_DIR=$(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js --session {SESSION_ID} --field working_dir)
+WORKING_DIR=$(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js --session ${CLAUDE_SESSION_ID} --field working_dir)
 
 # Design document path
 # Format: {working_dir}/docs/plans/YYYY-MM-DD-{goal-slug}-design.md
@@ -123,7 +123,7 @@ Break design into executable tasks:
 **Task structure**:
 
 ```bash
-bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-create.js --session {SESSION_ID} \
+bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-create.js --session ${CLAUDE_SESSION_ID} \
   --id "1" \
   --subject "Brief task title" \
   --description "Detailed implementation steps" \
@@ -168,7 +168,7 @@ Task(
     subagent_type="ultrawork:planner:planner",
     model="inherit",
     prompt=f"""
-SESSION_ID: {SESSION_ID}
+SESSION_ID: ${CLAUDE_SESSION_ID}
 
 Read exploration context and create:
 1. Design document (docs/plans/)
@@ -194,7 +194,7 @@ After planning completes:
 
 ```bash
 # Update session phase
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase EXECUTION
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
 ```
 
 ---

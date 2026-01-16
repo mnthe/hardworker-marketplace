@@ -31,7 +31,7 @@ This is synchronous - no polling needed. Proceed to Stage 2 after skill complete
 **Update exploration_stage to "analyzing":**
 
 ```bash
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage analyzing
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --exploration-stage analyzing
 ```
 
 Based on **Overview + Goal**, decide what areas need detailed exploration.
@@ -74,7 +74,7 @@ for i, hint in enumerate(hints):
     expected_ids += f",exp-{i+1}"
 
 # Initialize context.json with expected explorers
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-init.js" --session {SESSION_ID} --expected "{expected_ids}"
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-init.js" --session ${CLAUDE_SESSION_ID} --expected "{expected_ids}"
 ```
 
 This ensures:
@@ -88,13 +88,13 @@ This ensures:
 **Update exploration_stage to "targeted":**
 
 ```bash
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage targeted
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --exploration-stage targeted
 ```
 
 Spawn explorers for each identified area (parallel, in single message):
 
 ```python
-# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
+# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
 
 # Call multiple Tasks in single message = automatic parallel execution
 for i, hint in enumerate(hints):
@@ -102,7 +102,7 @@ for i, hint in enumerate(hints):
       subagent_type="ultrawork:explorer:explorer",
       model="haiku",  # or sonnet for complex areas
       prompt=f"""
-SESSION_ID: {SESSION_ID}
+SESSION_ID: ${CLAUDE_SESSION_ID}
 EXPLORER_ID: exp-{i+1}
 
 SEARCH_HINT: {hint}
@@ -116,7 +116,7 @@ CONTEXT: {overview_summary}
 **After all explorers complete, update exploration_stage to "complete":**
 
 ```bash
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --exploration-stage complete
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --exploration-stage complete
 ```
 
 ---
@@ -127,7 +127,7 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID}
 
 ```python
 # SESSION_ID from hook output, session_dir derived from it
-# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --dir')
+# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
 
 # Read session.json
 session = Bash(f'cat {session_dir}/session.json')
