@@ -27,10 +27,10 @@ plugins/ultrawork/
 │   │   ├── types.js           # JSDoc type definitions (@typedef)
 │   │   ├── file-lock.js       # Cross-platform file locking
 │   │   └── session-utils.js   # Session management utilities
-│   ├── scripts/               # CLI scripts (16 files)
+│   ├── scripts/               # CLI scripts (17 files)
 │   │   ├── setup-ultrawork.js
 │   │   ├── session-get.js
-│   │   ├── session-field.js     # NEW: Optimized single field extraction
+│   │   ├── session-field.js     # NEW: Optimized single field extraction (supports dot notation for nested fields)
 │   │   ├── session-update.js
 │   │   ├── task-create.js
 │   │   ├── task-get.js
@@ -44,7 +44,7 @@ plugins/ultrawork/
 │   │   ├── ultrawork-evidence.js
 │   │   ├── evidence-summary.js  # NEW: AI-friendly evidence index
 │   │   └── evidence-query.js    # NEW: Filter & query evidence
-│   └── hooks/                 # Lifecycle hooks (8 files)
+│   └── hooks/                 # Lifecycle hooks (9 files)
 │       ├── session-start-hook.js
 │       ├── session-context-hook.js
 │       ├── agent-lifecycle-tracking.js
@@ -52,7 +52,8 @@ plugins/ultrawork/
 │       ├── gate-enforcement.js
 │       ├── gate-status-notification.js
 │       ├── subagent-stop-tracking.js
-│       └── stop-hook.js
+│       ├── stop-hook.js
+│       └── keyword-detector.js
 ├── agents/                    # Agent definitions
 │   ├── explorer/
 │   ├── planner/
@@ -62,6 +63,10 @@ plugins/ultrawork/
 ├── commands/                  # Command definitions
 ├── hooks/
 │   └── hooks.json            # Hook configuration
+├── skills/                    # Skill definitions
+│   ├── overview-exploration/
+│   ├── planning/
+│   └── ultrawork/
 └── CLAUDE.md                 # This file
 ```
 
@@ -84,7 +89,7 @@ All scripts use Bun runtime with flag-based parameters.
 | **ultrawork-status.js** | Display session status dashboard | `--session <ID>` `--all` |
 | **ultrawork-cancel.js** | Cancel active session | `--session <ID>` |
 | **ultrawork-evidence.js** | View collected evidence log | `--session <ID>` |
-| **session-field.js** | Optimized single field extraction (partial file read) | `--session <ID>` `--field phase` `--json` |
+| **session-field.js** | Optimized single field extraction with dot notation support | `--session <ID>` `--field phase` `--field options.auto_mode` `--json` |
 | **task-summary.js** | Generate AI-friendly task markdown | `--session <ID>` `--task <ID>` `--save` |
 | **evidence-summary.js** | Generate AI-friendly evidence index | `--session <ID>` `--save` `--format md\|json` |
 | **evidence-query.js** | Query evidence with filters | `--session <ID>` `--type test_result` `--last 5` `--search "npm"` `--task 1` |
@@ -103,6 +108,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **gate-status-notification.js** | PostToolUse (Task) | Notify about gate enforcement status | Displays session phase and gate rules after Task tool usage |
 | **subagent-stop-tracking.js** | SubagentStop | Track subagent completion | Records when explorer/worker/verifier agents complete |
 | **stop-hook.js** | Stop | Cleanup on session end | Removes temporary state on Claude Code exit |
+| **keyword-detector.js** | UserPromptSubmit | Detect ultrawork keywords and transform prompts | Transforms "ultrawork X", "ulw X", "uw X" to /ultrawork commands; supports --auto and --plan-only modes |
 
 ## Agent Inventory
 
