@@ -83,6 +83,7 @@ All scripts use Bun runtime with flag-based parameters. All task/project scripts
 | **wave-status.js** | Query wave progress | `--project <name>` `--team <name>` `--format json\|table` |
 | **loop-state.js** | Manage worker loop state | `--get` `--set --project <name> --team <name> --role <role>` `--clear` |
 | **worker-setup.js** | Setup worker session context | `--project <name>` `--team <name>` `--role <role>` |
+| **project-status.js** | Get project dashboard status | `--project <name>` `--team <name>` `[--format json\|table]` `[--field <path>]` `[--verbose]` |
 
 ## Hook Inventory
 
@@ -581,4 +582,32 @@ bun src/scripts/loop-state.js --set \
 
 # Clear loop state
 bun src/scripts/loop-state.js --clear
+```
+
+### Project Status Dashboard
+
+```bash
+# Get status dashboard (table format)
+bun src/scripts/project-status.js \
+  --project my-app \
+  --team auth-team \
+  --format table
+
+# Get status in JSON format
+bun src/scripts/project-status.js \
+  --project my-app \
+  --team auth-team \
+  --format json
+
+# Get specific field using dot notation
+bun src/scripts/project-status.js \
+  --project my-app \
+  --team auth-team \
+  --field stats.progress
+
+# Get verbose output with task details
+bun src/scripts/project-status.js \
+  --project my-app \
+  --team auth-team \
+  --verbose
 ```
