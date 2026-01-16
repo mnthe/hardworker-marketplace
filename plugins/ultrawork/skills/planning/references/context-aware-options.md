@@ -60,9 +60,9 @@ For each question, create 3-4 options:
 ```python
 # After reading: "Found src/repositories/UserRepository.ts using Prisma"
 "options": [
-  {"label": "Prisma Repository (Recommended)", "description": "UserRepository 패턴 따름, src/repositories/에 생성"},
-  {"label": "Prisma Direct", "description": "Repository 없이 직접 prisma client 사용"},
-  {"label": "새 패턴 도입", "description": "다른 방식 제안 (Other에서 설명)"}
+  {"label": "Prisma Repository (Recommended)", "description": "Follows UserRepository pattern, created in src/repositories/"},
+  {"label": "Prisma Direct", "description": "Use Prisma client directly without Repository pattern"},
+  {"label": "Introduce new pattern", "description": "Propose different approach (explain in Other)"}
 ]
 ```
 
@@ -82,9 +82,9 @@ For each question, create 3-4 options:
 ```python
 # After reading: "package.json has zod@3.21.4"
 "options": [
-  {"label": "Zod (Recommended)", "description": "이미 프로젝트에서 사용 중"},
-  {"label": "Joi", "description": "다른 validation library"},
-  {"label": "Native validation", "description": "외부 의존성 없이"}
+  {"label": "Zod (Recommended)", "description": "Already used in the project"},
+  {"label": "Joi", "description": "Different validation library"},
+  {"label": "Native validation", "description": "Without external dependencies"}
 ]
 ```
 
@@ -105,9 +105,9 @@ For each question, create 3-4 options:
 ```python
 # After reading: "Prisma schema uses camelCase, UUID IDs"
 "options": [
-  {"label": "UUID + camelCase (Recommended)", "description": "기존 User, Post 모델과 일관성"},
-  {"label": "Auto-increment ID", "description": "정수 ID 사용"},
-  {"label": "다른 방식", "description": "Other에서 설명"}
+  {"label": "UUID + camelCase (Recommended)", "description": "Consistent with existing User, Post models"},
+  {"label": "Auto-increment ID", "description": "Use integer IDs"},
+  {"label": "Different approach", "description": "Explain in Other"}
 ]
 ```
 
@@ -127,9 +127,9 @@ For each question, create 3-4 options:
 ```python
 # After reading: "Found src/errors/AppError.ts base class"
 "options": [
-  {"label": "Extend AppError (Recommended)", "description": "ValidationError, AuthError 처럼 추가"},
-  {"label": "New error pattern", "description": "다른 에러 처리 방식"},
-  {"label": "직접 throw", "description": "에러 클래스 없이"}
+  {"label": "Extend AppError (Recommended)", "description": "Add like ValidationError, AuthError"},
+  {"label": "New error pattern", "description": "Different error handling approach"},
+  {"label": "Throw directly", "description": "Without error classes"}
 ]
 ```
 
@@ -205,9 +205,9 @@ For each question, create 3-4 options:
 ```python
 # After reading: "Found src/repositories/UserRepository.ts using Prisma"
 "options": [
-  {"label": "Prisma Repository (Recommended)", "description": "UserRepository 패턴 따름, src/repositories/ProductRepository 생성"},
-  {"label": "Prisma Direct", "description": "Repository 없이 app/api/products/route.ts에서 직접 사용"},
-  {"label": "새 패턴 도입", "description": "다른 방식 (Other에서 설명)"}
+  {"label": "Prisma Repository (Recommended)", "description": "Follows UserRepository pattern, creates src/repositories/ProductRepository"},
+  {"label": "Prisma Direct", "description": "Use directly in app/api/products/route.ts without Repository"},
+  {"label": "Introduce new pattern", "description": "Different approach (explain in Other)"}
 ]
 ```
 
