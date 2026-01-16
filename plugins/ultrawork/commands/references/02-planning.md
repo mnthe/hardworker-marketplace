@@ -60,7 +60,7 @@ Determine planning depth based on goal complexity:
 - [context-aware-options.md](../../skills/planning/references/context-aware-options.md) - Option generation
 
 **Key principles**:
-1. Ask ONE question at a time
+1. Ask related questions in batches (max 4 per AskUserQuestion call)
 2. Generate options from exploration context (not generic templates)
 3. Recommend option that follows existing patterns
 4. Record all decisions for design document

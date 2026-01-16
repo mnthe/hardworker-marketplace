@@ -251,9 +251,9 @@ Based on the goal "{goal}", I found:
 
 #### 3c. Clarify Requirements (Brainstorm Protocol)
 
-**Ask ONE question at a time.** Reference `skills/planning/SKILL.md` Phase 2-3.
+**Ask related questions in batches (max 4 per AskUserQuestion call).** Reference `commands/references/03-interview.md` for full interview protocol.
 
-For each ambiguous or unclear aspect:
+For ambiguous or unclear aspects:
 
 ```python
 AskUserQuestion(questions=[{
