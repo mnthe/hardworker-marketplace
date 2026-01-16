@@ -24,7 +24,7 @@ description: |
   </example>
 model: opus
 color: purple
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/project-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/wave-*.js:*)", "mcp__plugin_serena_serena__get_symbols_overview", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__search_for_pattern", "Agent(wave-verifier)"]
+tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/project-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/wave-*.js:*)", "mcp__plugin_serena_serena__get_symbols_overview", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__search_for_pattern", "Agent(wave-verifier)"]
 ---
 
 # Orchestrator Agent

@@ -24,7 +24,7 @@ description: |
   </example>
 model: inherit
 color: red
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__find_referencing_symbols", "mcp__plugin_serena_serena__search_for_pattern"]
+tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__find_referencing_symbols", "mcp__plugin_serena_serena__search_for_pattern"]
 ---
 
 # Security Worker Agent
