@@ -31,10 +31,12 @@ plugins/teamwork/
 │   │   ├── optimistic-lock.js # Task claim/release with file lock protection
 │   │   ├── project-utils.js   # Project and task path utilities
 │   │   └── args.js            # Common argument parsing
-│   ├── scripts/               # CLI scripts (13 files)
+│   ├── scripts/               # CLI scripts (15 files)
 │   │   ├── setup-teamwork.js
 │   │   ├── project-create.js
 │   │   ├── project-get.js
+│   │   ├── project-clean.js   # Clean project (delete tasks/verification)
+│   │   ├── project-status.js  # Project dashboard
 │   │   ├── task-create.js
 │   │   ├── task-get.js
 │   │   ├── task-list.js
@@ -74,6 +76,8 @@ All scripts use Bun runtime with flag-based parameters. All task/project scripts
 | **setup-teamwork.js** | Initialize teamwork environment | `--project <name>` `--team <name>` |
 | **project-create.js** | Create new project with metadata | `--project <name>` `--team <name>` `--goal "..."` |
 | **project-get.js** | Get project metadata | `--project <name>` `--team <name>` |
+| **project-clean.js** | Clean project by deleting task and verification directories | `--project <name>` `--team <name>` |
+| **project-status.js** | Get project dashboard status | `--project <name>` `--team <name>` `[--format json\|table]` `[--field <path>]` `[--verbose]` |
 | **task-create.js** | Create new task file | `--project <name>` `--team <name>` `--id <id>` `--title "..."` `--description "..."` `--role <role>` `--blocked-by "1,2"` |
 | **task-get.js** | Get single task details | `--project <name>` `--team <name>` `--id <id>` |
 | **task-list.js** | List all tasks in project | `--project <name>` `--team <name>` `--available` `--role <role>` `--format json\|table` |
@@ -84,7 +88,6 @@ All scripts use Bun runtime with flag-based parameters. All task/project scripts
 | **wave-status.js** | Query wave progress | `--project <name>` `--team <name>` `--format json\|table` |
 | **loop-state.js** | Manage worker loop state | `--get` `--set --project <name> --team <name> --role <role>` `--clear` |
 | **worker-setup.js** | Setup worker session context | `--project <name>` `--team <name>` `--role <role>` |
-| **project-status.js** | Get project dashboard status | `--project <name>` `--team <name>` `[--format json\|table]` `[--field <path>]` `[--verbose]` |
 
 ## Hook Inventory
 
@@ -93,6 +96,14 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | Hook File | Event | Purpose | Behavior |
 |-----------|-------|---------|----------|
 | **loop-detector.js** | Stop | Detect continuation marker and trigger next worker iteration | Checks for `__TEAMWORK_CONTINUE__` marker in agent output, continues worker loop if found |
+
+## Skill Inventory
+
+Skills provide reusable capabilities for agents. Each skill documents when to use it and what it does.
+
+| Skill | Purpose | Use Case |
+|-------|---------|----------|
+| **teamwork-clean** | Reset project execution state while preserving metadata | Recovering from failed orchestration, starting fresh with same goal, cleaning up after testing |
 
 ## Agent Inventory
 
@@ -624,4 +635,13 @@ bun src/scripts/project-status.js \
   --project my-app \
   --team auth-team \
   --verbose
+```
+
+### Clean Project
+
+```bash
+# Clean project to start fresh
+bun src/scripts/project-clean.js \
+  --project my-app \
+  --team auth-team
 ```
