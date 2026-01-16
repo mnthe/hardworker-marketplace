@@ -507,6 +507,45 @@ Design documents are written to the project directory:
 
 **Approach values**: `standard` | `tdd`
 
+### TDD Task Format
+
+**File**: `~/.claude/ultrawork/sessions/{session-id}/tasks/{task-id}.json`
+
+```json
+{
+  "id": "2",
+  "subject": "Validate user input",
+  "description": "Add input validation with test-first approach",
+  "complexity": "standard",
+  "status": "in_progress",
+  "blocked_by": [],
+  "criteria": [
+    "Test file created first",
+    "Test failed (TDD-RED)",
+    "Implementation passes test (TDD-GREEN)"
+  ],
+  "evidence": [
+    "TDD-RED: Created test file tests/validation.test.ts",
+    "TDD-RED: Test fails as expected (exit code 1)",
+    "TDD-GREEN: Implemented src/validation.ts",
+    "TDD-GREEN: Test passes (exit code 0)"
+  ],
+  "created_at": "2026-01-12T10:20:00Z",
+  "updated_at": "2026-01-12T10:25:00Z",
+  "approach": "tdd",
+  "test_file": "tests/validation.test.ts"
+}
+```
+
+**TDD Evidence Chain (Required):**
+1. `TDD-RED: Test file created`
+2. `TDD-RED: Test execution failed (exit code 1)`
+3. `TDD-GREEN: Implementation created`
+4. `TDD-GREEN: Test execution passed (exit code 0)`
+5. `TDD-REFACTOR: Improvements made, tests still pass` (optional)
+
+Gate enforcement blocks implementation edits until TDD-RED evidence exists in task.
+
 ## Workflows
 
 ### Interactive Workflow

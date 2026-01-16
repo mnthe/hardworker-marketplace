@@ -497,6 +497,77 @@ Tasks are assigned roles during coordination phase:
 - `VERIFICATION`: Wave or final verification in progress
 - `COMPLETE`: All tasks verified and project finished
 
+### Wave State Format (v2)
+
+```json
+{
+  "version": "1.0",
+  "total_waves": 3,
+  "current_wave": 2,
+  "waves": [
+    {
+      "id": 1,
+      "status": "verified",
+      "tasks": ["1", "2", "3"],
+      "started_at": "2026-01-15T10:00:00Z",
+      "verified_at": "2026-01-15T10:30:00Z"
+    },
+    {
+      "id": 2,
+      "status": "in_progress",
+      "tasks": ["4", "5"],
+      "started_at": "2026-01-15T10:30:00Z",
+      "verified_at": null
+    },
+    {
+      "id": 3,
+      "status": "pending",
+      "tasks": ["6", "7", "8"],
+      "started_at": null,
+      "verified_at": null
+    }
+  ]
+}
+```
+
+**Wave status values:**
+- `planning`: Wave is being prepared
+- `in_progress`: Workers are completing tasks in this wave
+- `completed`: All tasks resolved, awaiting verification
+- `verified`: Wave verification passed
+- `failed`: Wave verification failed
+
+### Verification Result Format (v2)
+
+```json
+{
+  "wave_id": 1,
+  "status": "passed",
+  "verified_at": "2026-01-15T10:30:00Z",
+  "tasks_verified": ["1", "2", "3"],
+  "checks": [
+    {
+      "name": "all_tasks_resolved",
+      "status": "passed"
+    },
+    {
+      "name": "no_file_conflicts",
+      "status": "passed"
+    },
+    {
+      "name": "build_succeeds",
+      "status": "passed",
+      "evidence": "npm run build: exit 0"
+    }
+  ],
+  "issues": []
+}
+```
+
+**Verification status values:**
+- `passed`: All checks passed, wave can proceed
+- `failed`: One or more checks failed, fix tasks required
+
 ## Workflows
 
 ### Interactive Workflow
@@ -637,11 +708,12 @@ flowchart TD
 
 ### Multiple Workers Claiming Same Task
 
-This should not happen due to OCC (Optimistic Concurrency Control). If it does:
-- Check filesystem supports atomic file operations
-- Verify task files are not being corrupted
-- Check for clock skew issues (timestamps must be accurate)
-- OCC prevents this better than file-based locking (no NFS issues)
+This should not happen due to file-based locking with owner identification. If it does:
+- Check filesystem supports atomic mkdir operations
+- Verify lock directories (`*.json.lock/`) are not being corrupted
+- Check that holder.json files contain valid session IDs
+- Stale lock detection should auto-cleanup after 1 minute if holder process is dead
+- File locks work reliably across all filesystems (including NFS)
 
 ### Loop Mode Not Continuing
 
