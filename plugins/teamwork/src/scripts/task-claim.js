@@ -1,21 +1,21 @@
 #!/usr/bin/env bun
 /**
- * task-claim.js - Claim a teamwork task with atomic locking
+ * task-claim.js - Claim a teamwork task with optimistic concurrency control
  *
- * Implements claim-verify pattern:
- * 1. Acquire file lock
- * 2. Read task and check if claimable (status=open, claimed_by=null)
- * 3. Write claim (update claimed_by)
- * 4. Re-read to verify claim succeeded
- * 5. Release lock
+ * Implements optimistic locking with version checking:
+ * 1. Read task and check if claimable (status=open, claimed_by=null)
+ * 2. Attempt to claim with version check
+ * 3. Retry on version conflict (up to 3 attempts)
+ * 4. Fail if already claimed or not in valid status
+ *
+ * Backward compatible: tasks without version field are treated as version 0
  *
  * Usage: task-claim.js --dir <path> --id <task_id> [--owner <owner_id>]
  */
 
-const fs = require('fs');
 const path = require('path');
 const { parseArgs, generateHelp } = require('../lib/args.js');
-const { withLock } = require('../lib/file-lock.js');
+const { claimTaskOptimistic } = require('../lib/optimistic-lock.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -45,13 +45,13 @@ const ARG_SPEC = {
 // ============================================================================
 
 /**
- * Main execution function
+ * Main execution function with retry logic for version conflicts
  * @returns {Promise<void>}
  */
 async function main() {
   // Check for help flag first
   if (process.argv.includes('--help') || process.argv.includes('-h')) {
-    console.log(generateHelp('task-claim.js', ARG_SPEC, 'Atomically claim a task with file locking and verification'));
+    console.log(generateHelp('task-claim.js', ARG_SPEC, 'Atomically claim a task with optimistic concurrency control'));
     process.exit(0);
   }
 
@@ -62,64 +62,56 @@ async function main() {
 
   const taskFile = path.join(args.dir, 'tasks', `${args.id}.json`);
 
-  // Check if task file exists
-  if (!fs.existsSync(taskFile)) {
-    console.error(`Error: Task ${args.id} not found`);
-    process.exit(1);
-  }
+  // Retry configuration
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY_MS = 100;
 
-  try {
-    // Perform atomic claim with file lock
-    const claimedTask = await withLock(taskFile, async () => {
-      // Step 1: Read current task
-      const content = fs.readFileSync(taskFile, 'utf-8');
-      /** @type {Task} */
-      const task = JSON.parse(content);
+  // Attempt to claim with retry logic
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const result = await claimTaskOptimistic(taskFile, owner);
 
-      // Step 2: Check if task is claimable
-      const currentStatus = task.status || 'open';
-      const currentOwner = task.claimed_by;
-
-      if (currentStatus !== 'open') {
-        throw new Error(`Task ${args.id} is not open (status: ${currentStatus})`);
-      }
-
-      if (currentOwner !== null && currentOwner !== undefined && currentOwner !== '') {
-        throw new Error(`Task ${args.id} already claimed by ${currentOwner}`);
-      }
-
-      // Step 3: Claim the task
-      task.claimed_by = owner;
-      task.updated_at = new Date().toISOString();
-
-      // Write atomically using temp file + rename
-      const tmpFile = `${taskFile}.tmp`;
-      fs.writeFileSync(tmpFile, JSON.stringify(task, null, 2), 'utf-8');
-      fs.renameSync(tmpFile, taskFile);
-
-      // Step 4: Verify claim succeeded (re-read and check)
-      const verifyContent = fs.readFileSync(taskFile, 'utf-8');
-      /** @type {Task} */
-      const verifiedTask = JSON.parse(verifyContent);
-
-      if (verifiedTask.claimed_by !== owner) {
-        throw new Error(`Claim verification failed: expected owner=${owner}, got owner=${verifiedTask.claimed_by}`);
-      }
-
-      return verifiedTask;
-    });
-
-    // Output success message and task
-    console.log(`OK: Task ${args.id} claimed by ${owner}`);
-    console.log(JSON.stringify(claimedTask, null, 2));
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error(`Error: ${error.message}`);
-    } else {
-      console.error('Error: Unknown error occurred');
+    if (result.success) {
+      // Success - output claimed task and exit
+      console.log(`OK: Task ${args.id} claimed by ${owner}`);
+      console.log(JSON.stringify(result.task, null, 2));
+      process.exit(0);
     }
-    process.exit(1);
+
+    // Handle different failure reasons
+    switch (result.reason) {
+      case 'task_not_found':
+        console.error(`Error: Task ${args.id} not found`);
+        process.exit(1);
+
+      case 'already_claimed':
+        console.error(`Error: Task ${args.id} already claimed by another worker`);
+        process.exit(1);
+
+      case 'not_claimable':
+        console.error(`Error: Task ${args.id} is not in a claimable status`);
+        process.exit(1);
+
+      case 'version_conflict':
+        // Retry on version conflict
+        if (attempt < MAX_RETRIES) {
+          // Wait before retry with exponential backoff
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempt));
+          continue;
+        } else {
+          // Max retries exceeded
+          console.error(`Error: Task ${args.id} claim failed after ${MAX_RETRIES} attempts (version conflicts)`);
+          process.exit(1);
+        }
+
+      default:
+        console.error(`Error: Unknown failure reason: ${result.reason}`);
+        process.exit(1);
+    }
   }
+
+  // Should never reach here
+  console.error('Error: Unexpected execution path');
+  process.exit(1);
 }
 
 // Run main

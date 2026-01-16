@@ -29,6 +29,8 @@ const {
  * @property {string} team
  * @property {Role | null} role
  * @property {boolean} loop
+ * @property {boolean} strict
+ * @property {number} freshStartInterval
  * @property {boolean} help
  */
 
@@ -37,6 +39,8 @@ const ARG_SPEC = {
   '--team': { key: 'team', alias: '-t' },
   '--role': { key: 'role', alias: '-r' },
   '--loop': { key: 'loop', alias: '-l', flag: true },
+  '--strict': { key: 'strict', flag: true },
+  '--fresh-start-interval': { key: 'freshStartInterval', alias: '-f' },
   '--help': { key: 'help', alias: '-h', flag: true }
 };
 
@@ -170,6 +174,8 @@ function main() {
   // Build output
   const teamworkDir = getProjectDir(project, team);
   const roleDisplay = args.role || 'any';
+  const freshStartInterval = args.freshStartInterval !== undefined ? parseInt(args.freshStartInterval, 10) : 10;
+  const strictMode = args.strict || false;
 
   console.log(`\
 ═══════════════════════════════════════════════════════════
@@ -180,6 +186,8 @@ function main() {
  Sub-team: ${team}
  Role filter: ${roleDisplay}
  Loop mode: ${args.loop}
+ Strict mode: ${strictMode}
+ Fresh start interval: ${freshStartInterval}
 
 ───────────────────────────────────────────────────────────
  STATUS
@@ -195,6 +203,8 @@ PROJECT=${project}
 SUB_TEAM=${team}
 ROLE_FILTER=${args.role || ''}
 LOOP_MODE=${args.loop}
+STRICT_MODE=${strictMode}
+FRESH_START_INTERVAL=${freshStartInterval}
 OPEN_TASKS=${open}`);
 
   // Exit with error if no open tasks

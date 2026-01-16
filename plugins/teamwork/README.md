@@ -4,13 +4,15 @@ Multi-session collaboration plugin with role-based workers, file-per-task storag
 
 ## Overview
 
-Teamwork enables distributed collaboration across multiple Claude sessions. A coordinator breaks down project goals into tasks, and specialized workers claim and execute them in parallel. Each worker runs in its own terminal session, coordinating through shared task files.
+Teamwork enables distributed collaboration across multiple Claude sessions. The unified orchestrator handles project planning, monitoring, and verification orchestration, while specialized workers claim and execute tasks in parallel. Each worker runs in its own terminal session, coordinating through shared task files with optimistic concurrency control.
 
 **Key capabilities:**
+- Unified orchestrator for planning, monitoring, and verification (v2)
 - Role-based task assignment (frontend, backend, test, devops, etc.)
 - Wave-based parallel execution with dependency management (v2)
 - Three-tier verification (task, wave, project levels) (v2)
-- File-per-task storage with atomic operations
+- Optimistic concurrency control (OCC) for conflict-free operations (v2)
+- Fresh start mechanism for releasing stuck tasks (v2)
 - Continuous loop mode for unattended execution
 - Dashboard status view with wave progress tracking
 - Cross-platform support (Windows, MacOS, Linux)
@@ -22,7 +24,8 @@ Teamwork enables distributed collaboration across multiple Claude sessions. A co
 - **Role Specialization**: Workers filter tasks by role (frontend, backend, test, etc.)
 - **Three-Tier Verification** (v2): Task-level, wave-level, and final project verification
 - **Structured Evidence** (v2): Command outputs, file changes, and test results tracked systematically
-- **Atomic Operations**: File-based locking prevents race conditions
+- **Optimistic Concurrency Control** (v2): Timestamp-based conflict detection prevents race conditions without file locks
+- **Fresh Start Mechanism** (v2): Automatic release of stuck tasks after configurable timeout
 - **Loop Mode**: Workers automatically claim next task until project complete
 - **Progress Dashboard**: Real-time status view with wave progress and completion metrics
 - **Zero Build Step**: Pure JavaScript with JSDoc types (no TypeScript compilation)
@@ -130,13 +133,14 @@ claude --plugin-dir /path/to/teamwork
 
 #### /teamwork-worker
 
-| Option           | Description                                             |
-| ---------------- | ------------------------------------------------------- |
-| `--loop`         | Continuous mode - keep working until all tasks complete |
-| `--role ROLE`    | Only claim tasks assigned to this role                  |
-| `--strict`       | (v2) Require structured evidence (ultrawork-level verification) |
-| `--project NAME` | Override project name detection                         |
-| `--team NAME`    | Override team name detection                            |
+| Option           | Default | Description                                             |
+| ---------------- | ------- | ------------------------------------------------------- |
+| `--loop`         | false   | Continuous mode - keep working until all tasks complete |
+| `--role ROLE`    | (none)  | Only claim tasks assigned to this role                  |
+| `--strict`       | false   | (v2) Require structured evidence (ultrawork-level verification) |
+| `--fresh-start-interval` | 3600 | (v2) Release stuck tasks after N seconds (0 = disabled) |
+| `--project NAME` | (auto)  | Override project name detection                         |
+| `--team NAME`    | (auto)  | Override team name detection                            |
 
 #### /teamwork-status
 
@@ -174,16 +178,44 @@ claude --plugin-dir /path/to/teamwork
 
 ## How It Works
 
-### Phase 1: Coordination
+### Architecture Diagram
+
+```
+┌──────────────────────────────────────────────┐
+│      Orchestrator (Unified, Opus Model)      │
+│   Planning → Monitoring → Verification       │
+└───────────────────┬──────────────────────────┘
+                    │
+    ┌───────────────┴────────────────┐
+    ▼                                ▼
+┌────────────────────┐    ┌────────────────────┐
+│   Workers (8 types) │    │  Verification      │
+│   - frontend        │    │  - wave-verifier   │
+│   - backend         │    │  - final-verifier  │
+│   - test, devops    │    └────────────────────┘
+│   - docs, security  │
+│   - review, worker  │
+└────────────────────┘
+
+         All coordinate via:
+    ┌──────────────────────────┐
+    │  Shared Task Files       │
+    │  (Optimistic Concurrency)│
+    └──────────────────────────┘
+```
+
+### Phase 1: Planning
 
 ```
 /teamwork "build REST API"
     ↓
-Coordinator agent spawned (uses Opus model)
+Orchestrator agent spawned (uses Opus model)
     ↓
 Analyzes codebase and requirements
     ↓
 Creates task breakdown with roles
+    ↓
+Calculates wave dependencies (v2)
     ↓
 Writes task files to shared directory
 ```
@@ -242,12 +274,14 @@ Results: PASS → COMPLETE | FAIL → new fix wave
 
 ### Concurrency Safety
 
-Teamwork handles multiple workers accessing shared state:
+Teamwork handles multiple workers accessing shared state with Optimistic Concurrency Control (v2):
 
-- **File-based locking**: Prevents race conditions during task claiming
-- **Atomic operations**: Task status updates are transactional
-- **Retry logic**: Workers retry on lock contention
-- **Stale detection**: Workers detect when tasks are claimed by others
+- **OCC (Optimistic Concurrency Control)**: Timestamp-based conflict detection without file locks
+- **Atomic operations**: Task status updates include timestamp validation
+- **Retry logic**: Workers retry on conflicts with fresh data
+- **Stale detection**: Workers detect when tasks are claimed by others via timestamp checks
+- **No lock files**: Eliminates lock contention, deadlocks, and stale lock issues
+- **Filesystem agnostic**: Works reliably on NFS, network drives, and all filesystems
 
 ## Configuration
 
@@ -409,12 +443,21 @@ Loop mode uses hook-based continuation for unattended execution:
 - Preserves project, team, and role filter across iterations
 - Automatically cleaned up when loop exits
 
+**Fresh start mechanism:**
+- Workers output `__TEAMWORK_FRESH_START__` marker after N tasks (default: 10)
+- Hook detects marker and restarts worker with fresh context
+- Prevents context window bloat and stuck patterns
+- Configurable via `--fresh-start-interval N` (0 to disable)
+
 ```bash
 # Start continuous worker
 /teamwork-worker --loop
 
 # Or with role specialization
 /teamwork-worker --role backend --loop
+
+# With custom fresh start interval
+/teamwork-worker --loop --fresh-start-interval 5
 ```
 
 ### Project Override Workflow

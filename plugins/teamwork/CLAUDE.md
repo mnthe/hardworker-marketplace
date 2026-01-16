@@ -5,16 +5,17 @@ Multi-session collaboration plugin with role-based workers.
 ## Plugin Description
 
 Teamwork enables multi-session collaboration where:
-1. **COORDINATION**: Orchestrator agent explores codebase and decomposes work into tasks
+1. **PLANNING & MONITORING**: Unified orchestrator agent handles codebase exploration, task decomposition, and wave monitoring
 2. **EXECUTION**: Multiple workers claim and complete tasks in parallel sessions
 3. **VERIFICATION**: Wave-based verification ensures correctness at task, wave, and project levels
-4. **SYNCHRONIZATION**: Workers coordinate through shared task files with atomic locking
+4. **SYNCHRONIZATION**: Workers coordinate through shared task files with optimistic concurrency control (OCC)
 
 Key features:
 - Project-based task management with wave-based execution
 - Role-based worker specialization (frontend, backend, devops, test, docs, security, review)
 - Three-tier verification (task-level, wave-level, final verification)
-- Atomic task claiming with file-based locking
+- Optimistic concurrency control (OCC) for conflict-free parallel execution
+- Fresh start mechanism for stuck workers
 - Loop detection for continuous worker execution
 - Multi-terminal coordination via shared state
 - Structured evidence collection and validation
@@ -95,10 +96,11 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 | Agent | Model | Role | Key Responsibilities |
 |-------|-------|------|---------------------|
-| **orchestrator** | opus | Project monitoring and verification orchestration | Monitor wave completion, trigger verifiers, handle conflicts, coordinate verification phases |
+| **orchestrator** | opus | Unified planning, monitoring, and verification orchestration | Codebase exploration, task decomposition, wave monitoring, trigger verifiers, handle conflicts, coordinate verification phases, fresh start detection |
 | **wave-verifier** | sonnet | Wave-level verification | Cross-task dependency checking, file conflict detection, wave-scoped build/test execution |
 | **final-verifier** | opus | Project-level verification | Full build/test, blocked pattern scanning, evidence completeness, cross-wave dependency validation |
-| **worker** | inherit | General purpose task execution | Find available tasks, claim atomically, implement, collect structured evidence, mark resolved |
+| **coordinator** | opus | DEPRECATED - Planning (v1 compatibility) | **Deprecated in v2**: Use orchestrator instead. Kept for backward compatibility only. |
+| **worker** | inherit | General purpose task execution | Find available tasks, claim with OCC, implement, collect structured evidence, mark resolved |
 | **frontend** | inherit | Frontend development specialist | UI components, styling, state management, user interactions, responsive design, accessibility |
 | **backend** | inherit | Backend development specialist | API endpoints, services, database, business logic, data validation |
 | **devops** | inherit | DevOps and infrastructure specialist | CI/CD, deployment, infrastructure, containerization, monitoring |
@@ -281,12 +283,42 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 **Verification status values**: `passed` | `failed`
 
+## Architecture (v2)
+
+```
+┌──────────────────────────────────────────────┐
+│      Orchestrator (Unified, Opus Model)      │
+│   Planning → Monitoring → Verification       │
+│   - Codebase exploration & task breakdown    │
+│   - Wave completion monitoring               │
+│   - Fresh start detection                    │
+│   - Verification orchestration               │
+└───────────────────┬──────────────────────────┘
+                    │
+    ┌───────────────┴────────────────┐
+    ▼                                ▼
+┌────────────────────┐    ┌────────────────────┐
+│   Workers (8 types) │    │  Verification      │
+│   - frontend        │    │  - wave-verifier   │
+│   - backend         │    │  - final-verifier  │
+│   - test, devops    │    └────────────────────┘
+│   - docs, security  │
+│   - review, worker  │
+└────────────────────┘
+
+         All coordinate via:
+    ┌──────────────────────────┐
+    │  Shared Task Files       │
+    │  (Optimistic Concurrency)│
+    └──────────────────────────┘
+```
+
 ## Wave Workflow (v2)
 
 ### Phase 1: PLANNING
 
 1. **Input**: Plan documents or goal
-2. **Process**:
+2. **Process** (Orchestrator):
    - Parse plan or decompose goal into tasks
    - Create task files with `blocked_by` dependencies
    - Calculate waves using DAG (Kahn's algorithm)
@@ -295,8 +327,8 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 ### Phase 2: EXECUTION
 
-1. **Workers**: Run autonomous loops, claim and execute tasks
-2. **Orchestrator**: Monitors wave completion
+1. **Workers**: Run autonomous loops, claim and execute tasks with OCC
+2. **Orchestrator**: Monitors wave completion, detects stuck workers
 3. **Wave Complete**: All tasks in wave resolved → trigger verification
 
 ### Phase 3: VERIFICATION
@@ -313,6 +345,44 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 2. **Results**:
    - PASS → Phase → COMPLETE
    - FAIL → Create fix tasks, new wave
+
+## Fresh Start Mechanism (v2)
+
+The fresh start mechanism prevents workers from getting stuck on difficult tasks:
+
+### How It Works
+
+1. **Orchestrator monitors** task claim timestamps via `--fresh-start-interval N` (default: 3600 seconds / 1 hour)
+2. **Detection**: If task `claimed_at` is older than interval and status is still `in_progress`
+3. **Action**: Orchestrator releases the task (clears `claimed_by`, resets `claimed_at`)
+4. **Notification**: Logs fresh start event in orchestrator output
+5. **Worker impact**: Worker can detect task was released, should abandon work
+
+### Configuration
+
+```bash
+# Default: 1 hour fresh start interval
+/teamwork-worker --role backend --loop
+
+# Custom interval (30 minutes)
+/teamwork-worker --role backend --loop --fresh-start-interval 1800
+
+# Disable fresh start
+/teamwork-worker --role backend --loop --fresh-start-interval 0
+```
+
+### Use Cases
+
+- Worker hangs or crashes mid-task
+- Task is more difficult than expected
+- Worker session is terminated
+- Network issues prevent completion
+
+### Worker Best Practices
+
+1. Check task ownership before committing work
+2. Handle graceful interruption when task is released
+3. Use `--release` flag when abandoning difficult tasks manually
 
 ## Development Rules
 
@@ -354,18 +424,27 @@ process.exit(1); // error
 | `worker/AGENT.md` | `agents/worker/AGENT.md` | General purpose worker agent |
 | Role agents | `agents/{role}/AGENT.md` | Specialized worker agents (frontend, backend, etc.) |
 
-### Concurrency Safety
+### Concurrency Safety (v2)
 
-- Workers must claim tasks atomically (file-based locking)
-- Task status updates must be atomic operations
-- Multiple workers can run in parallel without conflicts
+**Optimistic Concurrency Control (OCC):**
+- Workers use timestamp-based conflict detection (no file locks)
+- Task updates include `updated_at` timestamp check
+- Conflicts detected via stale timestamp, worker retries with fresh data
+- Multiple workers can read and attempt claims simultaneously
+- First successful write wins, others retry
+
+**OCC Benefits:**
+- No lock contention or deadlocks
+- Better performance under high parallelism
+- Works reliably across all filesystems (no NFS issues)
+- Simpler error recovery (no stale locks)
 
 ### Worker Coordination
 
 - Each worker runs in separate terminal/session
 - Workers claim tasks based on role matching
-- Workers communicate through shared task files
-- Coordinator monitors progress through task status
+- Workers communicate through shared task files with OCC
+- Orchestrator monitors progress through task status
 
 ## Hook Configuration
 

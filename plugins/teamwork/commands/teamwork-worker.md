@@ -1,7 +1,7 @@
 ---
 name: teamwork-worker
 description: "Claim and complete teamwork tasks (one-shot or continuous loop)"
-argument-hint: "[--project NAME] [--team NAME] [--role ROLE] [--loop] [--strict] | --help"
+argument-hint: "[--project NAME] [--team NAME] [--role ROLE] [--loop] [--strict] [--fresh-start-interval N] | --help"
 allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/worker-setup.js:*)", "Task", "TaskOutput", "Read", "Edit", "mcp__plugin_serena_serena__activate_project"]
 ---
 
@@ -49,6 +49,7 @@ Parse the output to get:
 - Role filter (optional)
 - Loop mode (true/false)
 - Strict mode (true/false)
+- Fresh start interval (number, default 10)
 - Teamwork directory path
 
 **If no project found:** Show error and suggest `/teamwork "goal"` first.
@@ -95,6 +96,7 @@ Use /teamwork-status to check progress.
   Options:
   - role_filter: {role or null}
   - strict_mode: {true or false}
+  - fresh_start_interval: {N or 10}
   ```
 
 Wait for worker to complete using TaskOutput.
@@ -161,6 +163,7 @@ Exit and report completion.
 | `--role ROLE` | Only claim tasks with this role |
 | `--loop` | Continuous mode - keep claiming tasks |
 | `--strict` | Enable strict evidence mode (require concrete verification for all criteria) |
+| `--fresh-start-interval N` | Reset context every N tasks (default: 10, 0 = disabled) |
 
 ## Role Options
 
@@ -199,6 +202,12 @@ Exit and report completion.
 
 # Strict + role specialization
 /teamwork-worker --role test --strict
+
+# Fresh start every 5 tasks (helps with stuck context)
+/teamwork-worker --loop --fresh-start-interval 5
+
+# Disable fresh start (never reset context)
+/teamwork-worker --loop --fresh-start-interval 0
 
 # Specific project
 /teamwork-worker --project myapp --team feature-x
