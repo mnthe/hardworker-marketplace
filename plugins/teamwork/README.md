@@ -443,21 +443,23 @@ Loop mode uses hook-based continuation for unattended execution:
 - Preserves project, team, and role filter across iterations
 - Automatically cleaned up when loop exits
 
-**Fresh start mechanism:**
-- Workers output `__TEAMWORK_FRESH_START__` marker after N tasks (default: 10)
-- Hook detects marker and restarts worker with fresh context
-- Prevents context window bloat and stuck patterns
+**Fresh start mechanism (v2):**
+- Orchestrator monitors task claim timestamps
+- Tasks stuck in `in_progress` for longer than `--fresh-start-interval` seconds are released
+- Default: 3600 seconds (1 hour)
+- Prevents workers from blocking tasks indefinitely if they hang or crash
+- Workers can detect task release and abandon work gracefully
 - Configurable via `--fresh-start-interval N` (0 to disable)
 
 ```bash
-# Start continuous worker
+# Start continuous worker (default: 1 hour fresh start)
 /teamwork-worker --loop
 
 # Or with role specialization
 /teamwork-worker --role backend --loop
 
-# With custom fresh start interval
-/teamwork-worker --loop --fresh-start-interval 5
+# With custom fresh start interval (30 minutes)
+/teamwork-worker --loop --fresh-start-interval 1800
 ```
 
 ### Project Override Workflow
@@ -491,10 +493,11 @@ Loop mode uses hook-based continuation for unattended execution:
 
 ### Multiple Workers Claiming Same Task
 
-This should not happen due to file-based locking. If it does:
-- Check filesystem supports atomic operations
-- Verify no NFS or network filesystem issues
-- Check for stale lock files in task directory
+This should not happen due to OCC (Optimistic Concurrency Control). If it does:
+- Check filesystem supports atomic file operations
+- Verify task files are not being corrupted
+- Check for clock skew issues (timestamps must be accurate)
+- OCC prevents this better than file-based locking (no NFS issues)
 
 ### Loop Mode Not Continuing
 
