@@ -34,10 +34,10 @@ const { claimTaskOptimistic } = require('../lib/optimistic-lock.js');
  */
 
 const ARG_SPEC = {
-  '--dir': { key: 'dir', alias: '-d', required: true },
-  '--id': { key: 'id', alias: '-i', required: true },
-  '--owner': { key: 'owner', alias: '-o' },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--dir': { key: 'dir', aliases: ['-d'], required: true },
+  '--id': { key: 'id', aliases: ['-i', '--task', '--task-id'], required: true },
+  '--owner': { key: 'owner', aliases: ['-o'] },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 // ============================================================================

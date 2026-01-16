@@ -32,14 +32,14 @@ const { getTasksDir, listTaskIds, readTask } = require('../lib/project-utils.js'
  */
 
 const ARG_SPEC = {
-  '--project': { key: 'project', alias: '-p', required: true },
-  '--team': { key: 'team', alias: '-t', required: true },
-  '--status': { key: 'status', alias: '-s' },
-  '--role': { key: 'role', alias: '-r' },
-  '--wave': { key: 'wave', alias: '-w' },
-  '--available': { key: 'available', alias: '-a', flag: true },
-  '--format': { key: 'format', alias: '-f', default: 'table' },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--project': { key: 'project', aliases: ['-p'], required: true },
+  '--team': { key: 'team', aliases: ['-t'], required: true },
+  '--status': { key: 'status', aliases: ['-s'] },
+  '--role': { key: 'role', aliases: ['-r'] },
+  '--wave': { key: 'wave', aliases: ['-w'] },
+  '--available': { key: 'available', aliases: ['-a'], flag: true },
+  '--format': { key: 'format', aliases: ['-f'], default: 'table' },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 // ============================================================================

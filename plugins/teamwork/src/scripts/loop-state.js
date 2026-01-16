@@ -73,13 +73,13 @@ function getTimestamp() {
  */
 
 const ARG_SPEC = {
-  '--get': { key: 'get', alias: '-g', flag: true },
-  '--set': { key: 'set', alias: '-s', flag: true },
-  '--clear': { key: 'clear', alias: '-c', flag: true },
-  '--project': { key: 'project', alias: '-p' },
-  '--team': { key: 'team', alias: '-t' },
-  '--role': { key: 'role', alias: '-r' },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--get': { key: 'get', aliases: ['-g'], flag: true },
+  '--set': { key: 'set', aliases: ['-s'], flag: true },
+  '--clear': { key: 'clear', aliases: ['-c'], flag: true },
+  '--project': { key: 'project', aliases: ['-p'] },
+  '--team': { key: 'team', aliases: ['-t'] },
+  '--role': { key: 'role', aliases: ['-r'] },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 // ============================================================================

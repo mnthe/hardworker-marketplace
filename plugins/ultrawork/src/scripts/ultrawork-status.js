@@ -24,9 +24,9 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  */
 
 const ARG_SPEC = {
-  '--session': { key: 'sessionId', alias: '-s' },
-  '--all': { key: 'listAll', alias: '-a', flag: true },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--session': { key: 'sessionId', aliases: ['-s'] },
+  '--all': { key: 'listAll', aliases: ['-a'], flag: true },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 // ============================================================================

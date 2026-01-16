@@ -35,13 +35,13 @@ const {
  */
 
 const ARG_SPEC = {
-  '--project': { key: 'project', alias: '-p' },
-  '--team': { key: 'team', alias: '-t' },
-  '--role': { key: 'role', alias: '-r' },
-  '--loop': { key: 'loop', alias: '-l', flag: true },
+  '--project': { key: 'project', aliases: ['-p'] },
+  '--team': { key: 'team', aliases: ['-t'] },
+  '--role': { key: 'role', aliases: ['-r'] },
+  '--loop': { key: 'loop', aliases: ['-l'], flag: true },
   '--strict': { key: 'strict', flag: true },
-  '--fresh-start-interval': { key: 'freshStartInterval', alias: '-f' },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--fresh-start-interval': { key: 'freshStartInterval', aliases: ['-f'] },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 // ============================================================================

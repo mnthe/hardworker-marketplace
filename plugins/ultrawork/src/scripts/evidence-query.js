@@ -29,13 +29,13 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  */
 
 const ARG_SPEC = {
-  '--session': { key: 'sessionId', alias: '-s', required: true },
-  '--type': { key: 'type', alias: '-T' },
-  '--last': { key: 'last', alias: '-l' },
-  '--search': { key: 'search', alias: '-q' },
-  '--task': { key: 'taskId', alias: '-t' },
-  '--format': { key: 'format', alias: '-f', default: 'md' },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--session': { key: 'sessionId', aliases: ['-s'], required: true },
+  '--type': { key: 'type', aliases: ['-T'] },
+  '--last': { key: 'last', aliases: ['-l'] },
+  '--search': { key: 'search', aliases: ['-q'] },
+  '--id': { key: 'taskId', aliases: ['-t', '--task', '--task-id'] },
+  '--format': { key: 'format', aliases: ['-f'], default: 'md' },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 // ============================================================================

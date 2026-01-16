@@ -40,15 +40,15 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  */
 
 const ARG_SPEC = {
-  '--session': { key: 'sessionId', alias: '-s', required: true },
-  '--max-workers': { key: 'maxWorkers', alias: '-w', default: 0 },
-  '--max-iterations': { key: 'maxIterations', alias: '-i', default: 5 },
-  '--skip-verify': { key: 'skipVerify', alias: '-V', flag: true },
-  '--plan-only': { key: 'planOnly', alias: '-p', flag: true },
-  '--auto': { key: 'autoMode', alias: '-a', flag: true },
-  '--force': { key: 'force', alias: '-f', flag: true },
-  '--resume': { key: 'resume', alias: '-r', flag: true },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--session': { key: 'sessionId', aliases: ['-s'], required: true },
+  '--max-workers': { key: 'maxWorkers', aliases: ['-w'], default: 0 },
+  '--max-iterations': { key: 'maxIterations', aliases: ['-i'], default: 5 },
+  '--skip-verify': { key: 'skipVerify', aliases: ['-V'], flag: true },
+  '--plan-only': { key: 'planOnly', aliases: ['-p'], flag: true },
+  '--auto': { key: 'autoMode', aliases: ['-a'], flag: true },
+  '--force': { key: 'force', aliases: ['-f'], flag: true },
+  '--resume': { key: 'resume', aliases: ['-r'], flag: true },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 /**

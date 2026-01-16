@@ -26,10 +26,10 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  */
 
 const ARG_SPEC = {
-  '--session': { key: 'sessionId', alias: '-s', required: true },
-  '--format': { key: 'format', alias: '-f', default: 'md' },
-  '--save': { key: 'save', alias: '-S', flag: true },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--session': { key: 'sessionId', aliases: ['-s'], required: true },
+  '--format': { key: 'format', aliases: ['-f'], default: 'md' },
+  '--save': { key: 'save', aliases: ['-S'], flag: true },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 // ============================================================================

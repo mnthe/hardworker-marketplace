@@ -15,13 +15,13 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
 const VALID_PHASES = ['PLANNING', 'EXECUTION', 'VERIFICATION', 'COMPLETE', 'CANCELLED', 'FAILED', 'unknown'];
 
 const ARG_SPEC = {
-  '--session': { key: 'sessionId', alias: '-s', required: true },
-  '--phase': { key: 'phase', alias: '-p' },
-  '--plan-approved': { key: 'planApproved', alias: '-P', flag: true },
-  '--exploration-stage': { key: 'explorationStage', alias: '-e' },
-  '--iteration': { key: 'iteration', alias: '-i' },
-  '--quiet': { key: 'quiet', alias: '-q', flag: true },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--session': { key: 'sessionId', aliases: ['-s'], required: true },
+  '--phase': { key: 'phase', aliases: ['-p'] },
+  '--plan-approved': { key: 'planApproved', aliases: ['-P'], flag: true },
+  '--exploration-stage': { key: 'explorationStage', aliases: ['-e'] },
+  '--iteration': { key: 'iteration', aliases: ['-i'] },
+  '--quiet': { key: 'quiet', aliases: ['-q'], flag: true },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 /**

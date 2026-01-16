@@ -10,9 +10,9 @@ const { getSessionDir } = require('../lib/session-utils.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
 
 const ARG_SPEC = {
-  '--session': { key: 'sessionId', alias: '-s', required: true },
-  '--data': { key: 'data', alias: '-d', required: true },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--session': { key: 'sessionId', aliases: ['-s'], required: true },
+  '--data': { key: 'data', aliases: ['-d'], required: true },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 function main() {

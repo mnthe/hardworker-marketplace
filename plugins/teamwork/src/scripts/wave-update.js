@@ -28,10 +28,10 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  */
 
 const ARG_SPEC = {
-  '--dir': { key: 'dir', alias: '-d', required: true },
-  '--wave': { key: 'wave', alias: '-w', required: true },
-  '--status': { key: 'status', alias: '-s', required: true },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--dir': { key: 'dir', aliases: ['-d'], required: true },
+  '--wave': { key: 'wave', aliases: ['-w'], required: true },
+  '--status': { key: 'status', aliases: ['-s'], required: true },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 // Valid wave status transitions

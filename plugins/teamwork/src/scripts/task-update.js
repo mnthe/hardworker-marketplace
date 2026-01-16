@@ -41,19 +41,19 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
 // ============================================================================
 
 const ARG_SPEC = {
-  '--dir': { key: 'dir', alias: '-d', required: true },
-  '--id': { key: 'id', alias: '-i', required: true },
-  '--status': { key: 'status', alias: '-s' },
-  '--add-evidence': { key: 'addEvidence', alias: '-e' },
+  '--dir': { key: 'dir', aliases: ['-d'], required: true },
+  '--id': { key: 'id', aliases: ['-i', '--task', '--task-id'], required: true },
+  '--status': { key: 'status', aliases: ['-s'] },
+  '--add-evidence': { key: 'addEvidence', aliases: ['-e'] },
   '--evidence-type': { key: 'evidenceType' },
   '--command': { key: 'command' },
   '--output': { key: 'output' },
   '--exit-code': { key: 'exitCode' },
   '--path': { key: 'path' },
   '--action': { key: 'action' },
-  '--owner': { key: 'owner', alias: '-o' },
-  '--release': { key: 'release', alias: '-r', flag: true },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--owner': { key: 'owner', aliases: ['-o'] },
+  '--release': { key: 'release', aliases: ['-r'], flag: true },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 /**

@@ -22,10 +22,10 @@ const { getTaskFile } = require('../lib/project-utils.js');
  */
 
 const ARG_SPEC = {
-  '--project': { key: 'project', alias: '-p', required: true },
-  '--team': { key: 'team', alias: '-t', required: true },
-  '--id': { key: 'id', alias: '-i', required: true },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--project': { key: 'project', aliases: ['-p'], required: true },
+  '--team': { key: 'team', aliases: ['-T'], required: true },
+  '--id': { key: 'id', aliases: ['-i', '--task', '--task-id'], required: true },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 // ============================================================================

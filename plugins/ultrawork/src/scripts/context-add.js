@@ -33,14 +33,14 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  */
 
 const ARG_SPEC = {
-  '--session': { key: 'sessionId', alias: '-s', required: true },
-  '--explorer-id': { key: 'explorerId', alias: '-e', required: true },
-  '--hint': { key: 'hint', alias: '-H', default: '' },
-  '--file': { key: 'file', alias: '-f', default: '' },
-  '--summary': { key: 'summary', alias: '-S', default: '' },
-  '--key-files': { key: 'keyFiles', alias: '-k', default: '' },
-  '--patterns': { key: 'patterns', alias: '-p', default: '' },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--session': { key: 'sessionId', aliases: ['-s'], required: true },
+  '--explorer-id': { key: 'explorerId', aliases: ['-e'], required: true },
+  '--hint': { key: 'hint', aliases: ['-H'], default: '' },
+  '--file': { key: 'file', aliases: ['-f'], default: '' },
+  '--summary': { key: 'summary', aliases: ['-S'], default: '' },
+  '--key-files': { key: 'keyFiles', aliases: ['-k'], default: '' },
+  '--patterns': { key: 'patterns', aliases: ['-p'], default: '' },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 // ============================================================================

@@ -31,11 +31,11 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  */
 
 const ARG_SPEC = {
-  '--session': { key: 'session', alias: '-s', required: true },
-  '--task-id': { key: 'id', alias: '-t', required: true },
-  '--status': { key: 'status', alias: '-S' },
-  '--add-evidence': { key: 'addEvidence', alias: '-e' },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--session': { key: 'session', aliases: ['-s'], required: true },
+  '--id': { key: 'id', aliases: ['-t', '--task', '--task-id'], required: true },
+  '--status': { key: 'status', aliases: ['-S'] },
+  '--add-evidence': { key: 'addEvidence', aliases: ['-e'] },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 // ============================================================================

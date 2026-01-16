@@ -8,16 +8,16 @@
  * import { parseArgs } from '../lib/args.js';
  *
  * const args = parseArgs({
- *   '--session': { key: 'session', alias: '-s', required: true },
- *   '--format': { key: 'format', alias: '-f', default: 'table' },
- *   '--help': { key: 'help', alias: '-h', flag: true }
+ *   '--session': { key: 'session', aliases: ['-s'], required: true },
+ *   '--format': { key: 'format', aliases: ['-f'], default: 'table' },
+ *   '--help': { key: 'help', aliases: ['-h'], flag: true }
  * });
  */
 
 /**
  * @typedef {Object} ArgSpec
  * @property {string} key - The key name in the returned args object
- * @property {string} [alias] - Short alias (e.g., '-s' for '--session')
+ * @property {string[]} [aliases] - All aliases for this argument (e.g., ['-s', '--sess'] for '--session')
  * @property {boolean} [required] - Whether this argument is required
  * @property {*} [default] - Default value if not provided
  * @property {boolean} [flag] - If true, argument is a boolean flag (no value)
@@ -33,9 +33,9 @@
  * @example
  * // Basic usage
  * const args = parseArgs({
- *   '--session': { key: 'session', alias: '-s', required: true },
- *   '--task': { key: 'taskId', alias: '-t' },
- *   '--verbose': { key: 'verbose', alias: '-v', flag: true }
+ *   '--session': { key: 'session', aliases: ['-s'], required: true },
+ *   '--task': { key: 'taskId', aliases: ['-t', '--id'] },
+ *   '--verbose': { key: 'verbose', aliases: ['-v'], flag: true }
  * });
  *
  * // With custom argv
@@ -47,8 +47,10 @@ export function parseArgs(spec, argv = process.argv) {
     // Build alias map: alias -> primary flag
     const aliasMap = {};
     for (const [flag, opt] of Object.entries(spec)) {
-        if (opt.alias) {
-            aliasMap[opt.alias] = flag;
+        if (opt.aliases) {
+            for (const alias of opt.aliases) {
+                aliasMap[alias] = flag;
+            }
         }
     }
 
@@ -84,7 +86,7 @@ export function parseArgs(spec, argv = process.argv) {
     // Validate required arguments
     for (const [flag, opt] of Object.entries(spec)) {
         if (opt.required && args[opt.key] === undefined) {
-            const aliasInfo = opt.alias ? ` (${opt.alias})` : '';
+            const aliasInfo = opt.aliases?.length > 0 ? ` (${opt.aliases[0]})` : '';
             console.error(`Error: ${flag}${aliasInfo} is required`);
             process.exit(1);
         }
@@ -109,11 +111,11 @@ export function generateHelp(scriptName, spec, description = '') {
     help += '\nOptions:\n';
 
     for (const [flag, opt] of Object.entries(spec)) {
-        const alias = opt.alias ? `, ${opt.alias}` : '';
+        const aliases = opt.aliases?.length > 0 ? `, ${opt.aliases.join(', ')}` : '';
         const required = opt.required ? ' (required)' : '';
         const defaultVal = opt.default !== undefined ? ` [default: ${opt.default}]` : '';
         const flagType = opt.flag ? '' : ' <value>';
-        help += `  ${flag}${alias}${flagType}${required}${defaultVal}\n`;
+        help += `  ${flag}${aliases}${flagType}${required}${defaultVal}\n`;
     }
 
     return help;

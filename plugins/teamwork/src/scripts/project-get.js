@@ -19,8 +19,8 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  */
 
 const ARG_SPEC = {
-  '--dir': { key: 'dir', alias: '-d', required: true },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--dir': { key: 'dir', aliases: ['-d'], required: true },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 // ============================================================================

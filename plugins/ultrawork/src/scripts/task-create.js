@@ -36,16 +36,16 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  */
 
 const ARG_SPEC = {
-  '--session': { key: 'session', alias: '-s', required: true },
-  '--id': { key: 'id', alias: '-i', required: true },
-  '--subject': { key: 'subject', alias: '-S', required: true },
-  '--description': { key: 'description', alias: '-d' },
-  '--complexity': { key: 'complexity', alias: '-c', default: 'standard' },
-  '--criteria': { key: 'criteria', alias: '-C' },
-  '--blocked-by': { key: 'blockedBy', alias: '-b' },
-  '--approach': { key: 'approach', alias: '-a' },
-  '--test-file': { key: 'testFile', alias: '-t' },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--session': { key: 'session', aliases: ['-s'], required: true },
+  '--id': { key: 'id', aliases: ['-i', '--task', '--task-id'], required: true },
+  '--subject': { key: 'subject', aliases: ['-S'], required: true },
+  '--description': { key: 'description', aliases: ['-d'] },
+  '--complexity': { key: 'complexity', aliases: ['-c'], default: 'standard' },
+  '--criteria': { key: 'criteria', aliases: ['-C'] },
+  '--blocked-by': { key: 'blockedBy', aliases: ['-b'] },
+  '--approach': { key: 'approach', aliases: ['-a'] },
+  '--test-file': { key: 'testFile', aliases: ['-t'] },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 // ============================================================================

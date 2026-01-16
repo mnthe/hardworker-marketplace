@@ -25,9 +25,9 @@ const {
  */
 
 const ARG_SPEC = {
-  '--project': { key: 'project', alias: '-p' },
-  '--team': { key: 'team', alias: '-t' },
-  '--help': { key: 'help', alias: '-h', flag: true }
+  '--project': { key: 'project', aliases: ['-p'] },
+  '--team': { key: 'team', aliases: ['-t'] },
+  '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 /**
