@@ -51,7 +51,7 @@ async function claimTaskOptimistic(taskPath, claimerId) {
     return { success: false, reason: 'task_not_found' };
   }
 
-  // Use file lock to ensure atomic read-check-write
+  // Use file lock with owner identification for reentrant locks and stale detection
   return await withLock(taskPath, async () => {
     // Re-check after acquiring lock (file may have been deleted)
     if (!fs.existsSync(taskPath)) {
@@ -86,7 +86,7 @@ async function claimTaskOptimistic(taskPath, claimerId) {
     fs.renameSync(tempPath, taskPath);
 
     return { success: true, task };
-  });
+  }, claimerId); // Pass claimerId as owner for lock identification
 }
 
 /**
@@ -168,7 +168,7 @@ async function releaseTaskOptimistic(taskPath, claimerId) {
     return { success: false, reason: 'task_not_found' };
   }
 
-  // Use file lock to ensure atomic read-check-write
+  // Use file lock with owner identification for reentrant locks and stale detection
   return await withLock(taskPath, async () => {
     // Re-check after acquiring lock (file may have been deleted)
     if (!fs.existsSync(taskPath)) {
@@ -198,7 +198,7 @@ async function releaseTaskOptimistic(taskPath, claimerId) {
     fs.renameSync(tempPath, taskPath);
 
     return { success: true, task };
-  });
+  }, claimerId); // Pass claimerId as owner for lock identification
 }
 
 // Export functions
