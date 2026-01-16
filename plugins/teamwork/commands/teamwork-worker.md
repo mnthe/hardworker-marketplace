@@ -11,6 +11,10 @@ allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/worker-setup.js:*)",
 
 Workers claim and complete tasks from a teamwork project. Can run in one-shot mode (default) or continuous loop mode.
 
+**Automatic Role Detection**: When `--role` is not specified, the worker automatically detects the role from the first available task and spawns the appropriate role-specific agent (frontend, backend, test, etc.). This ensures tasks are handled by agents with specialized knowledge and tools for their domain.
+
+**Role Selection Precedence**: `--role` flag (explicit) > task.role (auto-detected) > "worker" (generic fallback)
+
 ---
 
 ## Step 0: Serena Project Activation (Optional)
@@ -240,10 +244,16 @@ Exit and report completion.
 # One-shot: complete one task
 /teamwork-worker
 
-# Continuous: keep working until done
+# Auto-detect role from task (smart agent selection)
+# If first available task has role="backend", spawns teamwork:backend agent
+# If first available task has role="frontend", spawns teamwork:frontend agent
+# If no role specified in task, falls back to generic teamwork:worker
+/teamwork-worker
+
+# Continuous: keep working until done (with auto-detection)
 /teamwork-worker --loop
 
-# Specialized: only frontend tasks
+# Explicit role override (ignores task.role field)
 /teamwork-worker --role frontend
 
 # Specialized continuous
@@ -266,4 +276,20 @@ Exit and report completion.
 
 # Specific project
 /teamwork-worker --project myapp --team feature-x
+```
+
+### Agent Selection Examples
+
+```bash
+# Scenario 1: Task has role="backend", no --role flag specified
+# → Spawns teamwork:backend agent (auto-detected)
+
+# Scenario 2: Task has role="frontend", --role backend specified
+# → Spawns teamwork:backend agent (explicit flag takes precedence)
+
+# Scenario 3: Task has no role field (or role="worker"), no --role flag
+# → Spawns teamwork:worker agent (generic fallback)
+
+# Scenario 4: Multiple tasks, first has role="test", no --role flag
+# → Spawns teamwork:test agent (uses first available task's role)
 ```
