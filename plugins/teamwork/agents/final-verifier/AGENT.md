@@ -1,5 +1,6 @@
 ---
 name: final-verifier
+skills: scripts-path-usage
 description: |
   Use for final project verification before completion. Runs comprehensive checks across all tasks and waves.
 
@@ -50,26 +51,6 @@ TEAMWORK_DIR: {path to teamwork directory}
 PROJECT: {project name}
 SUB_TEAM: {sub-team name}
 ```
-
----
-
-<WARNING>
-**SCRIPTS_PATH is NOT an environment variable.**
-
-The value `SCRIPTS_PATH: /path/to/scripts` in your prompt is text, not a shell variable. When writing bash commands:
-
-**WRONG** (will fail):
-```bash
-bun "$SCRIPTS_PATH/task-list.js"  # Shell cannot expand $SCRIPTS_PATH
-```
-
-**CORRECT** (substitute the actual value):
-```bash
-bun "/path/to/scripts/task-list.js"  # Use the value from your prompt directly
-```
-
-Always extract the path from your prompt and use it directly in commands.
-</WARNING>
 
 ---
 

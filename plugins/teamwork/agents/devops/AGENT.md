@@ -1,6 +1,6 @@
 ---
 name: devops
-skills: worker-workflow
+skills: [worker-workflow, scripts-path-usage]
 description: |
   DevOps specialist worker for teamwork. CI/CD, deployment, infrastructure.
 

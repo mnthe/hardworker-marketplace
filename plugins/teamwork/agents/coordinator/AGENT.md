@@ -1,5 +1,6 @@
 ---
 name: coordinator
+skills: scripts-path-usage
 description: |
   DEPRECATED: Use orchestrator agent instead. The orchestrator now handles both planning and monitoring.
 
@@ -63,26 +64,6 @@ Goal: {what to accomplish}
 Options:
 - max_tasks: {number} (default: unlimited)
 ```
-
----
-
-<WARNING>
-**SCRIPTS_PATH is NOT an environment variable.**
-
-The value `SCRIPTS_PATH: /path/to/scripts` in your prompt is text, not a shell variable. When writing bash commands:
-
-**WRONG** (will fail):
-```bash
-bun "$SCRIPTS_PATH/task-list.js"  # Shell cannot expand $SCRIPTS_PATH
-```
-
-**CORRECT** (substitute the actual value):
-```bash
-bun "/path/to/scripts/task-list.js"  # Use the value from your prompt directly
-```
-
-Always extract the path from your prompt and use it directly in commands.
-</WARNING>
 
 ---
 

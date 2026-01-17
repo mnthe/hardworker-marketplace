@@ -1,6 +1,6 @@
 ---
 name: security
-skills: worker-workflow
+skills: [worker-workflow, scripts-path-usage]
 description: |
   Security specialist worker for teamwork. Auth, permissions, input validation.
 

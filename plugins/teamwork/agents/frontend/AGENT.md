@@ -1,6 +1,6 @@
 ---
 name: frontend
-skills: worker-workflow
+skills: [worker-workflow, scripts-path-usage]
 description: |
   Frontend specialist worker for teamwork. UI, components, styling, user interactions.
 
