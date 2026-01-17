@@ -25,6 +25,7 @@ The plugin operates in isolated sessions, where each development goal goes throu
 - **Cross-Platform**: JavaScript/Bun implementation works on Windows, MacOS, Linux
 - **Interactive Mode**: User approval at decision points (authentication method, architecture choices)
 - **Auto Mode**: Fully autonomous operation for CI/CD and well-defined tasks
+- **Worktree Support**: Isolated git worktree for each session (v6.1+)
 
 ## Installation
 
@@ -84,6 +85,7 @@ Options:
   --max-iterations N  Max execute-verify retry loops (default: 5)
   --skip-verify       Skip verification phase (fast mode)
   --plan-only         Stop after planning, don't execute
+  --worktree          Create isolated git worktree for session (v6.1+)
 ```
 
 Examples:
@@ -103,6 +105,9 @@ Examples:
 
 # Fast mode (skip verification)
 /ultrawork --skip-verify "fix typo in documentation"
+
+# Isolated worktree (v6.1+)
+/ultrawork --worktree "implement payment integration"
 ```
 
 #### /ultrawork-plan
@@ -445,9 +450,10 @@ Design documents are written to the project directory:
 
 ```json
 {
-  "version": "6.0",
+  "version": "6.1",
   "session_id": "abc-123",
   "working_dir": "/path/to/project",
+  "original_dir": null,
   "goal": "Implement user authentication",
   "started_at": "2026-01-12T10:00:00Z",
   "updated_at": "2026-01-12T10:05:00Z",
@@ -464,6 +470,7 @@ Design documents are written to the project directory:
     "plan_only": false,
     "auto_mode": false
   },
+  "worktree": null,
   "evidence_log": [],
   "cancelled_at": null
 }

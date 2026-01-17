@@ -126,6 +126,61 @@ Do NOT mark as resolved if failed - release for retry.
 
 ---
 
+## Phase 6: Commit Changes
+
+**After task is marked resolved, commit ONLY the files you modified:**
+
+⚠️ **CRITICAL: Selective File Staging**
+
+```bash
+# ❌ FORBIDDEN - NEVER use these:
+git add -A        # Stages ALL files
+git add .         # Stages ALL files
+git add --all     # Stages ALL files
+git add *         # Glob expansion - dangerous
+
+# ✅ REQUIRED - Only add files YOU modified during this task:
+git add path/to/file1.ts path/to/file2.ts && git commit -m "$(cat <<'EOF'
+<type>(<scope>): <short description>
+
+[teamwork] Project: {PROJECT} | Team: {SUB_TEAM} | Task: {TASK_ID}
+
+{TASK_TITLE}
+
+Evidence:
+- {evidence 1}
+- {evidence 2}
+
+Files changed:
+- path/to/file1.ts
+- path/to/file2.ts
+EOF
+)"
+```
+
+**Why selective staging?**
+- Other workers may have uncommitted changes in the repo
+- Only YOUR task changes should be in this commit
+- Enables clean rollback per task if needed
+
+**Angular Commit Message Types:**
+
+| Type | When to Use |
+|------|-------------|
+| feat | New feature or functionality |
+| fix | Bug fix |
+| refactor | Code refactoring without behavior change |
+| test | Adding or modifying tests |
+| docs | Documentation changes |
+| style | Code style changes (formatting, etc.) |
+| chore | Build, config, or maintenance tasks |
+
+**Skip commit if:**
+- No files changed (`git status --porcelain` is empty)
+- Task not resolved (failed/released)
+
+---
+
 ## Summary Checklist
 
 Before ending your work, verify:
@@ -134,6 +189,8 @@ Before ending your work, verify:
 - [ ] Phase 2: Successfully claimed it
 - [ ] Phase 3: Implemented the solution
 - [ ] Phase 4: Collected concrete evidence with exit codes
-- [ ] **Phase 5: Called task-update.js with --status resolved OR --release**
+- [ ] Phase 5: Called task-update.js with --status resolved OR --release
+- [ ] **Phase 6: Committed ONLY your modified files (if task resolved)**
 
 **If you skip Phase 5, the task will remain stuck in `in_progress` status forever.**
+**If you skip Phase 6, your changes may be lost or mixed with other workers' changes.**

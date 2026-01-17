@@ -86,6 +86,7 @@ All scripts use Bun runtime with flag-based parameters. All task/project scripts
 | **task-list.js** | List all tasks in project | `--project <name>` `--team <name>` `--available` `--role <role>` `--format json\|table` |
 | **task-claim.js** | Atomically claim a task | `--project <name>` `--team <name>` `--id <id>` `--owner <session_id>` |
 | **task-update.js** | Update task status/evidence/metadata | `--project <name>` `--team <name>` `--id <id>` `--status open\|in_progress\|resolved` `--add-evidence "..."` `--title "..."` `--description "..."` `--role <role>` `--release` |
+| **task-delete.js** | Delete a task (PLANNING phase only) | `--project <name>` `--team <name>` `--id <id>` `[--force]` |
 | **wave-calculate.js** | Calculate wave groups from task DAG | `--project <name>` `--team <name>` |
 | **wave-update.js** | Update wave status | `--project <name>` `--team <name>` `--wave <id>` `--status planning\|in_progress\|completed\|verified\|failed` |
 | **wave-status.js** | Query wave progress | `--project <name>` `--team <name>` `--format json\|table` |
@@ -554,6 +555,8 @@ bun "$SCRIPTS_PATH/task-list.js" ...
 | `teamwork.md` | `commands/teamwork.md` | Coordination command (planning phase) |
 | `teamwork-worker.md` | `commands/teamwork-worker.md` | Worker command (execution phase) |
 | `teamwork-status.md` | `commands/teamwork-status.md` | Status dashboard command |
+| `teamwork-verify.md` | `commands/teamwork-verify.md` | Manual verification command (v2) |
+| `teamwork-clean.md` | `commands/teamwork-clean.md` | Project cleanup command |
 | `orchestrator/AGENT.md` | `agents/orchestrator/AGENT.md` | Main orchestration agent (v2) |
 | `coordinator/AGENT.md` | `agents/coordinator/AGENT.md` | DEPRECATED - Use orchestrator instead |
 | `worker/AGENT.md` | `agents/worker/AGENT.md` | General purpose worker agent |

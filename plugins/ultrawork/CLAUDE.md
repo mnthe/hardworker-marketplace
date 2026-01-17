@@ -28,7 +28,8 @@ plugins/ultrawork/
 │   │   ├── types.js           # JSDoc type definitions (@typedef)
 │   │   ├── file-lock.js       # Cross-platform file locking
 │   │   ├── session-utils.js   # Session management utilities
-│   │   └── hook-utils.js      # Hook utilities (stdin, output helpers, error handling)
+│   │   ├── hook-utils.js      # Hook utilities (stdin, output helpers, error handling)
+│   │   └── args.js            # Command-line argument parsing utility
 │   ├── scripts/               # CLI scripts (18 files)
 │   │   ├── setup-ultrawork.js
 │   │   ├── session-get.js
@@ -69,6 +70,7 @@ plugins/ultrawork/
 ├── skills/                    # Skill definitions
 │   ├── overview-exploration/
 │   ├── planning/
+│   ├── scripts-path-usage/
 │   └── ultrawork/
 └── CLAUDE.md                 # This file
 ```
