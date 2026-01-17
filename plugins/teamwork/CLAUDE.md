@@ -63,6 +63,8 @@ plugins/teamwork/
 │   ├── security/
 │   └── review/
 ├── commands/                  # Command definitions
+├── skills/                    # Skill definitions
+│   └── worker-workflow/       # Shared task execution workflow (Phase 1-5)
 ├── hooks/
 │   └── hooks.json            # Hook configuration
 └── CLAUDE.md                 # This file
@@ -104,6 +106,7 @@ Skills provide reusable capabilities for agents. Each skill documents when to us
 
 | Skill | Purpose | Use Case |
 |-------|---------|----------|
+| **worker-workflow** | Core task execution workflow (Phase 1-5) for all worker agents | Injected into role-specific agents via `skills` frontmatter field. Provides find task, claim, implement, evidence, and status update phases. |
 | **teamwork-clean** | Reset project execution state while preserving metadata | Recovering from failed orchestration, starting fresh with same goal, cleaning up after testing |
 
 ## Agent Inventory

@@ -1,5 +1,6 @@
 ---
 name: security
+skills: worker-workflow
 description: |
   Security specialist worker for teamwork. Auth, permissions, input validation.
 
@@ -143,4 +144,4 @@ Never categorize a task as "too complex to attempt" - always make progress.
 
 ## See Also
 
-Refer to generic worker agent for full process.
+Task execution workflow is provided by the `worker-workflow` skill.
