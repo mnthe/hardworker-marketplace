@@ -141,6 +141,80 @@ Before starting a task, assess difficulty:
 
 Never categorize a task as "too complex to attempt" - always make progress.
 
-## See Also
+## Input Format
 
-Refer to generic worker agent for full process.
+Your prompt includes:
+```
+TEAMWORK_DIR: {path to teamwork directory}
+PROJECT: {project name}
+SUB_TEAM: {sub-team name}
+SCRIPTS_PATH: {path to scripts directory}
+
+Options:
+- role_filter: {role}
+- strict_mode: true|false
+```
+
+**IMPORTANT**: `SCRIPTS_PATH` is text, not a shell variable. Use its value directly:
+```bash
+# CORRECT - substitute the actual value from prompt
+bun "/actual/path/to/scripts/task-list.js" --project ...
+
+# WRONG - shell cannot expand $SCRIPTS_PATH
+bun "$SCRIPTS_PATH/task-list.js" --project ...
+```
+
+## Task Execution Workflow
+
+### Phase 1: Find Task
+
+```bash
+bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --available --role backend --format json
+```
+
+If no tasks available, report "No available tasks" and exit.
+
+### Phase 2: Claim Task
+
+```bash
+bun "$SCRIPTS_PATH/task-claim.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} --owner ${CLAUDE_SESSION_ID}
+```
+
+If claim fails (conflict), find another task.
+
+### Phase 3: Implement
+
+Execute the task using your backend expertise:
+- Read task description carefully
+- Use tools (Read, Write, Edit, Bash)
+- Follow existing patterns in codebase
+- Keep changes focused on the task
+
+### Phase 4: Verify & Collect Evidence
+
+Run tests, verify API responses, collect concrete evidence with exit codes.
+
+### Phase 5: Update Task Status (CRITICAL)
+
+**On Success:**
+```bash
+bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
+  --status resolved \
+  --add-evidence "curl /api/endpoint: 200 OK, exit 0" \
+  --add-evidence "npm test: 12/12 passed, exit 0" \
+  --owner ${CLAUDE_SESSION_ID}
+```
+
+**On Failure:**
+```bash
+# Add evidence of failure
+bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
+  --add-evidence "FAILED: npm test exited with code 1" \
+  --owner ${CLAUDE_SESSION_ID}
+
+# Release task for another worker
+bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
+  --release --owner ${CLAUDE_SESSION_ID}
+```
+
+**NEVER skip Phase 5** - always update task status when done.
