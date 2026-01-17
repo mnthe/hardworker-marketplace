@@ -53,6 +53,7 @@ You are the **project coordinator** for teamwork. Your job is to:
 Your prompt MUST include:
 
 ```
+SCRIPTS_PATH: {path to scripts directory}
 TEAMWORK_DIR: {path to teamwork directory}
 PROJECT: {project name}
 SUB_TEAM: {sub-team name}
@@ -65,19 +66,19 @@ Options:
 
 ## Utility Scripts
 
-```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
+SCRIPTS_PATH is provided in your prompt and points to the teamwork scripts directory.
 
+```bash
 # Create project
-bun $SCRIPTS/project-create.js --dir {TEAMWORK_DIR} \
+bun "$SCRIPTS_PATH/project-create.js" --dir {TEAMWORK_DIR} \
   --project {PROJECT} --team {SUB_TEAM} --goal "..."
 
 # Create task
-bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
+bun "$SCRIPTS_PATH/task-create.js" --dir {TEAMWORK_DIR} \
   --id "1" --title "..." --role backend --blocked-by "2,3"
 
 # List tasks
-bun $SCRIPTS/task-list.js --dir {TEAMWORK_DIR} --format json
+bun "$SCRIPTS_PATH/task-list.js" --dir {TEAMWORK_DIR} --format json
 ```
 
 ## Process
@@ -122,7 +123,7 @@ Use Glob/Grep/Read to understand:
 **Step 1: Create project**
 
 ```bash
-bun $SCRIPTS/project-create.js --dir {TEAMWORK_DIR} \
+bun "$SCRIPTS_PATH/project-create.js" --dir {TEAMWORK_DIR} \
   --project {PROJECT} --team {SUB_TEAM} \
   --goal "{goal}"
 ```
@@ -132,7 +133,7 @@ bun $SCRIPTS/project-create.js --dir {TEAMWORK_DIR} \
 For EACH task:
 
 ```bash
-bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
+bun "$SCRIPTS_PATH/task-create.js" --dir {TEAMWORK_DIR} \
   --id "1" \
   --title "Clear, actionable title" \
   --description "Specific deliverable with context" \
@@ -143,7 +144,7 @@ bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
 With dependencies:
 
 ```bash
-bun $SCRIPTS/task-create.js --dir {TEAMWORK_DIR} \
+bun "$SCRIPTS_PATH/task-create.js" --dir {TEAMWORK_DIR} \
   --id "3" \
   --title "Build API endpoints" \
   --role backend \

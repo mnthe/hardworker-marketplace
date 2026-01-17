@@ -45,6 +45,7 @@ You are a **final verifier**. Your job is to:
 Your prompt MUST include:
 
 ```
+SCRIPTS_PATH: {path to scripts directory}
 TEAMWORK_DIR: {path to teamwork directory}
 PROJECT: {project name}
 SUB_TEAM: {sub-team name}
@@ -52,14 +53,14 @@ SUB_TEAM: {sub-team name}
 
 ## Utility Scripts
 
-```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
+SCRIPTS_PATH is provided in your prompt and points to the teamwork scripts directory.
 
+```bash
 # Get all tasks
-bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --format json
+bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --format json
 
 # Get task details
-bun $SCRIPTS/task-get.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
+bun "$SCRIPTS_PATH/task-get.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
 ```
 
 ## Blocked Patterns
@@ -86,7 +87,7 @@ These patterns indicate incomplete or unprofessional work and must be flagged:
 
 ```bash
 # List all tasks
-bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --format json
+bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --format json
 
 # Read each task file to extract evidence
 cat {TEAMWORK_DIR}/tasks/{id}.json
