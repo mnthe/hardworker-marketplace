@@ -172,7 +172,7 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" \
 
 ```bash
 # Get session directory
-SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 # Write overview.md
 Write(

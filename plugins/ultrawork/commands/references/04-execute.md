@@ -19,7 +19,8 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 ## Execution Loop
 
 ```python
-# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
+# Get session directory directly
+SESSION_DIR = "~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}"
 
 while True:
     # Find unblocked pending tasks
@@ -216,11 +217,8 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session ${CLAUDE_SESSIO
 ### Commit Sequence
 
 ```bash
-# 1. Stage all changes from this task
-git add -A
-
-# 2. Commit with Angular format
-git commit -m "<type>(<scope>): <short description>
+# 1. Stage all changes and commit atomically to minimize race condition
+git add -A && git commit -m "<type>(<scope>): <short description>
 
 [ultrawork] Session: ${CLAUDE_SESSION_ID} | Task: {TASK_ID}
 
@@ -234,7 +232,7 @@ Files changed:
 - src/feature.ts
 - src/feature.test.ts"
 
-# 3. Record commit hash in evidence
+# 2. Record commit hash in evidence
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session ${CLAUDE_SESSION_ID} --task-id "{TASK_ID}" \
   --add-evidence "Committed: $(git rev-parse --short HEAD)"
 ```

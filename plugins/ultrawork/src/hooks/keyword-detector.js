@@ -17,19 +17,16 @@
 const fs = require('fs');
 const path = require('path');
 const { getSessionFile } = require('../lib/session-utils.js');
+const {
+  readStdin,
+  createUserPromptSubmit,
+  runHook
+} = require('../lib/hook-utils.js');
 
 /**
  * @typedef {Object} HookInput
  * @property {string} [session_id] - Current session ID
  * @property {string} [user_prompt] - The user's prompt text
- */
-
-/**
- * @typedef {Object} HookOutput
- * @property {Object} hookSpecificOutput
- * @property {string} hookSpecificOutput.hookEventName
- * @property {string} [hookSpecificOutput.transformedPrompt] - Modified prompt if transformed
- * @property {string} [hookSpecificOutput.additionalContext] - Context message
  */
 
 /**
@@ -51,18 +48,6 @@ const KEYWORD_PATTERNS = {
     /^(ultrawork|ulw|uw)\s+(.+)$/i
   ]
 };
-
-/**
- * Read all stdin data
- * @returns {Promise<string>}
- */
-async function readStdin() {
-  const chunks = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
-  }
-  return chunks.join('');
-}
 
 /**
  * Check if session is active (non-terminal phase)
@@ -144,91 +129,48 @@ function buildCommand(mode, goal) {
  * Main hook logic
  */
 async function main() {
-  try {
-    const input = await readStdin();
-    /** @type {HookInput} */
-    const hookInput = JSON.parse(input);
+  const input = await readStdin();
+  /** @type {HookInput} */
+  const hookInput = JSON.parse(input);
 
-    const prompt = hookInput.user_prompt || '';
-    const sessionId = hookInput.session_id;
+  const prompt = hookInput.user_prompt || '';
+  const sessionId = hookInput.session_id;
 
-    // Skip if prompt already starts with /
-    if (prompt.trim().startsWith('/')) {
-      console.log(JSON.stringify({
-        hookSpecificOutput: {
-          hookEventName: 'UserPromptSubmit'
-        }
-      }));
-      process.exit(0);
-      return;
-    }
-
-    // Skip if session is already active
-    if (isSessionActive(sessionId)) {
-      console.log(JSON.stringify({
-        hookSpecificOutput: {
-          hookEventName: 'UserPromptSubmit'
-        }
-      }));
-      process.exit(0);
-      return;
-    }
-
-    // Try to match keyword
-    const match = matchKeyword(prompt.trim());
-
-    if (!match) {
-      // No keyword match - pass through
-      console.log(JSON.stringify({
-        hookSpecificOutput: {
-          hookEventName: 'UserPromptSubmit'
-        }
-      }));
-      process.exit(0);
-      return;
-    }
-
-    // Build transformed command
-    const transformedPrompt = buildCommand(match.mode, match.goal);
-
-    /** @type {HookOutput} */
-    const output = {
-      hookSpecificOutput: {
-        hookEventName: 'UserPromptSubmit',
-        transformedPrompt: transformedPrompt,
-        additionalContext: `🔄 Magic keyword detected: "${prompt.split(' ')[0]}" → Executing: ${transformedPrompt}`
-      }
-    };
-
-    console.log(JSON.stringify(output));
+  // Skip if prompt already starts with /
+  if (prompt.trim().startsWith('/')) {
+    console.log(JSON.stringify(createUserPromptSubmit()));
     process.exit(0);
-  } catch (err) {
-    // On error, pass through without transformation
-    console.log(JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'UserPromptSubmit'
-      }
-    }));
-    process.exit(0);
+    return;
   }
+
+  // Skip if session is already active
+  if (isSessionActive(sessionId)) {
+    console.log(JSON.stringify(createUserPromptSubmit()));
+    process.exit(0);
+    return;
+  }
+
+  // Try to match keyword
+  const match = matchKeyword(prompt.trim());
+
+  if (!match) {
+    // No keyword match - pass through
+    console.log(JSON.stringify(createUserPromptSubmit()));
+    process.exit(0);
+    return;
+  }
+
+  // Build transformed command
+  const transformedPrompt = buildCommand(match.mode, match.goal);
+
+  const output = createUserPromptSubmit({
+    transformedPrompt: transformedPrompt,
+    additionalContext: `🔄 Magic keyword detected: "${prompt.split(' ')[0]}" → Executing: ${transformedPrompt}`
+  });
+
+  console.log(JSON.stringify(output));
+  process.exit(0);
 }
 
-// Handle stdin
-if (process.stdin.isTTY) {
-  console.log(JSON.stringify({
-    hookSpecificOutput: {
-      hookEventName: 'UserPromptSubmit'
-    }
-  }));
-  process.exit(0);
-} else {
-  process.stdin.setEncoding('utf8');
-  main().catch(() => {
-    console.log(JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'UserPromptSubmit'
-      }
-    }));
-    process.exit(0);
-  });
-}
+// Entry point
+runHook(main, createUserPromptSubmit);

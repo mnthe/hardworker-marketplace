@@ -78,7 +78,7 @@ Use these scripts for session/task management:
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Get session directory path
-SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 # Get session data
 bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
@@ -164,11 +164,8 @@ Do NOT mark as resolved if failed - leave status as "open" for retry.
 **After task is marked resolved, commit all changes:**
 
 ```bash
-# Stage all changes from this task
-git add -A
-
-# Commit with Angular Commit Message format
-git commit -m "$(cat <<'EOF'
+# Stage all changes and commit atomically to minimize race condition
+git add -A && git commit -m "$(cat <<'EOF'
 <type>(<scope>): <short description>
 
 [ultrawork] Session: ${CLAUDE_SESSION_ID} | Task: {TASK_ID}

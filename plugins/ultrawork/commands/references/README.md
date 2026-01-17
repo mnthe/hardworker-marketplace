@@ -87,7 +87,7 @@ This directory contains phase-based reference documentation following progressiv
 **Purpose**: Turn ambiguous ideas into clear designs through structured dialogue.
 
 **Content**:
-- Question rules (one at a time, multiple choice, recommended options)
+- Question rules (batch related questions max 4, multiple choice, recommended options)
 - Question priority order
 - Context-aware option generation (CRITICAL - no generic options!)
 - Interview rounds (Intent & Scope, Technical Decisions, Edge Cases, Polish)

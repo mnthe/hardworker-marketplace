@@ -8,6 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { readStdin, outputAndExit, hasStdin, extractTextContent } = require('../lib/hook-utils.js');
 
 // ============================================================================
 // Constants
@@ -125,36 +126,14 @@ function clearLoopState() {
   }
 }
 
-/**
- * Read all stdin data
- * @returns {Promise<string>}
- */
-async function readStdin() {
-  const chunks = [];
-
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
-  }
-
-  return chunks.join('');
-}
-
-/**
- * Output hook response and exit
- * @param {HookOutput} output
- * @returns {void}
- */
-function outputAndExit(output) {
-  // Stop hooks use top-level properties (no hookSpecificOutput wrapper)
-  // Valid fields: decision ("approve"|"block"), reason, systemMessage
-  console.log(JSON.stringify(output));
-  process.exit(0);
-}
-
 // ============================================================================
 // Main Hook Logic
 // ============================================================================
 
+/**
+ * Main hook execution logic
+ * @returns {Promise<void>}
+ */
 async function main() {
   try {
     // Read hook input from stdin
@@ -172,8 +151,7 @@ async function main() {
     }
 
     // Extract transcript from hook input
-    // Try transcript field first, then output, then use raw input
-    const transcript = hookInput.transcript || hookInput.output || input;
+    const transcript = extractTextContent(hookInput, input);
 
     // Check for fresh-start marker
     if (transcript.includes('__TEAMWORK_FRESH_START__')) {
@@ -253,17 +231,16 @@ async function main() {
 // Entry Point
 // ============================================================================
 
-// Handle stdin
-if (process.stdin.isTTY) {
+// Check stdin availability before processing
+if (!hasStdin()) {
   // No stdin available, output minimal response
-  console.log('{}');
-  process.exit(0);
-} else {
-  // Read stdin and process
-  process.stdin.setEncoding('utf8');
-  main().catch(() => {
-    // On error, output minimal valid JSON and exit 0
-    console.log('{}');
-    process.exit(0);
-  });
+  outputAndExit({});
 }
+
+// Read stdin and process
+process.stdin.setEncoding('utf8');
+main().catch(() => {
+  // On error, output minimal valid JSON and exit 0
+  // Hooks should never fail the tool execution
+  outputAndExit({});
+});

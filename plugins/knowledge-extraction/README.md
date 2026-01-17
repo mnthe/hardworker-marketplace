@@ -72,6 +72,23 @@ The **Stop/SubagentStop hooks** parse Claude's transcript and extract these patt
 7. **State Update**: Saves last processed uuid to `state.json`
 8. **Threshold Check**: (Stop only) Recommends extraction if count >= threshold
 
+```mermaid
+flowchart LR
+    A[Claude Response] --> B[★ Insight Generated]
+    B --> C[Hook Fires:<br/>Stop/SubagentStop]
+    C --> D[Parse Transcript]
+    D --> E[Extract Pattern]
+    E --> F[Capture Context]
+    F --> G[Store in insights.md]
+    G --> H[Update state.json]
+    H --> I{Stop Hook?}
+    I -->|Yes| J{Count >= Threshold?}
+    I -->|No| K[Complete]
+    J -->|Yes| L[Recommend Extraction]
+    J -->|No| K
+    L --> K
+```
+
 ### Extraction Workflow
 
 1. Insights are collected during normal Claude usage
@@ -101,6 +118,34 @@ The **Stop/SubagentStop hooks** parse Claude's transcript and extract these patt
 - **Stop Hook**: Automatically extracts `★ Insight` patterns from Claude's responses and saves to session file. Also recommends extraction when threshold reached.
 - **SubagentStop Hook**: Extracts insights from subagent responses (extraction only, no recommendations)
 
+```mermaid
+flowchart TD
+    A[Hook Event Triggered] --> B{Event Type?}
+    B -->|Stop| C[Session Stop]
+    B -->|SubagentStop| D[Agent Stop]
+
+    C --> E[Read Transcript]
+    D --> E
+
+    E --> F[Parse for ★ Insight Markers]
+    F --> G{New Insights Found?}
+
+    G -->|No| H[Exit Silently]
+    G -->|Yes| I[Extract Content Between Markers]
+
+    I --> J[Capture Context:<br/>User Question +<br/>Preceding Text]
+    J --> K[Append to insights.md]
+    K --> L[Update state.json<br/>with lastProcessedUuid]
+
+    L --> M{Hook Type?}
+    M -->|SubagentStop| H
+    M -->|Stop| N{Count >= Threshold?}
+
+    N -->|No| H
+    N -->|Yes| O[Recommend Extraction<br/>via additionalContext]
+    O --> H
+```
+
 ### Extraction Targets
 
 | Insight Type   | Primary Target | Secondary Target | Criteria                            |
@@ -112,6 +157,40 @@ The **Stop/SubagentStop hooks** parse Claude's transcript and extract these patt
 | `tool-usage`   | Skill          | Rules File       | Effective tool combinations         |
 | `standard`     | Rules File     | CLAUDE.md        | Standards, conventions, formatting  |
 | `convention`   | Rules File     | CLAUDE.md        | Naming conventions, file patterns   |
+
+```mermaid
+graph TD
+    A[Insight Collected] --> B{Classify Type}
+
+    B -->|code-pattern| C1[Primary: Skill]
+    B -->|workflow| C2[Primary: Command]
+    B -->|debugging| C3[Primary: Skill]
+    B -->|architecture| C4[Primary: CLAUDE.md]
+    B -->|tool-usage| C5[Primary: Skill]
+    B -->|standard| C6[Primary: Rules File]
+    B -->|convention| C7[Primary: Rules File]
+
+    C1 --> D1[Secondary: Rules File]
+    C2 --> D2[Secondary: Skill]
+    C3 --> D3[Secondary: CLAUDE.md]
+    C4 --> D4[Secondary: Rules File]
+    C5 --> D5[Secondary: Rules File]
+    C6 --> D6[Secondary: CLAUDE.md]
+    C7 --> D7[Secondary: CLAUDE.md]
+
+    D1 --> E{Check Criteria}
+    D2 --> E
+    D3 --> E
+    D4 --> E
+    D5 --> E
+    D6 --> E
+    D7 --> E
+
+    E -->|Reusable across projects| F[Extract to Skill]
+    E -->|Automatable procedure| G[Extract to Command]
+    E -->|Project-specific| H[Extract to CLAUDE.md]
+    E -->|Standard/Convention| I[Extract to Rules File]
+```
 
 ### Rules Files
 

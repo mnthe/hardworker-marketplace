@@ -55,7 +55,7 @@ SUB_TEAM: {sub-team name}
 Options:
 - role_filter: {role} (optional, e.g., "frontend")
 - loop: true|false (optional, default: false - enables continuous execution)
-- poll_interval: {seconds} (optional, default: 5 - wait time between task checks)
+- poll_interval: {seconds} (optional, default: 30 - wait time between task checks in polling mode)
 ```
 
 ## Utility Scripts
@@ -222,6 +222,137 @@ Workers track loop state in `~/.claude/teamwork/.loop-state/{terminal_id}.json`:
   "iteration": 5
 }
 ```
+
+## POLLING MODE
+
+**Purpose**: Enable workers to start before orchestrator creates the project, continuously polling for work.
+
+### Scenario
+
+Polling mode allows workers to be pre-started and wait for work:
+
+```
+Terminal 1: /teamwork-worker --project my-app --team master --role backend --loop
+            → Starts polling, waits for project...
+
+Terminal 2: /teamwork-worker --project my-app --team master --role frontend --loop
+            → Starts polling, waits for project...
+
+Terminal 3: /teamwork "Build API"
+            → Creates project, tasks generated
+            → Workers automatically discover and claim tasks
+```
+
+### Requirements
+
+**`--project` and `--team` are REQUIRED for polling mode:**
+
+```bash
+# Correct: Explicit project and team
+/teamwork-worker --project my-app --team master --role backend --loop
+
+# Wrong: No auto-detection
+/teamwork-worker --role backend --loop  # ❌ Error: --project required
+```
+
+**Why explicit?** Prevents ambiguity when multiple projects exist. Workers must explicitly specify which project/team to watch.
+
+### Polling Logic
+
+Workers follow this continuous loop:
+
+```
+┌─────────────────────────────┐
+│ 1. Check project exists      │
+│    - Look for project.json   │
+└─────────────────────────────┘
+    │
+    ├── Not found → Wait {poll_interval}s → Back to step 1
+    │
+    ▼
+┌─────────────────────────────┐
+│ 2. Check available tasks     │
+│    - task-list --available   │
+└─────────────────────────────┘
+    │
+    ├── None found → Wait {poll_interval}s → Back to step 2
+    │
+    ▼
+┌─────────────────────────────┐
+│ 3. Claim task → Execute      │
+└─────────────────────────────┘
+    │
+    └── Back to step 2 (if --loop enabled)
+```
+
+### Wait Behavior
+
+**Infinite wait until user termination:**
+- Workers never exit automatically in polling mode
+- Only `Ctrl+C` or manual termination stops the worker
+- No timeout or max retry limit
+
+**Poll interval**: Default 30 seconds, configurable via `--poll-interval`:
+
+```bash
+# Default: 30 second wait
+/teamwork-worker --project my-app --team master --role backend --loop
+
+# Custom: 60 second wait
+/teamwork-worker --project my-app --team master --role backend --loop --poll-interval 60
+```
+
+### Status Output Format
+
+Workers output timestamped status messages during polling:
+
+```
+[23:30:01] Waiting for project my-app/master...
+[23:30:31] Waiting for project my-app/master...
+[23:31:01] Project found: my-app/master
+[23:31:01] No available tasks (role: backend). Waiting 30s...
+[23:31:31] No available tasks (role: backend). Waiting 30s...
+[23:32:01] Found task 3: "Implement items.schema.ts"
+[23:32:01] Claiming task 3...
+[23:32:02] Working on task 3...
+[23:35:45] Task 3 complete. Looking for next task...
+[23:35:45] No available tasks (role: backend). Waiting 30s...
+```
+
+**Format**: `[HH:MM:SS] {status message}`
+
+**Key messages**:
+- `Waiting for project {project}/{team}...` - Project doesn't exist yet
+- `Project found: {project}/{team}` - Project detected
+- `No available tasks (role: {role}). Waiting {N}s...` - No claimable tasks
+- `Found task {id}: "{title}"` - Task discovered
+- `Claiming task {id}...` - Attempting claim
+- `Working on task {id}...` - Claim successful, starting work
+- `Task {id} complete. Looking for next task...` - Task resolved
+
+### Example Usage
+
+```bash
+# Start worker before orchestrator (polling mode)
+/teamwork-worker --project my-app --team master --role backend --loop --poll-interval 30
+
+# Worker output:
+# [10:00:00] Waiting for project my-app/master...
+# [10:00:30] Waiting for project my-app/master...
+# ... (continues until orchestrator creates project)
+```
+
+### Polling Mode vs Loop Mode
+
+| Feature | Loop Mode | Polling Mode |
+|---------|-----------|--------------|
+| **Project requirement** | Must exist | Can wait for creation |
+| **Task requirement** | Must have tasks | Can wait for tasks |
+| **Wait behavior** | Exits if no tasks | Waits indefinitely |
+| **Use case** | Project already set up | Pre-start workers |
+| **Termination** | Auto-exit when done | Manual only (Ctrl+C) |
+
+**Relationship**: Polling mode is loop mode WITH project/task waiting enabled via explicit `--project --team` flags.
 
 ## Task-Level Verification
 

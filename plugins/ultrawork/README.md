@@ -190,29 +190,38 @@ Cleans up ultrawork sessions based on age and status:
 
 ## Agents
 
-| Agent        | Model       | Purpose                       | Key Responsibilities                                                                                                              |
-| ------------ | ----------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **planner**  | opus        | Task decomposition and design | Reads exploration context, makes architecture decisions (auto mode), creates task graph with dependencies, writes design document |
-| **explorer** | haiku       | Codebase discovery            | Finds patterns and structures, writes detailed findings to exploration/*.md, updates context.json summary                         |
-| **worker**   | sonnet/opus | Task implementation           | Executes single task, collects evidence for success criteria, updates task status, supports TDD workflow                          |
-| **verifier** | opus        | Quality gatekeeper            | Validates evidence completeness, scans for blocked patterns, runs final tests, makes PASS/FAIL determination                      |
-| **reviewer** | sonnet      | Code quality review           | Deep code verification, security vulnerability detection, edge case identification, performance analysis (optional)               |
+| Agent              | Model   | Role                          | Key Responsibilities                                                                                                              |
+| ------------------ | ------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **explorer**       | haiku   | Codebase discovery            | Fast exploration, writes findings to exploration/*.md, updates context.json summary                                               |
+| **planner**        | inherit | Task decomposition and design | Reads exploration context, makes architecture decisions (auto mode), creates task graph with dependencies, writes design document |
+| **worker**         | inherit | Task implementation           | Executes ONE task, collects evidence for success criteria, updates task status, supports standard and TDD approaches              |
+| **verifier**       | inherit | Quality gatekeeper            | Audits evidence completeness, scans for blocked patterns, runs final tests, makes PASS/FAIL determination, triggers Ralph loop    |
+| **reviewer**       | inherit | Code quality review           | Deep code verification, security vulnerability detection, edge case identification, performance analysis (optional)               |
+| **scope-analyzer** | haiku   | Dependency detection          | Analyzes cross-layer dependencies, outputs to context.json scopeExpansion field                                                   |
 
 ### Agent Execution Flow
 
-```
-/ultrawork "goal"
-    │
-    ├─→ explorer (overview)     │ Codebase discovery
-    ├─→ explorer (targeted)     │
-    │                           │
-    ├─→ planner                 │ Task decomposition
-    │                           │
-    ├─→ worker (task 1)         │ Parallel execution
-    ├─→ worker (task 2)         │ with evidence
-    ├─→ worker (task 3)         │ collection
-    │                           │
-    └─→ verifier                │ Final validation
+```mermaid
+flowchart TD
+    Start(["/ultrawork 'goal'"]) --> Explorer1[Explorer: Overview]
+    Explorer1 --> Explorer2[Explorer: Targeted]
+    Explorer2 --> Planner[Planner: Task Decomposition]
+    Planner --> Worker1[Worker: Task 1]
+    Planner --> Worker2[Worker: Task 2]
+    Planner --> Worker3[Worker: Task 3]
+    Worker1 --> Verifier[Verifier: Final Validation]
+    Worker2 --> Verifier
+    Worker3 --> Verifier
+    Verifier --> Complete([COMPLETE])
+
+    style Explorer1 fill:#e1f5ff
+    style Explorer2 fill:#e1f5ff
+    style Planner fill:#fff4e6
+    style Worker1 fill:#e8f5e9
+    style Worker2 fill:#e8f5e9
+    style Worker3 fill:#e8f5e9
+    style Verifier fill:#fce4ec
+    style Complete fill:#f3e5f5
 ```
 
 ## How It Works
@@ -253,10 +262,40 @@ Cleans up ultrawork sessions based on age and status:
 
 ### Session Phases
 
+```mermaid
+stateDiagram-v2
+    [*] --> PLANNING: /ultrawork
+    PLANNING --> EXECUTION: Plan approved
+    EXECUTION --> VERIFICATION: All tasks resolved
+    VERIFICATION --> COMPLETE: Evidence valid (PASS)
+    VERIFICATION --> EXECUTION: Evidence invalid (FAIL - Ralph loop)
+    EXECUTION --> FAILED: Max iterations reached
+    PLANNING --> CANCELLED: User cancels
+    EXECUTION --> CANCELLED: User cancels
+    VERIFICATION --> CANCELLED: User cancels
+    COMPLETE --> [*]
+    FAILED --> [*]
+    CANCELLED --> [*]
+
+    note right of PLANNING
+        Exploration + Task Decomposition
+        Gate: No code edits allowed
+    end note
+
+    note right of EXECUTION
+        Workers implement tasks
+        Gate: TDD tasks block implementation before tests
+    end note
+
+    note right of VERIFICATION
+        Audit evidence, run final tests
+        Blocked patterns cause instant FAIL
+    end note
+```
+
 | Phase          | Description                             | Next Phase                              |
 | -------------- | --------------------------------------- | --------------------------------------- |
-| `EXPLORATION`  | Explorer agents gather codebase context | `PLANNING`                              |
-| `PLANNING`     | Create design document and task graph   | `EXECUTION`                             |
+| `PLANNING`     | Exploration + task decomposition        | `EXECUTION`                             |
 | `EXECUTION`    | Workers implement tasks in parallel     | `VERIFICATION`                          |
 | `VERIFICATION` | Verifier checks evidence and criteria   | `COMPLETE` (pass) or `EXECUTION` (fail) |
 | `COMPLETE`     | All criteria verified with evidence     | End                                     |
@@ -300,13 +339,46 @@ Determines model selection:
 
 Tasks can specify `approach: "tdd"` to enforce Test-Driven Development:
 
-```
-Phase 1: RED   - Write failing test first
-Phase 2: GREEN - Minimal implementation to pass
-Phase 3: REFACTOR - Improve code quality
+```mermaid
+sequenceDiagram
+    participant W as Worker Agent
+    participant G as Gate Hook
+    participant T as Test Runner
+    participant E as Evidence Log
+
+    Note over W,E: Phase 1: RED (Write Failing Test)
+    W->>W: Create test file (*.test.ts)
+    W->>T: npm test
+    T-->>W: Exit code 1 (FAIL)
+    W->>E: TDD-RED: Test fails as expected
+
+    Note over W,E: Phase 2: GREEN (Minimal Implementation)
+    W->>G: Write implementation file
+    G->>G: Check evidence for TDD-RED
+    G-->>W: Allow (TDD-RED found)
+    W->>W: Implement minimal code
+    W->>T: npm test
+    T-->>W: Exit code 0 (PASS)
+    W->>E: TDD-GREEN: Test passes
+
+    Note over W,E: Phase 3: REFACTOR (Optional)
+    W->>W: Improve code quality
+    W->>T: npm test
+    T-->>W: Exit code 0 (PASS)
+    W->>E: TDD-REFACTOR: Tests still pass
+
+    Note over W,E: Gate blocks implementation before TDD-RED evidence
 ```
 
-Gate hooks block out-of-order operations (implementation before test).
+**TDD Phases:**
+
+```
+Phase 1: RED      - Write failing test first (REQUIRED)
+Phase 2: GREEN    - Minimal implementation to pass (REQUIRED)
+Phase 3: REFACTOR - Improve code quality (OPTIONAL)
+```
+
+Gate hooks block out-of-order operations (implementation before test). Evidence chain must show: test created → test failed → implementation → test passed.
 
 ## Storage
 
@@ -314,19 +386,47 @@ Gate hooks block out-of-order operations (implementation before test).
 
 ```
 ~/.claude/ultrawork/sessions/{session-id}/
-├── session.json           # Session metadata (goal, phase, options)
+├── session.json           # Session state (minimal metadata)
+│                          # Contains: version, session_id, working_dir, goal, phase
+│                          # phase values: PLANNING | EXECUTION | VERIFICATION | COMPLETE | FAILED | CANCELLED
+│                          # Access via: session-get.js --session <ID> --field phase
+│
 ├── context.json           # Exploration summary (lightweight index)
-├── exploration/           # Detailed findings
-│   ├── overview.md        # Project overview
+│                          # Contains: expected_explorers, explorers[], key_files[], patterns[]
+│                          # Optional: scopeExpansion (cross-layer dependency detection)
+│                          # Access via: context-get.js --session <ID> --summary
+│
+├── evidence/              # Evidence files (separated from session.json in v6.0+)
+│   ├── log.jsonl          # Append-only evidence log (JSONL format)
+│   │                      # Each line: {"timestamp": "...", "type": "...", "data": {...}}
+│   │                      # Access via: ultrawork-evidence.js or evidence-query.js
+│   └── index.md           # AI-friendly summary (generated on demand)
+│                          # Generated via: evidence-summary.js --save
+│
+├── exploration/           # Detailed exploration findings (Markdown)
+│   ├── overview.md        # Project overview (always first)
+│   │                      # Generated by: overview-exploration skill
 │   ├── exp-1.md           # Targeted exploration 1
 │   ├── exp-2.md           # Targeted exploration 2
 │   └── exp-3.md           # Targeted exploration 3
+│                          # Generated by: explorer agents with hints
+│                          # OK to read directly (Markdown format)
+│
 └── tasks/                 # Task files with evidence
-    ├── 1.json             # Task metadata, status, evidence
-    ├── 2.json
+    ├── 1.json             # Task metadata: id, subject, description, complexity, status
+    │                      # status values: open | in_progress | resolved | blocked
+    │                      # approach values: standard | tdd
+    ├── 2.json             # Access via: task-get.js --session <ID> --task-id <TASK>
     ├── 3.json
-    └── verify.json        # Verification task
+    ├── verify.json        # Special verification task (always last)
+    └── summary.md         # AI-friendly task overview (generated on demand)
+                           # Generated via: task-summary.js --save
 ```
+
+**Data Access Rules:**
+- **JSON files**: Always use scripts (`session-get.js`, `task-get.js`, `context-get.js`)
+- **Markdown files**: OK to read directly with Read tool
+- **Evidence**: Use `evidence-query.js` for filtering, `evidence-summary.js` for AI-friendly view
 
 ### Project Directory Structure
 
@@ -341,50 +441,110 @@ Design documents are written to the project directory:
 
 ### Session State Format
 
+**File**: `~/.claude/ultrawork/sessions/{session-id}/session.json`
+
 ```json
 {
-  "session_id": "uuid",
-  "team": "default",
+  "version": "6.0",
+  "session_id": "abc-123",
   "working_dir": "/path/to/project",
-  "goal": "implement user authentication",
-  "phase": "EXECUTION",
-  "exploration_stage": "complete",
+  "goal": "Implement user authentication",
+  "started_at": "2026-01-12T10:00:00Z",
+  "updated_at": "2026-01-12T10:05:00Z",
+  "phase": "PLANNING",
+  "exploration_stage": "overview",
+  "iteration": 1,
+  "plan": {
+    "approved_at": null
+  },
   "options": {
-    "auto_mode": false,
     "max_workers": 0,
     "max_iterations": 5,
     "skip_verify": false,
-    "plan_only": false
+    "plan_only": false,
+    "auto_mode": false
   },
-  "iteration": 1,
-  "created_at": "2026-01-11T12:00:00.000Z",
-  "updated_at": "2026-01-11T12:30:00.000Z"
+  "evidence_log": [],
+  "cancelled_at": null
 }
 ```
 
+**Phase values**: `PLANNING` | `EXECUTION` | `VERIFICATION` | `COMPLETE` | `CANCELLED` | `FAILED`
+
+**Exploration stages**: `not_started` | `overview` | `analyzing` | `targeted` | `complete`
+
 ### Task File Format
+
+**File**: `~/.claude/ultrawork/sessions/{session-id}/tasks/{task-id}.json`
 
 ```json
 {
   "id": "1",
-  "subject": "Setup NextAuth provider",
-  "description": "Configure NextAuth with credentials",
+  "subject": "Add user authentication middleware",
+  "description": "Implement JWT-based auth middleware in src/middleware/auth.ts",
   "complexity": "standard",
-  "status": "resolved",
+  "status": "open",
   "blocked_by": [],
   "criteria": [
-    "Auth routes respond",
-    "Login flow works"
+    "Middleware created in src/middleware/auth.ts",
+    "Tests pass with 5/5 assertions",
+    "Handles invalid tokens gracefully"
   ],
   "evidence": [
-    "Created src/auth/next-auth.ts",
-    "npm test: 15/15 passed, exit 0"
+    "Created src/middleware/auth.ts",
+    "npm test -- auth.test.ts: 5/5 passed, exit 0"
   ],
+  "created_at": "2026-01-12T10:10:00Z",
+  "updated_at": "2026-01-12T10:15:00Z",
   "approach": "standard",
-  "created_at": "2026-01-11T12:00:00.000Z",
-  "updated_at": "2026-01-11T12:15:00.000Z"
+  "test_file": null
 }
 ```
+
+**Task status values**: `open` | `in_progress` | `resolved` | `blocked`
+
+**Complexity values**: `simple` | `standard` | `complex`
+
+**Approach values**: `standard` | `tdd`
+
+### TDD Task Format
+
+**File**: `~/.claude/ultrawork/sessions/{session-id}/tasks/{task-id}.json`
+
+```json
+{
+  "id": "2",
+  "subject": "Validate user input",
+  "description": "Add input validation with test-first approach",
+  "complexity": "standard",
+  "status": "in_progress",
+  "blocked_by": [],
+  "criteria": [
+    "Test file created first",
+    "Test failed (TDD-RED)",
+    "Implementation passes test (TDD-GREEN)"
+  ],
+  "evidence": [
+    "TDD-RED: Created test file tests/validation.test.ts",
+    "TDD-RED: Test fails as expected (exit code 1)",
+    "TDD-GREEN: Implemented src/validation.ts",
+    "TDD-GREEN: Test passes (exit code 0)"
+  ],
+  "created_at": "2026-01-12T10:20:00Z",
+  "updated_at": "2026-01-12T10:25:00Z",
+  "approach": "tdd",
+  "test_file": "tests/validation.test.ts"
+}
+```
+
+**TDD Evidence Chain (Required):**
+1. `TDD-RED: Test file created`
+2. `TDD-RED: Test execution failed (exit code 1)`
+3. `TDD-GREEN: Implementation created`
+4. `TDD-GREEN: Test execution passed (exit code 0)`
+5. `TDD-REFACTOR: Improvements made, tests still pass` (optional)
+
+Gate enforcement blocks implementation edits until TDD-RED evidence exists in task.
 
 ## Workflows
 

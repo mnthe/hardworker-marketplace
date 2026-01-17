@@ -21,7 +21,8 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 ### Step 1: Spawn Verifier
 
 ```python
-# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
+# Get session directory directly
+SESSION_DIR = "~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}"
 
 # Spawn verifier (foreground - waits for completion)
 Task(

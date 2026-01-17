@@ -41,6 +41,7 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
 
 const ARG_SPEC = {
   '--session': { key: 'sessionId', aliases: ['-s'], required: true },
+  '--goal': { key: 'goal', aliases: ['-g'] },
   '--max-workers': { key: 'maxWorkers', aliases: ['-w'], default: 0 },
   '--max-iterations': { key: 'maxIterations', aliases: ['-i'], default: 5 },
   '--skip-verify': { key: 'skipVerify', aliases: ['-V'], flag: true },
@@ -60,11 +61,17 @@ function parseCliArgs(argv) {
   // Parse flags using common utility
   const flagArgs = parseArgs(ARG_SPEC, argv);
 
-  // Collect positional arguments (goal parts)
+  // If --goal was provided, use it (prefer explicit flag over positional args)
+  if (flagArgs.goal) {
+    return flagArgs;
+  }
+
+  // Otherwise, collect positional arguments (backward compatibility)
   // Skip bun, script, and all flags
   const goalParts = [];
   const knownFlags = new Set([
     '--session', '-s',
+    '--goal', '-g',
     '--max-workers', '-w',
     '--max-iterations', '-i',
     '--skip-verify', '-V',

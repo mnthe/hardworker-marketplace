@@ -12,6 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { readStdin } = require('../lib/hook-utils.js');
 
 // ============================================================================
 // Configuration
@@ -28,14 +29,6 @@ const INSIGHT_END_PATTERN = /─{10,}/;
 // ============================================================================
 // Utilities
 // ============================================================================
-
-async function readStdin() {
-  const chunks = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
-  }
-  return chunks.join('');
-}
 
 function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) {

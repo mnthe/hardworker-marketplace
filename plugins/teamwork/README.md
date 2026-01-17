@@ -163,18 +163,18 @@ claude --plugin-dir /path/to/teamwork
 
 | Agent               | Model   | Purpose                   | Key Responsibilities                                            |
 | ------------------- | ------- | ------------------------- | --------------------------------------------------------------- |
-| **orchestrator**    | opus    | Monitoring & Orchestration | (v2) Monitors waves, triggers verification, handles conflicts  |
-| **wave-verifier**   | sonnet  | Wave Verification         | (v2) Cross-task checks, conflict detection, wave-level tests    |
-| **final-verifier**  | opus    | Project Verification      | (v2) Full project build/test, evidence completeness validation  |
-| **coordinator**     | opus    | Planning (DEPRECATED)     | **Deprecated:** Use orchestrator instead. Kept for backward compatibility. |
-| **frontend**        | inherit | UI Implementation         | UI components, styling, user interactions                       |
-| **backend**         | inherit | API Implementation        | API endpoints, services, database, business logic               |
-| **test**            | inherit | Testing                   | Unit tests, integration tests, fixtures, mocks                  |
-| **devops**          | inherit | Infrastructure            | CI/CD pipelines, deployment, infrastructure                     |
-| **docs**            | inherit | Documentation             | README files, API documentation, examples                       |
-| **security**        | inherit | Security                  | Authentication, authorization, input validation                 |
-| **review**          | inherit | Code Review               | Code review, refactoring suggestions                            |
-| **worker**          | inherit | General Purpose           | Claims tasks for any role (fallback agent)                      |
+| **orchestrator**    | opus    | Unified Planning, Monitoring & Verification | Codebase exploration, task decomposition, wave monitoring, trigger verifiers, handle conflicts, coordinate verification phases, fresh start detection |
+| **wave-verifier**   | sonnet  | Wave-Level Verification   | Cross-task dependency checking, file conflict detection, wave-scoped build/test execution |
+| **final-verifier**  | opus    | Project-Level Verification | Full build/test, blocked pattern scanning, evidence completeness, cross-wave dependency validation |
+| **coordinator**     | opus    | Planning (DEPRECATED)     | **Deprecated in v2:** Use orchestrator instead. Kept for backward compatibility only. |
+| **frontend**        | inherit | UI Implementation         | UI components, styling, state management, user interactions, responsive design, accessibility |
+| **backend**         | inherit | API Implementation        | API endpoints, services, database, business logic, data validation |
+| **test**            | inherit | Testing                   | Unit tests, integration tests, fixtures, mocks, test coverage |
+| **devops**          | inherit | Infrastructure            | CI/CD, deployment, infrastructure, containerization, monitoring |
+| **docs**            | inherit | Documentation             | README, API docs, examples, architectural documentation |
+| **security**        | inherit | Security                  | Authentication, authorization, input validation, security audits |
+| **review**          | inherit | Code Review               | Code quality, refactoring, best practices, architecture review |
+| **worker**          | inherit | General Purpose           | Find available tasks, claim with file lock, implement, collect structured evidence, mark resolved |
 
 ## How It Works
 
@@ -272,16 +272,113 @@ Project-level checks:
 Results: PASS → COMPLETE | FAIL → new fix wave
 ```
 
-### Concurrency Safety
+#### Wave-Based Execution Flow (v2)
 
-Teamwork handles multiple workers accessing shared state with Optimistic Concurrency Control (v2):
+```mermaid
+flowchart TD
+    Start([Start Project]) --> Planning[Phase 1: PLANNING]
+    Planning --> ParseInput{Input Type?}
+    ParseInput -->|--plans flag| ParsePlans[Parse plan documents]
+    ParseInput -->|Goal string| DecomposeGoal[Decompose goal into tasks]
+    ParsePlans --> CreateTasks[Create task files with blocked_by dependencies]
+    DecomposeGoal --> CreateTasks
+    CreateTasks --> CalcWaves[Calculate waves using DAG<br/>Kahn's algorithm]
+    CalcWaves --> WriteWaves[Write waves.json]
+    WriteWaves --> SetPhaseExec[Set phase → EXECUTION]
 
-- **OCC (Optimistic Concurrency Control)**: Timestamp-based conflict detection without file locks
-- **Atomic operations**: Task status updates include timestamp validation
-- **Retry logic**: Workers retry on conflicts with fresh data
-- **Stale detection**: Workers detect when tasks are claimed by others via timestamp checks
-- **No lock files**: Eliminates lock contention, deadlocks, and stale lock issues
-- **Filesystem agnostic**: Works reliably on NFS, network drives, and all filesystems
+    SetPhaseExec --> Execution[Phase 2: EXECUTION]
+    Execution --> WorkerLoop{Workers claim<br/>and execute tasks}
+    WorkerLoop -->|Task available| ClaimTask[Worker claims task<br/>with file lock]
+    ClaimTask --> ExecuteTask[Worker executes task]
+    ExecuteTask --> MarkResolved[Worker marks resolved<br/>with evidence]
+    MarkResolved --> WorkerLoop
+    WorkerLoop -->|Wave complete| WaveComplete{All tasks in<br/>wave resolved?}
+    WaveComplete -->|No| WorkerLoop
+    WaveComplete -->|Yes| TriggerWaveVerify[Orchestrator triggers<br/>wave-verifier agent]
+
+    TriggerWaveVerify --> Verification[Phase 3: VERIFICATION]
+    Verification --> WaveVerify[Wave Verification]
+    WaveVerify --> CrossTaskChecks[Cross-task checks:<br/>- File conflicts<br/>- Dependencies<br/>- Wave-scoped build/test]
+    CrossTaskChecks --> WaveResult{Verification<br/>result?}
+    WaveResult -->|PASS| NextWave{More waves<br/>remaining?}
+    WaveResult -->|FAIL| CreateFixTasks[Create fix tasks]
+    CreateFixTasks --> AppendWave[Append to current wave]
+    AppendWave --> Execution
+    NextWave -->|Yes| Execution
+    NextWave -->|No| TriggerFinalVerify[Orchestrator triggers<br/>final-verifier agent]
+
+    TriggerFinalVerify --> FinalVerify[Final Verification]
+    FinalVerify --> ProjectChecks[Project-level checks:<br/>- Full build/test<br/>- Evidence completeness<br/>- Blocked pattern scanning]
+    ProjectChecks --> FinalResult{Verification<br/>result?}
+    FinalResult -->|PASS| Complete[Phase 4: COMPLETE]
+    FinalResult -->|FAIL| CreateNewWave[Create new fix wave]
+    CreateNewWave --> Execution
+
+    Complete --> End([Project Complete])
+
+    style Planning fill:#e1f5ff
+    style Execution fill:#fff4e1
+    style Verification fill:#f0e1ff
+    style Complete fill:#e1ffe1
+```
+
+### Concurrency Safety (v2)
+
+Teamwork handles multiple workers accessing shared state with file-based locking:
+
+**File Lock with Owner Identification:**
+- Workers use mkdir-based atomic file locks for task claims
+- Lock holder info stored in `holder.json` (owner, pid, timestamp)
+- Reentrant locks: same owner can re-acquire without waiting
+- Stale lock detection: auto-cleanup if holder process is dead (>1 min)
+- Cross-platform: works on Windows, macOS, Linux
+
+#### Worker Coordination Sequence
+
+```mermaid
+sequenceDiagram
+    participant W1 as Worker A<br/>(session-a)
+    participant Lock as task.json.lock/<br/>holder.json
+    participant Task as task.json
+    participant W2 as Worker B<br/>(session-b)
+
+    Note over W1,W2: Atomic Lock Acquisition
+    W1->>Lock: acquireLock(task.json, "session-a")
+    Lock-->>W1: mkdir task.json.lock/ (SUCCESS)
+    W1->>Lock: write holder.json<br/>{owner: "session-a", pid: 12345}
+
+    Note over W2: Worker B tries to claim same task
+    W2->>Lock: acquireLock(task.json, "session-b")
+    Lock-->>W2: EEXIST (lock exists)
+    W2->>Lock: read holder.json
+    Lock-->>W2: owner = "session-a" ≠ "session-b"
+    W2->>W2: Wait and retry...
+
+    Note over W1,Task: Critical Section (Read → Check → Write)
+    W1->>Task: Read current task state
+    Task-->>W1: {status: "open", claimed_by: null}
+    W1->>W1: Check: task available
+    W1->>Task: Write: {status: "in_progress", claimed_by: "session-a"}
+
+    Note over W1: Worker A completes task
+    W1->>Task: Update: {status: "resolved", evidence: [...]}
+    W1->>Lock: releaseLock(task.json, "session-a")
+    Lock-->>W1: rmdir task.json.lock/ (SUCCESS)
+
+    Note over W2: Worker B can now proceed
+    W2->>Lock: acquireLock(task.json, "session-b") [retry]
+    Lock-->>W2: mkdir task.json.lock/ (SUCCESS)
+    W2->>Task: Read current task state
+    Task-->>W2: {status: "resolved", ...}
+    W2->>W2: Task already completed, skip
+    W2->>Lock: releaseLock(task.json, "session-b")
+```
+
+**Benefits:**
+- No race conditions (atomic mkdir + holder identification)
+- Reentrant: same session can claim multiple tasks
+- Stale lock recovery: auto-cleanup crashed sessions
+- Cross-platform compatibility
 
 ## Configuration
 
@@ -344,6 +441,8 @@ Tasks are assigned roles during coordination phase:
   "created_at": "2026-01-12T10:30:00Z",
   "updated_at": "2026-01-12T10:30:00Z",
   "claimed_by": null,
+  "claimed_at": null,
+  "completed_at": null,
   "evidence": [
     {
       "type": "command",
@@ -380,6 +479,7 @@ Tasks are assigned roles during coordination phase:
   "project": "my-app",
   "team": "feature-auth",
   "goal": "Build REST API with authentication",
+  "phase": "EXECUTION",
   "created_at": "2026-01-12T10:30:00Z",
   "updated_at": "2026-01-12T10:35:00Z",
   "stats": {
@@ -390,6 +490,83 @@ Tasks are assigned roles during coordination phase:
   }
 }
 ```
+
+**Phase values (v2):**
+- `PLANNING`: Orchestrator is analyzing and creating tasks
+- `EXECUTION`: Workers are claiming and completing tasks
+- `VERIFICATION`: Wave or final verification in progress
+- `COMPLETE`: All tasks verified and project finished
+
+### Wave State Format (v2)
+
+```json
+{
+  "version": "1.0",
+  "total_waves": 3,
+  "current_wave": 2,
+  "waves": [
+    {
+      "id": 1,
+      "status": "verified",
+      "tasks": ["1", "2", "3"],
+      "started_at": "2026-01-15T10:00:00Z",
+      "verified_at": "2026-01-15T10:30:00Z"
+    },
+    {
+      "id": 2,
+      "status": "in_progress",
+      "tasks": ["4", "5"],
+      "started_at": "2026-01-15T10:30:00Z",
+      "verified_at": null
+    },
+    {
+      "id": 3,
+      "status": "pending",
+      "tasks": ["6", "7", "8"],
+      "started_at": null,
+      "verified_at": null
+    }
+  ]
+}
+```
+
+**Wave status values:**
+- `planning`: Wave is being prepared
+- `in_progress`: Workers are completing tasks in this wave
+- `completed`: All tasks resolved, awaiting verification
+- `verified`: Wave verification passed
+- `failed`: Wave verification failed
+
+### Verification Result Format (v2)
+
+```json
+{
+  "wave_id": 1,
+  "status": "passed",
+  "verified_at": "2026-01-15T10:30:00Z",
+  "tasks_verified": ["1", "2", "3"],
+  "checks": [
+    {
+      "name": "all_tasks_resolved",
+      "status": "passed"
+    },
+    {
+      "name": "no_file_conflicts",
+      "status": "passed"
+    },
+    {
+      "name": "build_succeeds",
+      "status": "passed",
+      "evidence": "npm run build: exit 0"
+    }
+  ],
+  "issues": []
+}
+```
+
+**Verification status values:**
+- `passed`: All checks passed, wave can proceed
+- `failed`: One or more checks failed, fix tasks required
 
 ## Workflows
 
@@ -451,6 +628,41 @@ Loop mode uses hook-based continuation for unattended execution:
 - Workers can detect task release and abandon work gracefully
 - Configurable via `--fresh-start-interval N` (0 to disable)
 
+#### Fresh Start Mechanism Flow
+
+```mermaid
+flowchart TD
+    Start([Orchestrator Monitoring Loop]) --> CheckInterval[Check fresh-start-interval setting]
+    CheckInterval --> IntervalSet{Interval > 0?}
+    IntervalSet -->|No disabled| SkipFreshStart[Skip fresh start checks]
+    SkipFreshStart --> Start
+    IntervalSet -->|Yes| ScanTasks[Scan all tasks in project]
+
+    ScanTasks --> CheckTask{For each task:<br/>status = in_progress?}
+    CheckTask -->|No| NextTask[Check next task]
+    NextTask --> ScanTasks
+    CheckTask -->|Yes| GetClaimTime[Get claimed_at timestamp]
+    GetClaimTime --> CalcAge[Calculate age:<br/>now - claimed_at]
+    CalcAge --> AgeCheck{Age > interval?}
+    AgeCheck -->|No| NextTask
+    AgeCheck -->|Yes| StuckTask[Task is stuck!]
+
+    StuckTask --> ReleaseTask[Release task:<br/>- Clear claimed_by<br/>- Reset claimed_at<br/>- Keep status = in_progress]
+    ReleaseTask --> LogEvent[Log fresh start event:<br/>"Task X released after Y seconds"]
+    LogEvent --> NotifyWorker{Worker still<br/>processing?}
+    NotifyWorker -->|Yes| WorkerDetects[Worker detects task released<br/>on next file operation]
+    WorkerDetects --> WorkerAbandons[Worker abandons work<br/>without committing]
+    NotifyWorker -->|No crashed| TaskAvailable[Task now available<br/>for other workers]
+    WorkerAbandons --> TaskAvailable
+    TaskAvailable --> NextTask
+
+    style StuckTask fill:#ffe1e1
+    style ReleaseTask fill:#fff4e1
+    style TaskAvailable fill:#e1ffe1
+```
+
+**Configuration:**
+
 ```bash
 # Start continuous worker (default: 1 hour fresh start)
 /teamwork-worker --loop
@@ -460,6 +672,9 @@ Loop mode uses hook-based continuation for unattended execution:
 
 # With custom fresh start interval (30 minutes)
 /teamwork-worker --loop --fresh-start-interval 1800
+
+# Disable fresh start (not recommended)
+/teamwork-worker --loop --fresh-start-interval 0
 ```
 
 ### Project Override Workflow
@@ -493,11 +708,12 @@ Loop mode uses hook-based continuation for unattended execution:
 
 ### Multiple Workers Claiming Same Task
 
-This should not happen due to OCC (Optimistic Concurrency Control). If it does:
-- Check filesystem supports atomic file operations
-- Verify task files are not being corrupted
-- Check for clock skew issues (timestamps must be accurate)
-- OCC prevents this better than file-based locking (no NFS issues)
+This should not happen due to file-based locking with owner identification. If it does:
+- Check filesystem supports atomic mkdir operations
+- Verify lock directories (`*.json.lock/`) are not being corrupted
+- Check that holder.json files contain valid session IDs
+- Stale lock detection should auto-cleanup after 1 minute if holder process is dead
+- File locks work reliably across all filesystems (including NFS)
 
 ### Loop Mode Not Continuing
 

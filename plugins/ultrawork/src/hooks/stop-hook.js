@@ -9,6 +9,12 @@
 const fs = require('fs');
 const path = require('path');
 const { getSessionDir, getSessionFile } = require('../lib/session-utils.js');
+const {
+  readStdin,
+  createStopResponse,
+  outputAndExit,
+  runHook
+} = require('../lib/hook-utils.js');
 
 /**
  * @typedef {import('../lib/types.js').Session} Session
@@ -25,13 +31,6 @@ const { getSessionDir, getSessionFile } = require('../lib/session-utils.js');
  */
 
 /**
- * @typedef {Object} HookOutput
- * @property {'block' | 'allow'} [decision]
- * @property {string} [reason]
- * @property {string} [systemMessage]
- */
-
-/**
  * @typedef {Object} TaskFile
  * @property {string} [status]
  */
@@ -39,20 +38,6 @@ const { getSessionDir, getSessionFile } = require('../lib/session-utils.js');
 // ============================================================================
 // Utilities
 // ============================================================================
-
-/**
- * Read all stdin data
- * @returns {Promise<string>}
- */
-async function readStdin() {
-  const chunks = [];
-
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
-  }
-
-  return chunks.join('');
-}
 
 /**
  * Count completed tasks from tasks directory
@@ -164,44 +149,33 @@ function checkBlockedPhrases(session) {
   return null;
 }
 
-/**
- * Output hook response and exit
- * @param {HookOutput} output
- * @returns {void}
- */
-function outputAndExit(output) {
-  console.log(JSON.stringify(output));
-  process.exit(0);
-}
-
 // ============================================================================
 // Main Hook Logic
 // ============================================================================
 
 async function main() {
-  try {
-    // Read stdin JSON
-    const input = await readStdin();
-    /** @type {HookInput} */
-    const hookInput = JSON.parse(input);
+  // Read stdin JSON
+  const input = await readStdin();
+  /** @type {HookInput} */
+  const hookInput = JSON.parse(input);
 
-    // Extract session_id
-    const sessionId = hookInput.session_id;
+  // Extract session_id
+  const sessionId = hookInput.session_id;
 
-    // No session_id - allow exit
-    if (!sessionId) {
-      outputAndExit({});
-      return;
-    }
+  // No session_id - allow exit
+  if (!sessionId) {
+    outputAndExit(createStopResponse());
+    return;
+  }
 
     // Get session file
     const sessionFile = getSessionFile(sessionId);
 
-    // Session file doesn't exist - not an ultrawork session, allow exit
-    if (!fs.existsSync(sessionFile)) {
-      outputAndExit({});
-      return;
-    }
+  // Session file doesn't exist - not an ultrawork session, allow exit
+  if (!fs.existsSync(sessionFile)) {
+    outputAndExit(createStopResponse());
+    return;
+  }
 
     // Parse session state
     const content = fs.readFileSync(sessionFile, 'utf-8');
@@ -218,13 +192,13 @@ async function main() {
     /** @type {Phase[]} */
     const terminalPhases = ['COMPLETE', 'CANCELLED', 'FAILED'];
     if (terminalPhases.includes(phase)) {
-      outputAndExit({});
+      outputAndExit(createStopResponse());
       return;
     }
 
     // Plan-only mode - allow exit after planning
     if (planOnly && phase !== 'PLANNING') {
-      outputAndExit({});
+      outputAndExit(createStopResponse());
       return;
     }
 
@@ -234,21 +208,21 @@ async function main() {
       const { pending, inProgress } = countActiveTasks(sessionDir);
 
       if (pending === 0 && inProgress === 0) {
-        outputAndExit({});
+        outputAndExit(createStopResponse());
         return;
       }
     }
 
     // Interactive mode planning - orchestrator does planning inline, don't block
     if (phase === 'PLANNING' && !autoMode) {
-      outputAndExit({});
+      outputAndExit(createStopResponse());
       return;
     }
 
     // Check for blocked phrases in recent evidence
     const blockedPhrase = checkBlockedPhrases(session);
     if (blockedPhrase) {
-      outputAndExit({
+      outputAndExit(createStopResponse({
         decision: 'block',
         reason: `INCOMPLETE WORK DETECTED
 
@@ -269,7 +243,7 @@ Commands:
   /ultrawork-evidence - View evidence
   /ultrawork-clean   - Cancel session`,
         systemMessage: `⚠️ ULTRAWORK [${sessionId}]: Incomplete work detected`
-      });
+      }));
       return;
     }
 
@@ -281,7 +255,7 @@ Commands:
 
       // Require at least 1 evidence entry per completed task
       if (completedTasks > 0 && evidenceCount < completedTasks) {
-        outputAndExit({
+        outputAndExit(createStopResponse({
           decision: 'block',
           reason: `INSUFFICIENT EVIDENCE
 
@@ -302,7 +276,7 @@ Commands:
   /ultrawork-evidence - View evidence
   /ultrawork-clean   - Cancel session`,
           systemMessage: `⚠️ ULTRAWORK [${sessionId}]: Insufficient evidence`
-        });
+        }));
         return;
       }
     }
@@ -336,7 +310,7 @@ Commands:
 
     const evidenceCount = session.evidence_log.length;
 
-    outputAndExit({
+    outputAndExit(createStopResponse({
       decision: 'block',
       reason: `ULTRAWORK SESSION ACTIVE
 
@@ -352,29 +326,8 @@ Commands:
   /ultrawork-evidence - View evidence
   /ultrawork-clean   - Cancel session`,
       systemMessage: systemMsg
-    });
-
-  } catch (err) {
-    // Even on error, output minimal valid JSON and exit 0
-    outputAndExit({});
-  }
+    }));
 }
 
-// ============================================================================
-// Entry Point
-// ============================================================================
-
-// Handle stdin
-if (process.stdin.isTTY) {
-  // No stdin available, output minimal response
-  console.log('{}');
-  process.exit(0);
-} else {
-  // Read stdin and process
-  process.stdin.setEncoding('utf8');
-  main().catch(() => {
-    // On error, output minimal valid JSON and exit 0
-    console.log('{}');
-    process.exit(0);
-  });
-}
+// Entry point
+runHook(main, createStopResponse);

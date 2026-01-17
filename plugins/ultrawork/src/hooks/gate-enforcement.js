@@ -11,6 +11,12 @@
 const fs = require('fs');
 const path = require('path');
 const { isSessionActive, readSessionField, getSessionDir } = require('../lib/session-utils.js');
+const {
+  readStdin,
+  createPreToolUseAllow,
+  createPreToolUseBlock,
+  runHook
+} = require('../lib/hook-utils.js');
 
 /**
  * @typedef {import('../lib/types.js').Session} Session
@@ -28,29 +34,6 @@ const { isSessionActive, readSessionField, getSessionDir } = require('../lib/ses
  * @property {string} [tool_name]
  * @property {ToolInput} [tool_input]
  */
-
-/**
- * @typedef {Object} PreToolUseOutput
- * @property {Object} hookSpecificOutput
- * @property {string} hookSpecificOutput.hookEventName
- * @property {'allow' | 'block'} hookSpecificOutput.decision
- * @property {string} [hookSpecificOutput.reason]
- * @property {string} [hookSpecificOutput.additionalContext]
- */
-
-/**
- * Read all stdin data
- * @returns {Promise<string>}
- */
-async function readStdin() {
-  const chunks = [];
-
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
-  }
-
-  return chunks.join('');
-}
 
 /**
  * Check if file is allowed during PLANNING phase
@@ -102,7 +85,7 @@ function isFileAllowed(filePath) {
  * @param {string} filePath
  * @param {string} sessionId
  * @param {string} sessionFile
- * @returns {PreToolUseOutput}
+ * @returns {Object}
  */
 function createDenialResponse(tool, filePath, sessionId, sessionFile) {
   const reason = `${tool} blocked during PLANNING phase`;
@@ -129,27 +112,7 @@ If this is unexpected (orphaned session), cancel with:
 ALLOWED FILES DURING PLANNING:
 - *-design.md, session.json, context.json, exploration/*.md, docs/plans/*.md`;
 
-  return {
-    hookSpecificOutput: {
-      hookEventName: 'PreToolUse',
-      decision: 'block',
-      reason: reason,
-      additionalContext: additionalContext
-    }
-  };
-}
-
-/**
- * Create allow response
- * @returns {PreToolUseOutput}
- */
-function createAllowResponse() {
-  return {
-    hookSpecificOutput: {
-      hookEventName: 'PreToolUse',
-      decision: 'allow'
-    }
-  };
+  return createPreToolUseBlock(reason, additionalContext);
 }
 
 // ============================================================================
@@ -232,7 +195,7 @@ function hasTddRedEvidence(task) {
  * @param {string} tool
  * @param {string} filePath
  * @param {Task} task
- * @returns {PreToolUseOutput}
+ * @returns {Object}
  */
 function createTddViolationResponse(tool, filePath, task) {
   const reason = `${tool} blocked: TDD requires test-first approach`;
@@ -264,14 +227,7 @@ TEST FILE PATTERNS:
 - *.spec.ts, *.spec.js
 - __tests__/*.ts, __tests__/*.js`;
 
-  return {
-    hookSpecificOutput: {
-      hookEventName: 'PreToolUse',
-      decision: 'block',
-      reason: reason,
-      additionalContext: additionalContext
-    }
-  };
+  return createPreToolUseBlock(reason, additionalContext);
 }
 
 /**
@@ -281,110 +237,85 @@ TEST FILE PATTERNS:
 async function main() {
   // Import here to get path utilities
   const { getSessionFile } = require('../lib/session-utils.js');
+  const { outputAndExit } = require('../lib/hook-utils.js');
 
+  // Read stdin JSON
+  const input = await readStdin();
+  /** @type {HookInput} */
+  const hookInput = JSON.parse(input);
+
+  // Extract tool name
+  const toolName = hookInput.tool_name || '';
+
+  // Only process Edit and Write tools
+  if (toolName !== 'Edit' && toolName !== 'Write') {
+    outputAndExit(createPreToolUseAllow());
+  }
+
+  // Extract session ID
+  const sessionId = hookInput.session_id;
+
+  // No session - allow
+  if (!sessionId) {
+    outputAndExit(createPreToolUseAllow());
+  }
+
+  // Check if session is active
+  if (!isSessionActive(sessionId)) {
+    outputAndExit(createPreToolUseAllow());
+  }
+
+  // Get session file path for error message
+  const sessionFile = getSessionFile(sessionId);
+
+  // Get session phase (optimized: only reads phase field, not full JSON)
+  /** @type {string} */
+  let phase;
   try {
-    // Read stdin JSON
-    const input = await readStdin();
-    /** @type {HookInput} */
-    const hookInput = JSON.parse(input);
+    phase = readSessionField(sessionId, 'phase') || 'unknown';
+  } catch {
+    // Session file error - allow
+    outputAndExit(createPreToolUseAllow());
+  }
 
-    // Extract tool name
-    const toolName = hookInput.tool_name || '';
+  // Get file path from tool input
+  const filePath = hookInput.tool_input?.file_path || '';
 
-    // Only process Edit and Write tools
-    if (toolName !== 'Edit' && toolName !== 'Write') {
-      console.log(JSON.stringify(createAllowResponse()));
-      process.exit(0);
+  // =========================================================================
+  // Phase 1: PLANNING phase enforcement
+  // =========================================================================
+  if (phase === 'PLANNING') {
+    // Check if file is allowed during PLANNING
+    if (isFileAllowed(filePath)) {
+      outputAndExit(createPreToolUseAllow());
     }
 
-    // Extract session ID
-    const sessionId = hookInput.session_id;
+    // Block with clear message including session details
+    outputAndExit(createDenialResponse(toolName, filePath, sessionId, sessionFile));
+  }
 
-    // No session - allow
-    if (!sessionId) {
-      console.log(JSON.stringify(createAllowResponse()));
-      process.exit(0);
-    }
+  // =========================================================================
+  // Phase 2: TDD enforcement during EXECUTION phase
+  // =========================================================================
+  if (phase === 'EXECUTION') {
+    // Check for current TDD task
+    const tddTask = getCurrentTddTask(sessionId);
 
-    // Check if session is active
-    if (!isSessionActive(sessionId)) {
-      console.log(JSON.stringify(createAllowResponse()));
-      process.exit(0);
-    }
-
-    // Get session file path for error message
-    const sessionFile = getSessionFile(sessionId);
-
-    // Get session phase (optimized: only reads phase field, not full JSON)
-    /** @type {string} */
-    let phase;
-    try {
-      phase = readSessionField(sessionId, 'phase') || 'unknown';
-    } catch {
-      // Session file error - allow
-      console.log(JSON.stringify(createAllowResponse()));
-      process.exit(0);
-    }
-
-    // Get file path from tool input
-    const filePath = hookInput.tool_input?.file_path || '';
-
-    // =========================================================================
-    // Phase 1: PLANNING phase enforcement
-    // =========================================================================
-    if (phase === 'PLANNING') {
-      // Check if file is allowed during PLANNING
-      if (isFileAllowed(filePath)) {
-        console.log(JSON.stringify(createAllowResponse()));
-        process.exit(0);
-      }
-
-      // Block with clear message including session details
-      console.log(JSON.stringify(createDenialResponse(toolName, filePath, sessionId, sessionFile)));
-      process.exit(0);
-    }
-
-    // =========================================================================
-    // Phase 2: TDD enforcement during EXECUTION phase
-    // =========================================================================
-    if (phase === 'EXECUTION') {
-      // Check for current TDD task
-      const tddTask = getCurrentTddTask(sessionId);
-
-      if (tddTask) {
-        // If writing to a non-test file, check TDD-RED evidence
-        if (!isTestFile(filePath) && !isFileAllowed(filePath)) {
-          // Check if TDD-RED evidence exists
-          if (!hasTddRedEvidence(tddTask)) {
-            // Block: trying to write implementation before test
-            console.log(JSON.stringify(createTddViolationResponse(toolName, filePath, tddTask)));
-            process.exit(0);
-          }
+    if (tddTask) {
+      // If writing to a non-test file, check TDD-RED evidence
+      if (!isTestFile(filePath) && !isFileAllowed(filePath)) {
+        // Check if TDD-RED evidence exists
+        if (!hasTddRedEvidence(tddTask)) {
+          // Block: trying to write implementation before test
+          outputAndExit(createTddViolationResponse(toolName, filePath, tddTask));
         }
       }
     }
-
-    // Allow all other cases
-    console.log(JSON.stringify(createAllowResponse()));
-    process.exit(0);
-  } catch (err) {
-    // On error, allow (fail open for safety)
-    console.log(JSON.stringify(createAllowResponse()));
-    process.exit(0);
   }
+
+  // Allow all other cases
+  outputAndExit(createPreToolUseAllow());
 }
 
-// Handle stdin
-if (process.stdin.isTTY) {
-  // No stdin available, allow by default
-  console.log(JSON.stringify(createAllowResponse()));
-  process.exit(0);
-} else {
-  // Read stdin and process
-  process.stdin.setEncoding('utf8');
-  main().catch(() => {
-    // On error, allow (fail open)
-    console.log(JSON.stringify(createAllowResponse()));
-    process.exit(0);
-  });
-}
+// Entry point
+runHook(main, createPreToolUseAllow);

@@ -9,6 +9,11 @@
 const fs = require('fs');
 const path = require('path');
 const { getSessionDir, getSessionFile, isSessionActive, updateSession } = require('../lib/session-utils.js');
+const {
+  readStdin,
+  createPostToolUse,
+  runHook
+} = require('../lib/hook-utils.js');
 
 /**
  * @typedef {import('../lib/types.js').Session} Session
@@ -29,50 +34,14 @@ const { getSessionDir, getSessionFile, isSessionActive, updateSession } = requir
  */
 
 /**
- * @typedef {Object} PostToolUseOutput
- * @property {Object} hookSpecificOutput
- * @property {string} hookSpecificOutput.hookEventName
- * @property {string} [hookSpecificOutput.additionalContext]
- */
-
-/**
- * Read all stdin data
- * @returns {Promise<string>}
- */
-async function readStdin() {
-  const chunks = [];
-
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
-  }
-
-  return chunks.join('');
-}
-
-/**
- * Create empty response
- * @returns {PostToolUseOutput}
- */
-function createEmptyResponse() {
-  return {
-    hookSpecificOutput: {
-      hookEventName: 'PostToolUse'
-    }
-  };
-}
-
-/**
  * Create notification response
  * @param {string} message
- * @returns {PostToolUseOutput}
+ * @returns {Object}
  */
 function createNotificationResponse(message) {
-  return {
-    hookSpecificOutput: {
-      hookEventName: 'PostToolUse',
-      additionalContext: message
-    }
-  };
+  const output = createPostToolUse();
+  output.hookSpecificOutput.additionalContext = message;
+  return output;
 }
 
 /**
@@ -96,18 +65,17 @@ function isExplorerTask(hookInput) {
  * @returns {Promise<void>}
  */
 async function main() {
-  try {
-    // Read stdin JSON
-    const input = await readStdin();
-    /** @type {HookInput} */
-    const hookInput = JSON.parse(input);
+  // Read stdin JSON
+  const input = await readStdin();
+  /** @type {HookInput} */
+  const hookInput = JSON.parse(input);
 
     // Extract tool name
     const toolName = hookInput.tool_name || '';
 
     // Only process Task tool completions
     if (toolName !== 'Task' && toolName !== 'task') {
-      console.log(JSON.stringify(createEmptyResponse()));
+      console.log(JSON.stringify(createPostToolUse()));
       process.exit(0);
       return;
     }
@@ -117,7 +85,7 @@ async function main() {
 
     // No session - exit
     if (!sessionId) {
-      console.log(JSON.stringify(createEmptyResponse()));
+      console.log(JSON.stringify(createPostToolUse()));
       process.exit(0);
       return;
     }
@@ -128,7 +96,7 @@ async function main() {
 
     // Session file doesn't exist - exit
     if (!fs.existsSync(sessionFile)) {
-      console.log(JSON.stringify(createEmptyResponse()));
+      console.log(JSON.stringify(createPostToolUse()));
       process.exit(0);
       return;
     }
@@ -140,7 +108,7 @@ async function main() {
       const content = fs.readFileSync(sessionFile, 'utf-8');
       session = JSON.parse(content);
     } catch {
-      console.log(JSON.stringify(createEmptyResponse()));
+      console.log(JSON.stringify(createPostToolUse()));
       process.exit(0);
       return;
     }
@@ -150,7 +118,7 @@ async function main() {
 
     // Only notify during PLANNING phase
     if (phase !== 'PLANNING') {
-      console.log(JSON.stringify(createEmptyResponse()));
+      console.log(JSON.stringify(createPostToolUse()));
       process.exit(0);
       return;
     }
@@ -194,7 +162,7 @@ NEXT ACTION:
           const contextContent = fs.readFileSync(contextPath, 'utf-8');
           context = JSON.parse(contextContent);
         } catch {
-          console.log(JSON.stringify(createEmptyResponse()));
+          console.log(JSON.stringify(createPostToolUse()));
           process.exit(0);
           return;
         }
@@ -253,7 +221,7 @@ GATE 4 (Execution) → READY
 
 NEXT ACTION:
 Ask user for plan approval, then:
-session-update.js --session SESSION_DIR --phase EXECUTION`;
+session-update.js --session ${CLAUDE_SESSION_ID} --phase EXECUTION`;
 
         console.log(JSON.stringify(createNotificationResponse(message)));
         process.exit(0);
@@ -262,26 +230,9 @@ session-update.js --session SESSION_DIR --phase EXECUTION`;
     }
 
     // No notification needed
-    console.log(JSON.stringify(createEmptyResponse()));
+    console.log(JSON.stringify(createPostToolUse()));
     process.exit(0);
-  } catch (err) {
-    // On error, output empty response
-    console.log(JSON.stringify(createEmptyResponse()));
-    process.exit(0);
-  }
 }
 
-// Handle stdin
-if (process.stdin.isTTY) {
-  // No stdin available, output empty response
-  console.log(JSON.stringify(createEmptyResponse()));
-  process.exit(0);
-} else {
-  // Read stdin and process
-  process.stdin.setEncoding('utf8');
-  main().catch(() => {
-    // On error, output empty response
-    console.log(JSON.stringify(createEmptyResponse()));
-    process.exit(0);
-  });
-}
+// Entry point
+runHook(main, createPostToolUse);

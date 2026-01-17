@@ -88,7 +88,7 @@ Use these scripts for session operations:
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Get session directory path
-SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 # Get session data
 bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
@@ -114,7 +114,7 @@ bun "$SCRIPTS/context-add.js" --session ${CLAUDE_SESSION_ID} \
 **Exploration files MUST go to SESSION_DIR:**
 
 ```bash
-SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 # ✅ CORRECT: Write to session directory
 Write(file_path="$SESSION_DIR/exploration/{EXPLORER_ID}.md")
@@ -186,7 +186,7 @@ Read(file_path="src/index.ts")
 
 ```bash
 # First, get session directory
-SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 ```
 
 **Overview Template:**

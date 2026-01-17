@@ -7,12 +7,12 @@ Turn ambiguous ideas into clear, validated designs through dialogue.
 ## The Flow
 
 ```
-For each decision point:
+For each batch of related decision points (max 4 per call):
   1. Present brief context (what you found)
-  2. Ask ONE question with options
+  2. Ask questions with options (batch related)
   3. Wait for response
-  4. Record decision
-  5. Move to next question
+  4. Record decisions
+  5. Move to next batch
 ```
 
 ---
@@ -24,7 +24,7 @@ For each decision point:
 | **Batch related** | Group related questions (max 4 per AskUserQuestion call) |
 | **Multiple choice** | Prefer options over open-ended when possible |
 | **Recommend** | Add "(Recommended)" to your suggested option |
-| **Max 4 options** | Keep choices manageable |
+| **Max 4 options per question** | Keep choices manageable for each question |
 | **Lead with why** | Briefly explain why you're asking |
 
 ---
