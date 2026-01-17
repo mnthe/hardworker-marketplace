@@ -51,12 +51,34 @@ SUB_TEAM: {sub-team name}
 WAVE_ID: {wave number}
 ```
 
+---
+
+<WARNING>
+**SCRIPTS_PATH is NOT an environment variable.**
+
+The value `SCRIPTS_PATH: /path/to/scripts` in your prompt is text, not a shell variable. When writing bash commands:
+
+**WRONG** (will fail):
+```bash
+bun "$SCRIPTS_PATH/task-list.js"  # Shell cannot expand $SCRIPTS_PATH
+```
+
+**CORRECT** (substitute the actual value):
+```bash
+bun "/path/to/scripts/task-list.js"  # Use the value from your prompt directly
+```
+
+Always extract the path from your prompt and use it directly in commands.
+</WARNING>
+
+---
+
 ## Utility Scripts
 
-SCRIPTS_PATH is provided in your prompt and points to the teamwork scripts directory.
+SCRIPTS_PATH is provided in your prompt - substitute its actual value into commands:
 
 ```bash
-# Get all tasks for the wave
+# Get all tasks for the wave (use actual path from prompt)
 bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --format json
 
 # Get task details

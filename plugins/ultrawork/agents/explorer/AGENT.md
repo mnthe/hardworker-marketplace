@@ -83,10 +83,28 @@ CONTEXT: {summary from overview, optional}
 
 ## Utility Scripts
 
+<WARNING>
+**SCRIPTS_PATH is NOT an environment variable.**
+
+The value `SCRIPTS_PATH: /path/to/scripts` in your prompt is text, not a shell variable. When writing bash commands:
+
+**WRONG** (will fail):
+```bash
+bun "$SCRIPTS_PATH/session-get.js"  # Shell cannot expand $SCRIPTS_PATH
+```
+
+**CORRECT** (substitute the actual value):
+```bash
+bun "/path/to/scripts/session-get.js"  # Use the value from your prompt directly
+```
+
+Always extract the path from your prompt and use it directly in commands.
+</WARNING>
+
 Use these scripts for session operations:
 
 ```bash
-# SCRIPTS_PATH is provided in the prompt
+# SCRIPTS_PATH value comes from your prompt input (substitute the actual path)
 # Get session directory path
 SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 

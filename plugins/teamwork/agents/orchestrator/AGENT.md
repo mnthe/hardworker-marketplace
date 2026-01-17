@@ -67,11 +67,33 @@ Options:
 - max_iterations: {number, default 1000}
 ```
 
+---
+
+<WARNING>
+**SCRIPTS_PATH is NOT an environment variable.**
+
+The value `SCRIPTS_PATH: /path/to/scripts` in your prompt is text, not a shell variable. When writing bash commands:
+
+**WRONG** (will fail):
+```bash
+bun "$SCRIPTS_PATH/task-list.js"  # Shell cannot expand $SCRIPTS_PATH
+```
+
+**CORRECT** (substitute the actual value):
+```bash
+bun "/path/to/scripts/task-list.js"  # Use the value from your prompt directly
+```
+
+Always extract the path from your prompt and use it directly in commands.
+</WARNING>
+
+---
+
 ## Utility Scripts
 
 ```bash
-# SCRIPTS_PATH is provided in the prompt
-# Use $SCRIPTS_PATH directly in commands
+# SCRIPTS_PATH value comes from your prompt input (see Input Format above)
+# Substitute the actual value into commands (do NOT use shell variable syntax)
 
 # Project management
 bun "$SCRIPTS_PATH/project-create.js" --project {PROJECT} --team {SUB_TEAM} --goal "..."
