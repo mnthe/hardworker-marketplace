@@ -120,6 +120,7 @@ claude --plugin-dir /path/to/teamwork
 | `/teamwork-status` | View dashboard with progress metrics and active workers | `--project NAME`, `--team NAME`, `--verbose`                              |
 | `/teamwork-worker` | Claim and complete one task (one-shot mode)             | `--loop`, `--role ROLE`, `--strict` (v2), `--project NAME`, `--team NAME` |
 | `/teamwork-verify` | Trigger manual verification (v2)                        | `--wave N`, `--final`, `--project NAME`, `--team NAME`                    |
+| `/teamwork-clean`  | Clean project by deleting task and verification directories | `--project NAME`, `--team NAME`                                      |
 
 ### Options
 
