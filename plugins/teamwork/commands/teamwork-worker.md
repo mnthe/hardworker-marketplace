@@ -1,8 +1,8 @@
 ---
 name: teamwork-worker
 description: "Claim and complete teamwork tasks (one-shot or continuous loop)"
-argument-hint: "[--project NAME] [--team NAME] [--role ROLE] [--loop] [--strict] [--fresh-start-interval N] | --help"
-allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/worker-setup.js:*)", "Task", "TaskOutput", "Read", "Edit", "mcp__plugin_serena_serena__activate_project"]
+argument-hint: "[--project NAME] [--team NAME] [--role ROLE] [--loop] [--strict] [--fresh-start-interval N] [--poll-interval N] | --help"
+allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/worker-setup.js:*)", "Bash(sleep:*)", "Task", "TaskOutput", "Read", "Edit", "mcp__plugin_serena_serena__activate_project"]
 ---
 
 # Teamwork Worker Command
@@ -54,11 +54,48 @@ Parse the output to get:
 - Loop mode (true/false)
 - Strict mode (true/false)
 - Fresh start interval (number, default 10)
+- Poll interval (number, default 30 seconds)
 - Teamwork directory path
 
-**If no project found:** Show error and suggest `/teamwork "goal"` first.
+### Polling Mode (when `--loop` is enabled)
 
-**If `--loop` mode:**
+**If worker-setup.js fails (no project found or no open tasks) AND `--loop` is enabled:**
+
+Instead of exiting with error, enter polling mode:
+
+```python
+poll_interval = args.poll_interval or 30  # seconds
+max_retries = None  # infinite until manual stop
+
+while True:
+    result = run_worker_setup()
+
+    if result.success:
+        break  # Project found and tasks available
+
+    # Output timestamped status
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    if "No teamwork project found" in result.error:
+        print(f"[{timestamp}] Waiting for project {project}/{team}...")
+    elif "No open tasks" in result.error:
+        print(f"[{timestamp}] No available tasks (role: {role}). Waiting {poll_interval}s...")
+
+    # Wait before retry
+    sleep(poll_interval)
+```
+
+**Output format during polling:**
+```
+[15:50:30] Waiting for project item-search/master...
+[15:51:00] Waiting for project item-search/master...
+[15:51:30] Project found: item-search/master
+[15:51:30] Found 5 open tasks. Starting worker...
+```
+
+**If `--loop` is NOT enabled:**
+Show error and suggest `/teamwork "goal"` first (existing behavior).
+
+**If `--loop` mode and project ready:**
 Register loop state for this terminal:
 
 ```!
@@ -221,9 +258,10 @@ Exit and report completion.
 | `--project NAME` | Override project name (default: git repo name) |
 | `--team NAME` | Override sub-team name (default: branch name) |
 | `--role ROLE` | Only claim tasks with this role |
-| `--loop` | Continuous mode - keep claiming tasks |
+| `--loop` | Continuous mode - keep claiming tasks, enables polling when project/tasks not found |
 | `--strict` | Enable strict evidence mode (require concrete verification for all criteria) |
 | `--fresh-start-interval N` | Reset context every N tasks (default: 10, 0 = disabled) |
+| `--poll-interval N` | Seconds to wait between polling attempts in loop mode (default: 30) |
 
 ## Role Options
 
@@ -277,6 +315,14 @@ Exit and report completion.
 
 # Specific project
 /teamwork-worker --project myapp --team feature-x
+
+# Start worker before project exists (polling mode)
+# Worker will wait for project to be created by orchestrator
+/teamwork-worker --loop
+# Output: [15:50:30] Waiting for project item-search/master...
+
+# Custom poll interval (60 seconds)
+/teamwork-worker --loop --poll-interval 60
 ```
 
 ### Agent Selection Examples
