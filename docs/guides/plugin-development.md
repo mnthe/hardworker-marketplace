@@ -502,6 +502,34 @@ try {
 }
 ```
 
+### Calling Scripts from Agents
+
+When agents need to call scripts, they cannot rely on `${CLAUDE_PLUGIN_ROOT}` being available as a shell environment variable. Claude Code expands this variable in command/hook files at load time, but NOT in agent markdown content.
+
+**Pattern**: Commands pass `SCRIPTS_PATH` to agents via their prompt.
+
+**In command file** (commands/myplugin-start.md):
+```markdown
+Spawn the worker agent with:
+- Task: ultrawork:worker
+- Prompt parameters:
+  - SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
+  - SESSION_ID: {session-id}
+```
+
+**In agent file** (agents/worker/AGENT.md):
+```markdown
+## Utility Scripts
+
+SCRIPTS_PATH is provided in the prompt. Use it directly:
+
+\`\`\`bash
+bun "$SCRIPTS_PATH/task-update.js" --session {SESSION_ID} --id 1 --status resolved
+\`\`\`
+```
+
+**DO NOT** define `SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"` in agent markdown - this will fail because `CLAUDE_PLUGIN_ROOT` is not a shell environment variable.
+
 ### Cross-Platform Paths
 
 ```javascript
