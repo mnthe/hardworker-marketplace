@@ -120,6 +120,14 @@ async function main() {
 
       // Update status if provided
       if (args.status) {
+        // Validate status value - only allow valid task statuses
+        const validStatuses = ['open', 'in_progress', 'resolved'];
+        if (!validStatuses.includes(args.status)) {
+          console.error(`Error: Invalid status "${args.status}". Valid values: ${validStatuses.join(', ')}`);
+          console.error('  Note: "pending" is NOT a valid task status (use "open" instead)');
+          process.exit(1);
+        }
+
         task.status = args.status;
 
         // Set completed_at when marking as resolved

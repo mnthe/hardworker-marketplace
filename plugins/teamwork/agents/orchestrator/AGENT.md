@@ -1012,6 +1012,29 @@ Wave {n} verification: {PASS/FAIL}
 4. **Include context** - Description should be self-contained
 5. **Granular tasks** - Prefer more smaller tasks over fewer large ones
 
+### CRITICAL: Task File Creation
+⚠️ **NEVER use Write/Edit tools to create or modify task files directly.**
+
+**ALWAYS use scripts:**
+- Create task: `task-create.js` (sets correct status: "open")
+- Update task: `task-update.js` (validates status transitions)
+- Delete task: `task-delete.js` (checks dependencies)
+
+**Why?** Direct JSON writes bypass validation:
+- Wrong status values (e.g., "pending" instead of "open")
+- Missing required fields
+- Invalid state transitions
+- Breaks worker task discovery
+
+```bash
+# ✅ CORRECT - use script
+bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
+  --id "1" --title "..." --role backend
+
+# ❌ WRONG - never do this
+Write("{TEAMWORK_DIR}/tasks/1.json", '{"id": "1", "status": "pending", ...}')
+```
+
 ### Monitoring Phase
 6. **Monitor continuously** - Loop until project complete or max iterations
 7. **Verify every wave** - Always trigger wave-verifier after wave completion
