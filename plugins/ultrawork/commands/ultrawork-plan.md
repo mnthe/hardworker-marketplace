@@ -300,7 +300,7 @@ Store user's choice for planner to use when creating tasks.
 
 #### 3c. Clarify Requirements (Brainstorm Protocol)
 
-**Ask related questions in batches (max 4 per AskUserQuestion call).** Reference `skills/planning/SKILL.md` Phase 2-3 and `commands/references/03-interview.md`.
+**Batch related questions (max 4 per call).** Reference `skills/planning/SKILL.md` Phase 2-3 and `commands/references/03-interview.md`.
 
 For each ambiguous or unclear aspect:
 

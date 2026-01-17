@@ -258,7 +258,7 @@ Based on the goal "{goal}", I found:
 
 #### 3c. Clarify Requirements (Brainstorm Protocol)
 
-**Ask related questions in batches (max 4 per AskUserQuestion call).** Reference `commands/references/03-interview.md` for full interview protocol.
+**Batch related questions (max 4 per call).** Reference `commands/references/03-interview.md` for full interview protocol.
 
 For ambiguous or unclear aspects:
 
