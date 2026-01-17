@@ -186,6 +186,137 @@ async function resumeSession(sessionId) {
 }
 
 // ============================================================================
+// Worktree Setup Logic
+// ============================================================================
+
+const { execSync } = require('child_process');
+
+/**
+ * Generate branch name from goal
+ * @param {string} goal - The ultrawork goal
+ * @returns {string} Branch name in format ultrawork/{slug}-{date}
+ */
+function generateBranchName(goal) {
+  // Slugify goal: lowercase, remove special chars, spaces to hyphens, limit length
+  const slug = goal
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .substring(0, 40)
+    .replace(/-$/, '');
+
+  // Add date
+  const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  return `ultrawork/${slug}-${date}`;
+}
+
+/**
+ * Check if path is ignored by git
+ * @param {string} pathToCheck - Path to check
+ * @returns {boolean} True if ignored
+ */
+function isGitIgnored(pathToCheck) {
+  try {
+    execSync(`git check-ignore -q "${pathToCheck}"`, { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Setup git worktree for isolated development
+ * @param {string} branchName - Branch name to create
+ * @param {string} originalDir - Original project directory
+ * @returns {{worktreePath: string, branchName: string}} Worktree info
+ */
+function setupWorktree(branchName, originalDir) {
+  const worktreesDir = path.join(originalDir, '.worktrees');
+  const worktreeName = branchName.replace(/^ultrawork\//, '');
+  const worktreePath = path.join(worktreesDir, worktreeName);
+
+  // 1. Ensure .worktrees directory exists
+  if (!fs.existsSync(worktreesDir)) {
+    fs.mkdirSync(worktreesDir, { recursive: true });
+    console.log(`📁 Created .worktrees directory`);
+  }
+
+  // 2. Check if .worktrees is in .gitignore
+  if (!isGitIgnored('.worktrees')) {
+    const gitignorePath = path.join(originalDir, '.gitignore');
+    let gitignoreContent = '';
+
+    if (fs.existsSync(gitignorePath)) {
+      gitignoreContent = fs.readFileSync(gitignorePath, 'utf-8');
+    }
+
+    // Add .worktrees/ to .gitignore
+    if (!gitignoreContent.includes('.worktrees')) {
+      const newContent = gitignoreContent.trim() + '\n\n# Ultrawork worktrees\n.worktrees/\n';
+      fs.writeFileSync(gitignorePath, newContent, 'utf-8');
+      console.log(`📝 Added .worktrees/ to .gitignore`);
+
+      // Commit the .gitignore change
+      try {
+        execSync('git add .gitignore && git commit -m "chore: add .worktrees to gitignore"', {
+          cwd: originalDir,
+          stdio: 'ignore'
+        });
+        console.log(`✅ Committed .gitignore change`);
+      } catch {
+        // Ignore if commit fails (maybe already committed or no changes)
+      }
+    }
+  }
+
+  // 3. Check if worktree already exists
+  if (fs.existsSync(worktreePath)) {
+    console.log(`⚠️  Worktree already exists at ${worktreePath}`);
+    return { worktreePath, branchName };
+  }
+
+  // 4. Create worktree with new branch
+  try {
+    execSync(`git worktree add "${worktreePath}" -b "${branchName}"`, {
+      cwd: originalDir,
+      stdio: 'pipe'
+    });
+    console.log(`🌳 Created worktree: ${worktreePath}`);
+    console.log(`🌿 Created branch: ${branchName}`);
+  } catch (err) {
+    // Branch might already exist, try without -b
+    try {
+      execSync(`git worktree add "${worktreePath}" "${branchName}"`, {
+        cwd: originalDir,
+        stdio: 'pipe'
+      });
+      console.log(`🌳 Created worktree using existing branch: ${branchName}`);
+    } catch (err2) {
+      console.error(`❌ Failed to create worktree: ${err2.message}`);
+      throw err2;
+    }
+  }
+
+  // 5. Run project setup if package.json exists
+  const packageJsonPath = path.join(worktreePath, 'package.json');
+  if (fs.existsSync(packageJsonPath)) {
+    console.log(`📦 Running npm install in worktree...`);
+    try {
+      execSync('npm install', {
+        cwd: worktreePath,
+        stdio: 'inherit'
+      });
+      console.log(`✅ Dependencies installed`);
+    } catch {
+      console.log(`⚠️  npm install failed, continuing anyway`);
+    }
+  }
+
+  return { worktreePath, branchName };
+}
+
+// ============================================================================
 // Session Creation Logic
 // ============================================================================
 
@@ -195,7 +326,7 @@ async function resumeSession(sessionId) {
  * @returns {void}
  */
 function createSession(args) {
-  const { sessionId, goal, maxWorkers, maxIterations, skipVerify, planOnly, autoMode, force } =
+  const { sessionId, goal, maxWorkers, maxIterations, skipVerify, planOnly, autoMode, force, worktree, branch } =
     args;
 
   const sessionFile = getSessionFile(sessionId);
@@ -233,15 +364,28 @@ function createSession(args) {
   // Generate timestamp
   const timestamp = new Date().toISOString();
 
-  // Get working directory (project root)
-  const workingDir = process.cwd();
+  // Get original working directory
+  const originalDir = process.cwd();
+
+  // Setup worktree if requested
+  let workingDir = originalDir;
+  let worktreeInfo = null;
+
+  if (worktree) {
+    const branchName = branch || generateBranchName(goal);
+    console.log(`\n🔧 Setting up worktree...`);
+    worktreeInfo = setupWorktree(branchName, originalDir);
+    workingDir = worktreeInfo.worktreePath;
+    console.log(`\n`);
+  }
 
   // Create session.json
   /** @type {Session} */
   const session = {
-    version: '6.0',
+    version: '6.1',
     session_id: sessionId,
     working_dir: workingDir,
+    original_dir: worktreeInfo ? originalDir : null,
     goal: goal,
     started_at: timestamp,
     updated_at: timestamp,
@@ -258,6 +402,12 @@ function createSession(args) {
       plan_only: planOnly,
       auto_mode: autoMode,
     },
+    worktree: worktreeInfo ? {
+      enabled: true,
+      branch: worktreeInfo.branchName,
+      path: worktreeInfo.worktreePath,
+      created_at: timestamp,
+    } : null,
     evidence_log: [],
     cancelled_at: null,
   };
@@ -303,6 +453,17 @@ function createSession(args) {
   const executionIcon = planOnly ? '[⊘]' : '[ ]';
   const verificationIcon = skipVerify || planOnly ? '[⊘]' : '[ ]';
 
+  // Worktree section (only shown if enabled)
+  const worktreeSection = worktreeInfo ? `
+───────────────────────────────────────────────────────────
+ WORKTREE (Isolated Development)
+───────────────────────────────────────────────────────────
+
+ Branch:      ${worktreeInfo.branchName}
+ Path:        ${worktreeInfo.worktreePath}
+ Original:    ${originalDir}
+` : '';
+
   console.log(`\
 ═══════════════════════════════════════════════════════════
  ULTRAWORK SESSION STARTED
@@ -323,7 +484,8 @@ function createSession(args) {
  Skip verify:    ${skipVerify}
  Plan only:      ${planOnly}
  Auto mode:      ${autoMode}
-
+ Worktree:       ${worktree}
+${worktreeSection}
 ───────────────────────────────────────────────────────────
  SESSION DIRECTORY (Internal Metadata)
 ───────────────────────────────────────────────────────────

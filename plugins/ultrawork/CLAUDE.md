@@ -17,6 +17,7 @@ Key features:
 - TDD support with test-first enforcement
 - Evidence collection via lifecycle hooks
 - Ralph loop (return to EXECUTION on verification failure)
+- **Worktree support** for isolated development (v6.1+)
 
 ## File Structure
 
@@ -185,9 +186,10 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 ```json
 {
-  "version": "6.0",
+  "version": "6.1",
   "session_id": "abc-123",
   "working_dir": "/path/to/project",
+  "original_dir": null,
   "goal": "Implement user authentication",
   "started_at": "2026-01-12T10:00:00Z",
   "updated_at": "2026-01-12T10:05:00Z",
@@ -204,8 +206,24 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
     "plan_only": false,
     "auto_mode": false
   },
+  "worktree": null,
   "evidence_log": [],
   "cancelled_at": null
+}
+```
+
+**With worktree enabled** (`/ultrawork "goal" --worktree`):
+```json
+{
+  "version": "6.1",
+  "working_dir": "/project/.worktrees/user-auth-2026-01-17",
+  "original_dir": "/project",
+  "worktree": {
+    "enabled": true,
+    "branch": "ultrawork/user-auth-2026-01-17",
+    "path": "/project/.worktrees/user-auth-2026-01-17",
+    "created_at": "2026-01-17T10:00:00Z"
+  }
 }
 ```
 

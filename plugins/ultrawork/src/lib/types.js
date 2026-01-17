@@ -25,10 +25,19 @@
  */
 
 /**
+ * @typedef {Object} WorktreeInfo
+ * @property {boolean} enabled
+ * @property {string} branch
+ * @property {string} path
+ * @property {string} created_at
+ */
+
+/**
  * @typedef {Object} Session
  * @property {string} version
  * @property {string} session_id
  * @property {string} working_dir
+ * @property {string | null} [original_dir] - Original project dir when using worktree
  * @property {string} goal
  * @property {string} started_at
  * @property {string} updated_at
@@ -37,6 +46,7 @@
  * @property {number} iteration
  * @property {{ approved_at: string | null }} plan
  * @property {SessionOptions} options
+ * @property {WorktreeInfo | null} [worktree] - Worktree info when enabled
  * @property {EvidenceEntry[]} evidence_log
  * @property {string | null} cancelled_at
  */
