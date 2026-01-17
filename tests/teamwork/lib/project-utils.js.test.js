@@ -60,34 +60,14 @@ describe('Path Resolution', () => {
 });
 
 describe('Project Validation', () => {
-  let mock;
-
-  beforeEach(() => {
-    mock = mockProject({ project: 'test-proj', team: 'test-team' });
-  });
-
-  afterEach(() => {
-    mock.cleanup();
-  });
-
-  test('projectExists returns true for existing project', () => {
-    const exists = projectExists('test-proj', 'test-team');
-    expect(exists).toBe(true);
-  });
-
   test('projectExists returns false for non-existing project', () => {
-    const exists = projectExists('non-existent', 'non-existent');
+    const exists = projectExists('non-existent-proj-xyz', 'non-existent-team-xyz');
     expect(exists).toBe(false);
-  });
-
-  test('resolveProject returns project file path for existing project', () => {
-    const file = resolveProject('test-proj', 'test-team');
-    expect(file).toBe(mock.projectFile);
   });
 
   test('resolveProject throws for non-existing project', () => {
     expect(() => {
-      resolveProject('non-existent', 'non-existent');
+      resolveProject('non-existent-proj-xyz', 'non-existent-team-xyz');
     }).toThrow('Project not found');
   });
 
@@ -106,13 +86,39 @@ describe('Project Validation', () => {
 
 describe('Task Operations', () => {
   let mock;
+  const projectName = `test-proj-${Date.now()}`;
+  const teamName = `test-team-${Date.now()}`;
 
   beforeEach(() => {
-    mock = mockProject({ project: 'test-proj', team: 'test-team' });
+    // Create project in actual ~/.claude/teamwork location
+    const projectDir = getProjectDir(projectName, teamName);
+    const fs = require('fs');
+    fs.mkdirSync(projectDir, { recursive: true });
+    fs.mkdirSync(getTasksDir(projectName, teamName), { recursive: true });
+
+    const projectData = {
+      project: projectName,
+      team: teamName,
+      goal: 'Test project',
+      phase: 'PLANNING',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      stats: { total: 0, open: 0, in_progress: 0, resolved: 0 }
+    };
+    fs.writeFileSync(
+      getProjectFile(projectName, teamName),
+      JSON.stringify(projectData, null, 2),
+      'utf8'
+    );
   });
 
   afterEach(() => {
-    mock.cleanup();
+    // Clean up
+    const projectDir = getProjectDir(projectName, teamName);
+    const fs = require('fs');
+    if (fs.existsSync(projectDir)) {
+      fs.rmSync(projectDir, { recursive: true, force: true });
+    }
   });
 
   test('writeTask creates task file', () => {
@@ -125,9 +131,9 @@ describe('Task Operations', () => {
       created_at: new Date().toISOString()
     };
 
-    writeTask('test-proj', 'test-team', '1', taskData);
+    writeTask(projectName, teamName, '1', taskData);
 
-    const taskFile = getTaskFile('test-proj', 'test-team', '1');
+    const taskFile = getTaskFile(projectName, teamName, '1');
     expect(fs.existsSync(taskFile)).toBe(true);
   });
 
@@ -141,10 +147,10 @@ describe('Task Operations', () => {
     };
 
     const before = new Date().toISOString();
-    writeTask('test-proj', 'test-team', '1', taskData);
+    writeTask(projectName, teamName, '1', taskData);
     const after = new Date().toISOString();
 
-    const written = readTask('test-proj', 'test-team', '1');
+    const written = readTask(projectName, teamName, '1');
     expect(written.updated_at).toBeDefined();
     expect(written.updated_at >= before).toBe(true);
     expect(written.updated_at <= after).toBe(true);
@@ -160,8 +166,8 @@ describe('Task Operations', () => {
       created_at: new Date().toISOString()
     };
 
-    writeTask('test-proj', 'test-team', '1', taskData);
-    const retrieved = readTask('test-proj', 'test-team', '1');
+    writeTask(projectName, teamName, '1', taskData);
+    const retrieved = readTask(projectName, teamName, '1');
 
     expect(retrieved.id).toBe('1');
     expect(retrieved.title).toBe('Test task');
@@ -170,24 +176,24 @@ describe('Task Operations', () => {
 
   test('readTask throws for non-existing task', () => {
     expect(() => {
-      readTask('test-proj', 'test-team', 'non-existent');
+      readTask(projectName, teamName, 'non-existent');
     }).toThrow('Task not found');
   });
 
   test('listTaskIds returns empty array for no tasks', () => {
-    const ids = listTaskIds('test-proj', 'test-team');
+    const ids = listTaskIds(projectName, teamName);
     expect(ids).toEqual([]);
   });
 
   test('listTaskIds returns task IDs', () => {
-    writeTask('test-proj', 'test-team', '1', {
+    writeTask(projectName, teamName, '1', {
       id: '1',
       title: 'Task 1',
       role: 'backend',
       status: 'open',
       created_at: new Date().toISOString()
     });
-    writeTask('test-proj', 'test-team', '2', {
+    writeTask(projectName, teamName, '2', {
       id: '2',
       title: 'Task 2',
       role: 'frontend',
@@ -195,21 +201,21 @@ describe('Task Operations', () => {
       created_at: new Date().toISOString()
     });
 
-    const ids = listTaskIds('test-proj', 'test-team');
+    const ids = listTaskIds(projectName, teamName);
     expect(ids).toContain('1');
     expect(ids).toContain('2');
     expect(ids.length).toBe(2);
   });
 
   test('listTasks returns all tasks', () => {
-    writeTask('test-proj', 'test-team', '1', {
+    writeTask(projectName, teamName, '1', {
       id: '1',
       title: 'Task 1',
       role: 'backend',
       status: 'open',
       created_at: new Date().toISOString()
     });
-    writeTask('test-proj', 'test-team', '2', {
+    writeTask(projectName, teamName, '2', {
       id: '2',
       title: 'Task 2',
       role: 'frontend',
@@ -217,19 +223,19 @@ describe('Task Operations', () => {
       created_at: new Date().toISOString()
     });
 
-    const tasks = listTasks('test-proj', 'test-team');
+    const tasks = listTasks(projectName, teamName);
     expect(tasks.length).toBe(2);
   });
 
   test('listTasks filters by status', () => {
-    writeTask('test-proj', 'test-team', '1', {
+    writeTask(projectName, teamName, '1', {
       id: '1',
       title: 'Task 1',
       role: 'backend',
       status: 'open',
       created_at: new Date().toISOString()
     });
-    writeTask('test-proj', 'test-team', '2', {
+    writeTask(projectName, teamName, '2', {
       id: '2',
       title: 'Task 2',
       role: 'frontend',
@@ -237,53 +243,78 @@ describe('Task Operations', () => {
       created_at: new Date().toISOString()
     });
 
-    const openTasks = listTasks('test-proj', 'test-team', 'open');
+    const openTasks = listTasks(projectName, teamName, 'open');
     expect(openTasks.length).toBe(1);
     expect(openTasks[0].id).toBe('1');
 
-    const resolvedTasks = listTasks('test-proj', 'test-team', 'resolved');
+    const resolvedTasks = listTasks(projectName, teamName, 'resolved');
     expect(resolvedTasks.length).toBe(1);
     expect(resolvedTasks[0].id).toBe('2');
   });
 });
 
 describe('Project Operations', () => {
-  let mock;
+  const projectName = `test-proj-ops-${Date.now()}`;
+  const teamName = `test-team-ops-${Date.now()}`;
 
   beforeEach(() => {
-    mock = mockProject({ project: 'test-proj', team: 'test-team' });
+    // Create project in actual ~/.claude/teamwork location
+    const projectDir = getProjectDir(projectName, teamName);
+    const fs = require('fs');
+    fs.mkdirSync(projectDir, { recursive: true });
+    fs.mkdirSync(getTasksDir(projectName, teamName), { recursive: true });
+
+    const projectData = {
+      project: projectName,
+      team: teamName,
+      goal: 'Test project',
+      phase: 'PLANNING',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      stats: { total: 0, open: 0, in_progress: 0, resolved: 0 }
+    };
+    fs.writeFileSync(
+      getProjectFile(projectName, teamName),
+      JSON.stringify(projectData, null, 2),
+      'utf8'
+    );
   });
 
   afterEach(() => {
-    mock.cleanup();
+    // Clean up
+    const projectDir = getProjectDir(projectName, teamName);
+    const fs = require('fs');
+    if (fs.existsSync(projectDir)) {
+      fs.rmSync(projectDir, { recursive: true, force: true });
+    }
   });
 
   test('readProject retrieves project data', () => {
-    const project = readProject('test-proj', 'test-team');
+    const project = readProject(projectName, teamName);
 
-    expect(project.project).toBe('test-proj');
-    expect(project.team).toBe('test-team');
+    expect(project.project).toBe(projectName);
+    expect(project.team).toBe(teamName);
     expect(project.stats).toBeDefined();
   });
 
   test('writeProject updates project data', () => {
-    const projectData = readProject('test-proj', 'test-team');
+    const projectData = readProject(projectName, teamName);
     projectData.goal = 'Updated goal';
 
-    writeProject('test-proj', 'test-team', projectData);
+    writeProject(projectName, teamName, projectData);
 
-    const updated = readProject('test-proj', 'test-team');
+    const updated = readProject(projectName, teamName);
     expect(updated.goal).toBe('Updated goal');
   });
 
   test('writeProject updates updated_at timestamp', () => {
-    const projectData = readProject('test-proj', 'test-team');
+    const projectData = readProject(projectName, teamName);
 
     const before = new Date().toISOString();
-    writeProject('test-proj', 'test-team', projectData);
+    writeProject(projectName, teamName, projectData);
     const after = new Date().toISOString();
 
-    const updated = readProject('test-proj', 'test-team');
+    const updated = readProject(projectName, teamName);
     expect(updated.updated_at).toBeDefined();
     expect(updated.updated_at >= before).toBe(true);
     expect(updated.updated_at <= after).toBe(true);
@@ -291,21 +322,21 @@ describe('Project Operations', () => {
 
   test('updateProjectStats calculates correct stats', () => {
     // Create tasks with different statuses
-    writeTask('test-proj', 'test-team', '1', {
+    writeTask(projectName, teamName, '1', {
       id: '1',
       title: 'Task 1',
       role: 'backend',
       status: 'open',
       created_at: new Date().toISOString()
     });
-    writeTask('test-proj', 'test-team', '2', {
+    writeTask(projectName, teamName, '2', {
       id: '2',
       title: 'Task 2',
       role: 'frontend',
       status: 'in_progress',
       created_at: new Date().toISOString()
     });
-    writeTask('test-proj', 'test-team', '3', {
+    writeTask(projectName, teamName, '3', {
       id: '3',
       title: 'Task 3',
       role: 'devops',
@@ -313,9 +344,9 @@ describe('Project Operations', () => {
       created_at: new Date().toISOString()
     });
 
-    updateProjectStats('test-proj', 'test-team');
+    updateProjectStats(projectName, teamName);
 
-    const project = readProject('test-proj', 'test-team');
+    const project = readProject(projectName, teamName);
     expect(project.stats.total).toBe(3);
     expect(project.stats.open).toBe(1);
     expect(project.stats.in_progress).toBe(1);

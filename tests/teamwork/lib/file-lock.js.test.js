@@ -41,14 +41,17 @@ describe('acquireLock', () => {
     releaseLock(testFile);
   });
 
-  test('fails to acquire lock when already locked', async () => {
-    await acquireLock(testFile);
+  test('fails to acquire lock when already locked by different owner', async () => {
+    const owner1 = 'session-123';
+    const owner2 = 'session-456';
 
-    // Try to acquire again (with short timeout)
-    const acquired = await acquireLock(testFile, 100);
+    await acquireLock(testFile, owner1);
+
+    // Try to acquire with different owner (with short timeout)
+    const acquired = await acquireLock(testFile, owner2, 100);
     expect(acquired).toBe(false);
 
-    releaseLock(testFile);
+    releaseLock(testFile, owner1);
   });
 
   test('supports reentrant locks with owner', async () => {
@@ -313,16 +316,20 @@ describe('withLock', () => {
   });
 
   test('throws when lock cannot be acquired', async () => {
-    // Acquire lock first
-    await acquireLock(testFile);
+    const owner1 = 'session-123';
+    const owner2 = 'session-456';
+
+    // Acquire lock first with owner1
+    await acquireLock(testFile, owner1);
 
     try {
-      await withLock(testFile, () => 'should not execute', 100);
+      // Try to acquire with owner2 (should timeout and throw)
+      await withLock(testFile, () => 'should not execute', owner2, 100);
       expect(true).toBe(false); // Should not reach here
     } catch (err) {
       expect(err.message).toContain('Failed to acquire lock');
     }
 
-    releaseLock(testFile);
+    releaseLock(testFile, owner1);
   });
 });
