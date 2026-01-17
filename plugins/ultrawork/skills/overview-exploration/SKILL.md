@@ -115,7 +115,7 @@ SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 bun $SCRIPTS/session-update.js --session ${CLAUDE_SESSION_ID} --exploration-stage overview
 
 # Get session directory and write findings
-SESSION_DIR=$(bun $SCRIPTS/session-get.js --session ${CLAUDE_SESSION_ID} --dir)
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 mkdir -p "$SESSION_DIR/exploration"
 # Write findings to $SESSION_DIR/exploration/overview.md using Write tool
 

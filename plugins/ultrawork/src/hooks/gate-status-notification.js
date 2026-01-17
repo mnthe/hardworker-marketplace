@@ -221,7 +221,7 @@ GATE 4 (Execution) → READY
 
 NEXT ACTION:
 Ask user for plan approval, then:
-session-update.js --session SESSION_DIR --phase EXECUTION`;
+session-update.js --session ${CLAUDE_SESSION_ID} --phase EXECUTION`;
 
         console.log(JSON.stringify(createNotificationResponse(message)));
         process.exit(0);

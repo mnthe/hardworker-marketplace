@@ -79,7 +79,7 @@ All scripts use Bun runtime with flag-based parameters.
 | Script | Purpose | Key Parameters |
 |--------|---------|----------------|
 | **setup-ultrawork.js** | Initialize session directory, create session.json | `--session <ID>` `--goal "..."` `--max-workers N` `--auto` |
-| **session-get.js** | Read session data or get session directory path | `--session <ID>` `--field phase` `--dir` `--file` |
+| **session-get.js** | Read session data or extract specific field | `--session <ID>` `--field phase` `--file` |
 | **session-update.js** | Update session phase, plan approval, exploration stage | `--session <ID>` `--phase EXECUTION` `--plan-approved` `--exploration-stage complete` |
 | **scope-set.js** | Set scope expansion data in context.json | `--session <ID>` `--data '<JSON>'` |
 | **task-create.js** | Create task JSON file with validation | `--session <ID>` `--id "1"` `--subject "..."` `--criteria "c1\|c2"` `--complexity standard\|complex` `--approach tdd` |
@@ -561,7 +561,9 @@ bun src/scripts/setup-ultrawork.js --session abc-123 --goal "Add user auth"
 ```bash
 bun src/scripts/session-get.js --session abc-123
 bun src/scripts/session-get.js --session abc-123 --field phase
-bun src/scripts/session-get.js --session abc-123 --dir
+
+# Session directory (use direct path instead of script)
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 ```
 
 ### Create Task
