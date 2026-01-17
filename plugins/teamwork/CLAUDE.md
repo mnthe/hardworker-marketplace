@@ -83,7 +83,7 @@ All scripts use Bun runtime with flag-based parameters. All task/project scripts
 | **task-get.js** | Get single task details | `--project <name>` `--team <name>` `--id <id>` |
 | **task-list.js** | List all tasks in project | `--project <name>` `--team <name>` `--available` `--role <role>` `--format json\|table` |
 | **task-claim.js** | Atomically claim a task | `--project <name>` `--team <name>` `--id <id>` `--owner <session_id>` |
-| **task-update.js** | Update task status/evidence | `--project <name>` `--team <name>` `--id <id>` `--status open\|in_progress\|resolved` `--add-evidence "..."` `--release` |
+| **task-update.js** | Update task status/evidence/metadata | `--project <name>` `--team <name>` `--id <id>` `--status open\|in_progress\|resolved` `--add-evidence "..."` `--title "..."` `--description "..."` `--role <role>` `--release` |
 | **wave-calculate.js** | Calculate wave groups from task DAG | `--project <name>` `--team <name>` |
 | **wave-update.js** | Update wave status | `--project <name>` `--team <name>` `--wave <id>` `--status planning\|in_progress\|completed\|verified\|failed` |
 | **wave-status.js** | Query wave progress | `--project <name>` `--team <name>` `--format json\|table` |
@@ -577,6 +577,15 @@ bun src/scripts/task-update.js \
   --team auth-team \
   --id "1" \
   --add-evidence "Created src/middleware/auth.ts"
+
+# Update metadata (title, description, role)
+bun src/scripts/task-update.js \
+  --project my-app \
+  --team auth-team \
+  --id "1" \
+  --title "New task title" \
+  --description "Updated description" \
+  --role frontend
 
 # Mark resolved
 bun src/scripts/task-update.js \
