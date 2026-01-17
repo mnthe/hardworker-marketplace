@@ -1,7 +1,7 @@
 # Plugin Documentation Standards
 
 **Source of Truth**: This file (authoritative for plugin documentation format)
-**Last Updated**: 2026-01-16
+**Last Updated**: 2026-01-17
 
 ## README.md Format
 
@@ -223,6 +223,82 @@ Must document:
 - **Phase transition rules** - State machine transitions
 - **Synchronization requirements** - File update triggers
 
+### Agent Script Path Pattern
+
+**Problem**: Variable notation in agent documentation creates ambiguity between shell environment variables and prompt text variables.
+
+**Context**: Claude Code expands `${CLAUDE_PLUGIN_ROOT}` in command/hook files at load time, but agent markdown content is passed verbatim to agents. When agents see `$VARIABLE` or `${VARIABLE}` in their instructions, they may interpret it as shell environment variable rather than prompt text to substitute.
+
+**Anti-Pattern** (causes confusion):
+
+```markdown
+## Agent Instructions
+
+Scripts are located at:
+```bash
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
+```
+
+Call scripts like:
+```bash
+bun "$SCRIPTS/task-update.js" --session-id ${SESSION_ID}
+```
+```
+
+**Why this fails**:
+- `${CLAUDE_PLUGIN_ROOT}` is NOT a shell environment variable
+- Agents try literal shell expansion, which fails
+- Some agents understand to substitute, others don't
+- Inconsistent behavior across 19+ agent files observed
+
+**Correct Pattern**:
+
+```markdown
+## Utility Scripts
+
+SCRIPTS_PATH is provided in the prompt when this agent is spawned. Use it directly:
+
+```bash
+bun "$SCRIPTS_PATH/task-update.js" --session-id {SESSION_ID} --id 1 --status resolved
+```
+
+Do NOT try to define SCRIPTS_PATH yourself - it's already provided as prompt text.
+```
+
+**Requirements for agent documentation**:
+- Explicitly state that path variables come from prompt (not environment)
+- Use placeholder notation: `{VARIABLE}` or `$VARIABLE` with explanation
+- Add clear instruction: "provided in the prompt" or "passed as parameter"
+- Avoid shell variable assignment syntax in agent instructions
+- Test that agents understand the variable is prompt text, not environment variable
+
+**Command-to-Agent handoff pattern**:
+
+In command file:
+```markdown
+Spawn agent with:
+- Task: plugin:agent-name
+- Prompt parameters:
+  - SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
+  - SESSION_ID: {session-id}
+```
+
+In agent file:
+```markdown
+## Context
+
+You receive these values in your prompt:
+- SCRIPTS_PATH: Path to plugin scripts
+- SESSION_ID: Current session identifier
+
+Use them directly in bash commands:
+```bash
+bun "$SCRIPTS_PATH/script.js" --session-id "$SESSION_ID"
+```
+```
+
+**Validation**: After updating agent documentation, verify agents correctly invoke scripts without attempting shell variable expansion of undefined variables.
+
 ---
 
 ## Format Standards
@@ -384,3 +460,5 @@ Before finalizing plugin documentation, verify:
 - [ ] State management section complete with formats
 - [ ] Development rules section documents patterns
 - [ ] All tables properly formatted with alignment
+- [ ] Agent documentation clarifies prompt text vs environment variables
+- [ ] Script paths use SCRIPTS_PATH pattern (not ${CLAUDE_PLUGIN_ROOT})
