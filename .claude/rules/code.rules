@@ -1,7 +1,7 @@
 # Code Standards
 
 **Source of Truth**: Both (this file for detailed standards, CLAUDE.md for overview)
-**Last Updated**: 2026-01-16
+**Last Updated**: 2026-01-17
 
 ## Core Principles
 
@@ -86,3 +86,42 @@ Stop and reassess if:
 - Same error appearing 3+ times
 
 **"Going in circles" = stop, explain blocker, ask for guidance.**
+
+## Defensive Programming
+
+### Multi-Layer Validation Pattern
+
+To prevent bugs from recurring, apply validation at multiple layers:
+
+**Layer 1: Documentation**
+- Document rules in AGENT.md, CLAUDE.md, or code comments
+- Makes intent clear to developers and AI agents
+- Example: "Task status must be: open | in_progress | resolved"
+
+**Layer 2: Code Validation**
+- Implement validation in scripts/functions
+- Reject invalid values with clear error messages
+- Example:
+  ```javascript
+  const VALID_STATUSES = ['open', 'in_progress', 'resolved'];
+  if (!VALID_STATUSES.includes(status)) {
+    console.error(`Error: Invalid status '${status}'. Must be: ${VALID_STATUSES.join(' | ')}`);
+    process.exit(1);
+  }
+  ```
+
+**Layer 3: Version Tracking**
+- Track changes through version control
+- Document breaking changes in commits
+- Makes debugging and rollback possible
+
+**Why all three layers?**
+- Documentation alone: Can be ignored or missed
+- Code validation alone: Intent may be unclear
+- Version tracking alone: Doesn't prevent bugs
+
+**When to apply**:
+- Enum-like values (status, type, role)
+- File format requirements
+- State machine transitions
+- API contracts
