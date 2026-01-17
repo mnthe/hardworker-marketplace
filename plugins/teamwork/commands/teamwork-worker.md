@@ -2,7 +2,7 @@
 name: teamwork-worker
 description: "Claim and complete teamwork tasks (one-shot or continuous loop)"
 argument-hint: "[--project NAME] [--team NAME] [--role ROLE] [--loop] [--strict] [--fresh-start-interval N] [--poll-interval N] | --help"
-allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/worker-setup.js:*)", "Bash(sleep:*)", "Task", "TaskOutput", "Read", "Edit", "mcp__plugin_serena_serena__activate_project"]
+allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/worker-setup.js:*)", "Bash(sleep:*)", "Task", "TaskOutput", "Read", "Edit", "mcp__plugin_serena_serena__activate_project", "mcp__plugin_playwright_playwright__browser_navigate"]
 ---
 
 # Teamwork Worker Command
@@ -36,6 +36,32 @@ if "mcp__plugin_serena_serena__activate_project" in available_tools:
 - Role specialists: Symbol-based tools for their expertise area
 
 **If Serena is not available, agents will use standard tools (Read, Edit, Grep).**
+
+---
+
+## Step 0.5: Playwright Browser Automation (Optional)
+
+If the MCP tool `mcp__plugin_playwright_playwright__browser_navigate` is available, Playwright browser automation is enabled:
+
+```python
+# Check if Playwright is available
+if "mcp__plugin_playwright_playwright__browser_navigate" in available_tools:
+    # Playwright enabled - worker agents can use browser tools
+    # No explicit activation needed - tools are auto-available
+    pass
+```
+
+**Benefits when Playwright is active:**
+- Frontend workers: Visual verification of UI components, responsive design testing
+- Test workers: End-to-end browser testing, screenshot evidence collection
+- Review workers: Visual inspection of implemented features
+
+**When Playwright is used:**
+- Frontend tasks requiring visual verification (UI components, styling, layouts)
+- Integration testing tasks that need browser automation
+- Tasks where screenshot evidence adds value to verification
+
+**If Playwright is not available, workers will use standard verification methods (code review, unit tests).**
 
 ---
 

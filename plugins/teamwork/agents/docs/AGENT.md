@@ -1,5 +1,6 @@
 ---
 name: docs
+skills: [worker-workflow, scripts-path-usage]
 description: |
   Documentation specialist worker for teamwork. Documentation, README, examples.
 
@@ -143,4 +144,4 @@ Never categorize a task as "too complex to attempt" - always make progress.
 
 ## See Also
 
-Refer to generic worker agent for full process.
+Task execution workflow is provided by the `worker-workflow` skill.

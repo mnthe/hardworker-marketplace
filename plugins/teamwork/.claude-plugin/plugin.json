@@ -1,6 +1,7 @@
 {
   "name": "teamwork",
-  "version": "0.17.2",
+  "version": "0.19.0",
+  "skills": "./skills/",
   "description": "Multi-session collaboration plugin with role-based workers, file-per-task storage, and dashboard status (cross-platform version using javascript/Bun).",
   "author": {
     "name": "mnthe"

@@ -63,6 +63,8 @@ plugins/teamwork/
 │   ├── security/
 │   └── review/
 ├── commands/                  # Command definitions
+├── skills/                    # Skill definitions
+│   └── worker-workflow/       # Shared task execution workflow (Phase 1-5)
 ├── hooks/
 │   └── hooks.json            # Hook configuration
 └── CLAUDE.md                 # This file
@@ -104,6 +106,7 @@ Skills provide reusable capabilities for agents. Each skill documents when to us
 
 | Skill | Purpose | Use Case |
 |-------|---------|----------|
+| **worker-workflow** | Core task execution workflow (Phase 1-5) for all worker agents | Injected into role-specific agents via `skills` frontmatter field. Provides find task, claim, implement, evidence, and status update phases. |
 | **teamwork-clean** | Reset project execution state while preserving metadata | Recovering from failed orchestration, starting fresh with same goal, cleaning up after testing |
 
 ## Agent Inventory
@@ -773,3 +776,105 @@ bun src/scripts/project-clean.js \
   --project my-app \
   --team auth-team
 ```
+
+## Testing
+
+The teamwork plugin includes a comprehensive test suite to ensure script reliability and prevent regressions.
+
+### Running Tests
+
+```bash
+# Run all plugin tests
+bun test tests/teamwork/
+
+# Run specific test file
+bun test tests/teamwork/project-create.test.js
+
+# Run with coverage
+bun test tests/teamwork/ --coverage
+```
+
+### Test Structure
+
+Tests are organized to mirror the plugin structure:
+
+- `tests/teamwork/*.test.js` - Script tests (one file per script)
+- `tests/teamwork/lib/*.test.js` - Library module tests (file-lock, optimistic-lock, etc.)
+- `tests/test-utils.js` - Shared test utilities (`mockProject()`, `runScript()`, etc.)
+
+**Key test utilities:**
+- `mockProject()` - Creates isolated test project structure
+- `runScript(scriptPath, params, options)` - Executes scripts with proper environment
+- Always pass `HOME` env var to `runScript()` for correct project location
+
+### Writing New Tests
+
+When adding or modifying scripts, create or update the corresponding `.test.js` file:
+
+**Required test coverage:**
+1. **Help flag**: Verify `--help` displays usage information
+2. **Success case**: Test normal execution with valid inputs
+3. **Required parameters**: Verify error when required params missing
+4. **Edge cases**: Empty values, invalid inputs, boundary conditions
+
+**Test pattern example:**
+
+```javascript
+import { test, expect } from "bun:test";
+import { runScript, mockProject } from "../test-utils.js";
+
+test("script-name --help shows usage", async () => {
+  const result = await runScript("./src/scripts/script-name.js", { help: true });
+  expect(result.exitCode).toBe(0);
+  expect(result.stdout).toContain("Usage:");
+});
+
+test("script-name succeeds with valid params", async () => {
+  const { projectDir, projectName, teamName } = await mockProject();
+
+  const result = await runScript("./src/scripts/script-name.js", {
+    project: projectName,
+    team: teamName,
+    param: "value"
+  }, {
+    env: { HOME: projectDir }
+  });
+
+  expect(result.exitCode).toBe(0);
+  // Verify output or side effects
+});
+
+test("script-name fails without required param", async () => {
+  const result = await runScript("./src/scripts/script-name.js", {
+    project: "test"
+  });
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("--param required");
+});
+```
+
+**Best practices:**
+- Use `mockProject()` for isolated test environments
+- Pass `HOME` env var to ensure scripts find test project directory
+- Clean up test artifacts after test completion
+- Run tests before committing changes
+
+### Updating Tests on Plugin Changes
+
+When modifying the plugin, update tests to reflect changes:
+
+| Change Type | Test Action |
+|-------------|-------------|
+| New parameter | Add test for parameter handling and validation |
+| New output field | Update schema validation and output assertions |
+| Bug fix | Add regression test to prevent reoccurrence |
+| New script | Create new `.test.js` file with full coverage |
+| Changed behavior | Update existing tests to match new behavior |
+| Removed feature | Delete or skip obsolete tests |
+
+**Pre-commit checklist:**
+- [ ] All tests pass: `bun test tests/teamwork/`
+- [ ] New code has corresponding tests
+- [ ] Existing tests updated for behavior changes
+- [ ] No skipped/disabled tests without documentation

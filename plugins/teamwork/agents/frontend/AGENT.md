@@ -1,5 +1,6 @@
 ---
 name: frontend
+skills: [worker-workflow, scripts-path-usage]
 description: |
   Frontend specialist worker for teamwork. UI, components, styling, user interactions.
 
@@ -24,7 +25,7 @@ description: |
   </example>
 model: inherit
 color: green
-tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__replace_symbol_body", "mcp__plugin_serena_serena__get_symbols_overview"]
+tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__replace_symbol_body", "mcp__plugin_serena_serena__get_symbols_overview", "mcp__plugin_playwright_playwright__browser_navigate", "mcp__plugin_playwright_playwright__browser_snapshot", "mcp__plugin_playwright_playwright__browser_take_screenshot", "mcp__plugin_playwright_playwright__browser_click"]
 ---
 
 # Frontend Worker Agent
@@ -143,4 +144,4 @@ Never categorize a task as "too complex to attempt" - always make progress.
 
 ## See Also
 
-Refer to generic worker agent for full process.
+Task execution workflow is provided by the `worker-workflow` skill.

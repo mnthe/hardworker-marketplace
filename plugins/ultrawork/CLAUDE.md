@@ -17,6 +17,7 @@ Key features:
 - TDD support with test-first enforcement
 - Evidence collection via lifecycle hooks
 - Ralph loop (return to EXECUTION on verification failure)
+- **Worktree support** for isolated development (v6.1+)
 
 ## File Structure
 
@@ -185,9 +186,10 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 ```json
 {
-  "version": "6.0",
+  "version": "6.1",
   "session_id": "abc-123",
   "working_dir": "/path/to/project",
+  "original_dir": null,
   "goal": "Implement user authentication",
   "started_at": "2026-01-12T10:00:00Z",
   "updated_at": "2026-01-12T10:05:00Z",
@@ -204,8 +206,24 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
     "plan_only": false,
     "auto_mode": false
   },
+  "worktree": null,
   "evidence_log": [],
   "cancelled_at": null
+}
+```
+
+**With worktree enabled** (`/ultrawork "goal" --worktree`):
+```json
+{
+  "version": "6.1",
+  "working_dir": "/project/.worktrees/user-auth-2026-01-17",
+  "original_dir": "/project",
+  "worktree": {
+    "enabled": true,
+    "branch": "ultrawork/user-auth-2026-01-17",
+    "path": "/project/.worktrees/user-auth-2026-01-17",
+    "created_at": "2026-01-17T10:00:00Z"
+  }
 }
 ```
 
@@ -580,6 +598,69 @@ verifier -> audit evidence -> run tests -> PASS/FAIL
 ## No Build Step Required
 
 Scripts run directly from source. No compilation needed.
+
+## Testing
+
+This plugin includes automated tests using Bun's built-in test runner.
+
+### Running Tests
+
+```bash
+# Run all plugin tests
+bun test tests/ultrawork/
+
+# Run specific test file
+bun test tests/ultrawork/session-get.test.js
+
+# Run with coverage
+bun test tests/ultrawork/ --coverage
+```
+
+### Test Structure
+
+- `tests/ultrawork/*.test.js` - Script tests
+- `tests/ultrawork/lib/*.test.js` - Lib module tests
+- `tests/test-utils.js` - Shared utilities
+
+### Writing New Tests
+
+When adding new scripts or modifying existing ones:
+
+1. **Create/update corresponding .test.js file**
+   - Script: `src/scripts/task-get.js` → Test: `tests/ultrawork/task-get.test.js`
+   - Lib: `src/lib/session-utils.js` → Test: `tests/ultrawork/lib/session-utils.test.js`
+
+2. **Cover essential scenarios:**
+   - Help flag (`--help`)
+   - Success case with valid parameters
+   - Required parameter validation
+   - Edge cases (empty values, non-existent resources)
+
+3. **Use test utilities:**
+   - `mockSession()` - Creates isolated test session directories
+   - Clean up test data in `afterEach` blocks
+
+4. **Run tests before committing:**
+   ```bash
+   bun test tests/ultrawork/
+   ```
+
+### Updating Tests on Plugin Changes
+
+| Change Type | Test Action |
+|-------------|-------------|
+| New parameter | Add test for parameter handling and validation |
+| New output field | Update schema validation tests |
+| Bug fix | Add regression test to prevent reoccurrence |
+| New script | Create new test file with full coverage |
+
+### Test Requirements
+
+- All scripts should have corresponding test files
+- Tests must verify actual behavior (not just pass)
+- Mock external dependencies (file system, git)
+- Use descriptive test names
+- Include error path testing
 
 ## Usage Examples
 

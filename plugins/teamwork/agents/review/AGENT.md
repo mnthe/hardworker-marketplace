@@ -1,5 +1,6 @@
 ---
 name: review
+skills: [worker-workflow, scripts-path-usage]
 description: |
   Code review specialist worker for teamwork. Code review, refactoring.
 
@@ -143,4 +144,4 @@ Never categorize a task as "too complex to attempt" - always make progress.
 
 ## See Also
 
-Refer to generic worker agent for full process.
+Task execution workflow is provided by the `worker-workflow` skill.
