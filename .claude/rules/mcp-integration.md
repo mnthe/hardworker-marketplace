@@ -1,42 +1,75 @@
-# MCP Tool Integration Pattern
+# MCP Tool Integration Patterns
 
-## Rule
+Claude Code plugins can integrate optional MCP tools using two patterns.
 
-When integrating optional MCP tools, always check tool availability before activation. Enable enhanced capabilities without blocking core functionality.
+## Pattern 1: Declarative (Recommended)
 
-## Pattern
+List MCP tools in agent frontmatter. Claude Code runtime auto-filters unavailable tools.
 
-```javascript
-// Check if MCP tool is available before using
-if (available_tools.includes("mcp__plugin_name__tool_name")) {
-    try {
-        // Use enhanced capability
-        await mcp__plugin_name__tool_name(params);
-    } catch (error) {
-        // Graceful fallback to standard tools
-        console.error("MCP tool failed, using fallback");
-    }
-} else {
-    // Core functionality works without MCP
-}
+```yaml
+# AGENT.md frontmatter
+tools: [
+  "Read", "Write", "Edit",
+  "mcp__plugin_serena_serena__find_symbol",
+  "mcp__plugin_playwright_playwright__browser_snapshot"
+]
 ```
 
-## Examples in This Project
+**How it works:**
+- Tools declared in frontmatter are requested at agent spawn
+- Claude Code checks actual MCP availability at runtime
+- Unavailable tools are silently removed from the agent's toolset
+- Agent code works identically with or without MCP installed
 
-- `ultrawork.md` - Checks for Serena MCP before enabling symbol navigation
-- `teamwork.md` - Checks for Serena MCP before enabling code analysis
-- `teamwork-worker.md` - Checks for Serena MCP before enabling symbol tools
+**Benefits:**
+- No error handling code needed
+- Same agent definition works in all environments
+- Zero configuration for end users
+- Graceful degradation built-in
 
-## Why This Matters
+## Pattern 2: Imperative (For Conditional Logic)
 
-1. **Graceful degradation** - Plugins work even when MCP servers unavailable
-2. **Optional enhancement** - MCP tools add capabilities, don't gate them
-3. **Error resilience** - MCP failures don't crash the workflow
-4. **User flexibility** - Users can choose which MCP servers to run
+Check tool availability in command code when you need different behavior.
 
-## Anti-patterns
+```python
+# In command markdown
+if "mcp__plugin_serena_serena__activate_project" in available_tools:
+    mcp__plugin_serena_serena__activate_project(project=".")
+    # Enable Serena-specific workflow
+else:
+    # Use alternative workflow
+```
 
-- Assuming MCP tools are always available
-- Hard failing when MCP tool not found
-- Not catching MCP tool execution errors
-- Duplicating MCP availability checks (check once, store result)
+**When to use:**
+- Need to activate/initialize the MCP before use
+- Want to show different UI or messages based on availability
+- Need to choose between alternative implementations
+
+## Pattern Comparison
+
+| Aspect | Declarative | Imperative |
+|--------|-------------|------------|
+| Error handling | Automatic | Manual |
+| Code complexity | Lower | Higher |
+| Conditional behavior | No | Yes |
+| Best for | Agent tools | Commands |
+
+## Example: Playwright Integration
+
+```yaml
+# Declarative: Agent can use if available
+tools: ["mcp__plugin_playwright_playwright__browser_snapshot"]
+```
+
+```python
+# Imperative: Command checks availability
+if "mcp__plugin_playwright_playwright__browser_navigate" in available_tools:
+    print("Visual testing enabled")
+```
+
+## Best Practices
+
+1. **Default to Declarative** - Simpler, less code, automatic fallback
+2. **Use Imperative for initialization** - When MCP needs setup (e.g., Serena's `activate_project`)
+3. **Don't mix patterns unnecessarily** - Pick one approach per integration point
+4. **Document MCP requirements** - List optional MCP dependencies in CLAUDE.md
