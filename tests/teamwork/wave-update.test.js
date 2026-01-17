@@ -5,6 +5,7 @@
 
 const { test, expect, describe, beforeEach, afterEach } = require('bun:test');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 const { runScript, mockProject } = require('../test-utils.js');
 
@@ -40,11 +41,15 @@ describe('wave-update.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Task 1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     runScript(WAVE_CALC_PATH, {
       project: 'test-project',
       team: 'test-team'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
@@ -52,6 +57,8 @@ describe('wave-update.js', () => {
       team: 'test-team',
       wave: '1',
       status: 'in_progress'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -63,6 +70,8 @@ describe('wave-update.js', () => {
     const result = runScript(SCRIPT_PATH, {
       project: 'test-project',
       team: 'test-team'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);
@@ -78,11 +87,15 @@ describe('wave-update.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Task 1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     runScript(WAVE_CALC_PATH, {
       project: 'test-project',
       team: 'test-team'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
@@ -90,6 +103,8 @@ describe('wave-update.js', () => {
       team: 'test-team',
       wave: '999',
       status: 'in_progress'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);
@@ -105,11 +120,15 @@ describe('wave-update.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Task 1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     runScript(WAVE_CALC_PATH, {
       project: 'test-project',
       team: 'test-team'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
@@ -117,6 +136,8 @@ describe('wave-update.js', () => {
       team: 'test-team',
       wave: '1',
       status: 'invalid'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);
@@ -132,11 +153,15 @@ describe('wave-update.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Task 1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     runScript(WAVE_CALC_PATH, {
       project: 'test-project',
       team: 'test-team'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
@@ -144,6 +169,8 @@ describe('wave-update.js', () => {
       team: 'test-team',
       wave: '1',
       status: 'verified'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);

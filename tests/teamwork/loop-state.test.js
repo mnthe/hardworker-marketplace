@@ -68,6 +68,8 @@ describe('loop-state.js', () => {
   });
 
   test('clears loop state', () => {
+    const sessionId = 'test-session-clear-123';
+
     // Start loop first
     runScript(SCRIPT_PATH, {
       start: '',
@@ -75,12 +77,12 @@ describe('loop-state.js', () => {
       team: 'test-team',
       role: 'backend'
     }, {
-      env: { ...process.env, HOME: tempDir }
+      env: { ...process.env, HOME: tempDir, CLAUDE_SESSION_ID: sessionId }
     });
 
     // Clear loop
     const result = runScript(SCRIPT_PATH, { clear: '' }, {
-      env: { ...process.env, HOME: tempDir }
+      env: { ...process.env, HOME: tempDir, CLAUDE_SESSION_ID: sessionId }
     });
 
     expect(result.exitCode).toBe(0);
@@ -119,6 +121,8 @@ describe('loop-state.js', () => {
   });
 
   test('gets active loop state', () => {
+    const sessionId = 'test-session-get-456';
+
     // Start a loop first
     runScript(SCRIPT_PATH, {
       start: '',
@@ -126,12 +130,12 @@ describe('loop-state.js', () => {
       team: 'test-team',
       role: 'backend'
     }, {
-      env: { ...process.env, HOME: tempDir }
+      env: { ...process.env, HOME: tempDir, CLAUDE_SESSION_ID: sessionId }
     });
 
     // Now get the state
     const result = runScript(SCRIPT_PATH, { get: '' }, {
-      env: { ...process.env, HOME: tempDir }
+      env: { ...process.env, HOME: tempDir, CLAUDE_SESSION_ID: sessionId }
     });
 
     expect(result.exitCode).toBe(0);

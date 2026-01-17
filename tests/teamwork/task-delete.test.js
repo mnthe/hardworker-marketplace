@@ -5,6 +5,7 @@
 
 const { test, expect, describe, beforeEach, afterEach } = require('bun:test');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 const { runScript, mockProject } = require('../test-utils.js');
 
@@ -39,6 +40,8 @@ describe('task-delete.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const taskFile = path.join(mock.tasksDir, '1.json');
@@ -53,6 +56,8 @@ describe('task-delete.js', () => {
       project: 'test-project',
       team: 'test-team',
       id: '1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -78,6 +83,8 @@ describe('task-delete.js', () => {
       project: 'test-project',
       team: 'test-team',
       id: '999'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);
@@ -94,6 +101,8 @@ describe('task-delete.js', () => {
       project: 'test-project',
       team: 'test-team',
       id: '1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);

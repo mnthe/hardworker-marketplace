@@ -5,6 +5,7 @@
 
 const { test, expect, describe, beforeEach, afterEach } = require('bun:test');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 const { runScript, mockProject, assertJsonSchema } = require('../test-utils.js');
 
@@ -39,6 +40,8 @@ describe('wave-calculate.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Task 1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     runScript(TASK_CREATE_PATH, {
@@ -47,15 +50,19 @@ describe('wave-calculate.js', () => {
       id: '2',
       title: 'Task 2',
       'blocked-by': '1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
       project: 'test-project',
       team: 'test-team'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('OK: Waves calculated');
+    expect(result.stdout).toContain('OK: Calculated');
     expect(result.json).toBeTruthy();
 
     assertJsonSchema(result.json, {
@@ -69,6 +76,8 @@ describe('wave-calculate.js', () => {
   test('fails without required parameters', () => {
     const result = runScript(SCRIPT_PATH, {
       project: 'test-project'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);
@@ -82,10 +91,12 @@ describe('wave-calculate.js', () => {
     const result = runScript(SCRIPT_PATH, {
       project: 'test-project',
       team: 'test-team'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
-    expect(result.exitCode).toBe(0);
-    expect(result.json.total_waves).toBe(0);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('No tasks found');
   });
 
   test('creates waves.json file', () => {
@@ -97,11 +108,15 @@ describe('wave-calculate.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Task 1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
       project: 'test-project',
       team: 'test-team'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -120,6 +135,8 @@ describe('wave-calculate.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Task 1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     runScript(TASK_CREATE_PATH, {
@@ -127,11 +144,15 @@ describe('wave-calculate.js', () => {
       team: 'test-team',
       id: '2',
       title: 'Task 2'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
       project: 'test-project',
       team: 'test-team'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);

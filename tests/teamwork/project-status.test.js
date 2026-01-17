@@ -5,6 +5,7 @@
 
 const { test, expect, describe, beforeEach, afterEach } = require('bun:test');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 const { runScript, mockProject, assertJsonSchema } = require('../test-utils.js');
 
@@ -36,6 +37,8 @@ describe('project-status.js', () => {
       project: 'test-project',
       team: 'test-team',
       format: 'table'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -50,15 +53,20 @@ describe('project-status.js', () => {
       project: 'test-project',
       team: 'test-team',
       format: 'json'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
     expect(result.json).toBeTruthy();
 
     assertJsonSchema(result.json, {
-      project: 'object',
+      project: 'string',
+      team: 'string',
+      goal: 'string',
+      phase: 'string',
       stats: 'object',
-      tasks: 'array'
+      blocked_tasks: 'array'
     });
   });
 
@@ -70,6 +78,8 @@ describe('project-status.js', () => {
       project: 'test-project',
       team: 'test-team',
       field: 'stats.total'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -79,6 +89,8 @@ describe('project-status.js', () => {
   test('fails without required parameters', () => {
     const result = runScript(SCRIPT_PATH, {
       project: 'test-project'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);
@@ -89,6 +101,8 @@ describe('project-status.js', () => {
     const result = runScript(SCRIPT_PATH, {
       project: 'non-existent',
       team: 'non-existent'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);

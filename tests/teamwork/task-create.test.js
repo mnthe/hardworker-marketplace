@@ -5,6 +5,7 @@
 
 const { test, expect, describe, beforeEach, afterEach } = require('bun:test');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 const { runScript, mockProject, assertJsonSchema } = require('../test-utils.js');
 
@@ -39,6 +40,8 @@ describe('task-create.js', () => {
       title: 'Test task',
       description: 'Task description',
       role: 'backend'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -69,6 +72,8 @@ describe('task-create.js', () => {
       project: 'test-project',
       team: 'test-team',
       id: '1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);
@@ -85,6 +90,8 @@ describe('task-create.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     // Try to create again
@@ -93,6 +100,8 @@ describe('task-create.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);
@@ -109,6 +118,8 @@ describe('task-create.js', () => {
       id: '3',
       title: 'Dependent task',
       'blocked-by': '1,2'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -124,6 +135,8 @@ describe('task-create.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -140,6 +153,8 @@ describe('task-create.js', () => {
       id: '1',
       title: 'Test task',
       complexity: 'invalid'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);

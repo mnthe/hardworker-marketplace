@@ -5,6 +5,7 @@
 
 const { test, expect, describe, beforeEach, afterEach } = require('bun:test');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 const { runScript, mockProject, assertJsonSchema } = require('../test-utils.js');
 
@@ -39,6 +40,8 @@ describe('task-claim.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
@@ -46,6 +49,8 @@ describe('task-claim.js', () => {
       team: 'test-team',
       id: '1',
       owner: 'session-123'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -65,8 +70,7 @@ describe('task-claim.js', () => {
   test('fails without required parameters', () => {
     const result = runScript(SCRIPT_PATH, {
       project: 'test-project',
-      team: 'test-team',
-      id: '1'
+      team: 'test-team'
     });
 
     expect(result.exitCode).toBe(1);
@@ -82,6 +86,8 @@ describe('task-claim.js', () => {
       team: 'test-team',
       id: '999',
       owner: 'session-123'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);
@@ -97,6 +103,8 @@ describe('task-claim.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     // First claim
@@ -105,6 +113,8 @@ describe('task-claim.js', () => {
       team: 'test-team',
       id: '1',
       owner: 'session-123'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     // Second claim attempt
@@ -113,6 +123,8 @@ describe('task-claim.js', () => {
       team: 'test-team',
       id: '1',
       owner: 'session-456'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);
@@ -128,6 +140,8 @@ describe('task-claim.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     // First claim
@@ -136,6 +150,8 @@ describe('task-claim.js', () => {
       team: 'test-team',
       id: '1',
       owner: 'session-123'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     // Reclaim by same owner
@@ -144,6 +160,8 @@ describe('task-claim.js', () => {
       team: 'test-team',
       id: '1',
       owner: 'session-123'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);

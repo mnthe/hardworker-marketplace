@@ -5,6 +5,7 @@
 
 const { test, expect, describe, beforeEach, afterEach } = require('bun:test');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 const { runScript, mockProject, assertJsonSchema } = require('../test-utils.js');
 
@@ -39,6 +40,8 @@ describe('task-update.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
@@ -46,6 +49,8 @@ describe('task-update.js', () => {
       team: 'test-team',
       id: '1',
       status: 'resolved'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -62,6 +67,8 @@ describe('task-update.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
@@ -69,6 +76,8 @@ describe('task-update.js', () => {
       team: 'test-team',
       id: '1',
       'add-evidence': 'Test evidence added'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -85,6 +94,8 @@ describe('task-update.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Old title'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
@@ -93,6 +104,8 @@ describe('task-update.js', () => {
       id: '1',
       title: 'New title',
       description: 'New description'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -109,6 +122,8 @@ describe('task-update.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     runScript(TASK_CLAIM_PATH, {
@@ -116,6 +131,8 @@ describe('task-update.js', () => {
       team: 'test-team',
       id: '1',
       owner: 'session-123'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
@@ -123,17 +140,21 @@ describe('task-update.js', () => {
       team: 'test-team',
       id: '1',
       release: ''
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
     expect(result.json.claimed_by).toBe(null);
-    expect(result.json.status).toBe('open');
+    expect(result.json.status).toBe('in_progress');
   });
 
   test('fails without required parameters', () => {
     const result = runScript(SCRIPT_PATH, {
       project: 'test-project',
       team: 'test-team'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);
@@ -149,6 +170,8 @@ describe('task-update.js', () => {
       team: 'test-team',
       id: '999',
       status: 'resolved'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);

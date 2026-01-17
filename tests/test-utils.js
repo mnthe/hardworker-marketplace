@@ -258,9 +258,35 @@ function runScript(scriptPath, params = {}, options = {}) {
   // Parse JSON output if possible
   let json = null;
   try {
+    // First, try to parse the entire stdout as JSON (backward compatibility)
     json = JSON.parse(result.stdout);
   } catch {
-    // Not JSON, that's fine
+    // If that fails, try to extract JSON from multi-line output
+    // Scripts often output "OK: message\n{json}"
+    const lines = result.stdout.split('\n');
+
+    // Find lines that start with '{' or '[' (JSON start)
+    const jsonLines = [];
+    let inJson = false;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        inJson = true;
+      }
+      if (inJson && trimmed) {
+        jsonLines.push(line);
+      }
+    }
+
+    // Try to parse the extracted JSON lines
+    if (jsonLines.length > 0) {
+      try {
+        json = JSON.parse(jsonLines.join('\n'));
+      } catch {
+        // Still not valid JSON, that's fine
+      }
+    }
   }
 
   return {

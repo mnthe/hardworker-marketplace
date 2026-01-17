@@ -5,6 +5,7 @@
 
 const { test, expect, describe, beforeEach, afterEach } = require('bun:test');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 const { runScript, mockProject } = require('../test-utils.js');
 
@@ -44,6 +45,8 @@ describe('project-clean.js', () => {
     const result = runScript(SCRIPT_PATH, {
       project: 'test-project',
       team: 'test-team'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -84,6 +87,8 @@ describe('project-clean.js', () => {
     const result = runScript(SCRIPT_PATH, {
       project: 'test-project',
       team: 'test-team'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);

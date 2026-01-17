@@ -5,6 +5,7 @@
 
 const { test, expect, describe, beforeEach, afterEach } = require('bun:test');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 const { runScript, mockProject } = require('../test-utils.js');
 
@@ -39,6 +40,8 @@ describe('task-list.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Task 1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     runScript(TASK_CREATE_PATH, {
@@ -46,12 +49,16 @@ describe('task-list.js', () => {
       team: 'test-team',
       id: '2',
       title: 'Task 2'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
       project: 'test-project',
       team: 'test-team',
       format: 'json'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -69,12 +76,16 @@ describe('task-list.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Task 1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
       project: 'test-project',
       team: 'test-team',
       format: 'table'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -92,6 +103,8 @@ describe('task-list.js', () => {
       id: '1',
       title: 'Backend task',
       role: 'backend'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     runScript(TASK_CREATE_PATH, {
@@ -100,6 +113,8 @@ describe('task-list.js', () => {
       id: '2',
       title: 'Frontend task',
       role: 'frontend'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
@@ -107,6 +122,8 @@ describe('task-list.js', () => {
       team: 'test-team',
       role: 'backend',
       format: 'json'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -123,6 +140,8 @@ describe('task-list.js', () => {
       team: 'test-team',
       id: '1',
       title: 'Open task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     const result = runScript(SCRIPT_PATH, {
@@ -130,6 +149,8 @@ describe('task-list.js', () => {
       team: 'test-team',
       available: '',
       format: 'json'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(0);
@@ -141,6 +162,8 @@ describe('task-list.js', () => {
   test('fails without required parameters', () => {
     const result = runScript(SCRIPT_PATH, {
       project: 'test-project'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
     });
 
     expect(result.exitCode).toBe(1);
