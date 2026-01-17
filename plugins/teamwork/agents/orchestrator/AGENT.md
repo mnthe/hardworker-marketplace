@@ -167,11 +167,53 @@ Use Glob/Grep/Read to understand:
 
 ### Step 3: Task Decomposition
 
-**Rules:**
-- Each task = one discrete unit of work
-- Task should be completable by ONE worker session
-- No task should take more than ~30 minutes
-- Prefer more granular tasks over fewer large ones
+**Hybrid Decomposition Strategy:**
+
+Use a combination of plan-based (Strategy A) and semantic (Strategy B) decomposition:
+
+#### Strategy A: Plan Document Based
+Use when `plans` option is provided with detailed implementation documents.
+
+1. **Extract Steps**: Parse plan documents for Markdown headers (## Step N, ### Phase N)
+2. **Map to Tasks**: Each header section becomes a task candidate
+3. **Sub-decompose**: If a step mentions multiple files (>3), split into sub-tasks
+4. **Verify Atomicity**: Each task should be completable in one worker session
+
+Example transformation:
+```
+Plan: "03.impl-workspace-setup.md"
+├─ Step 1: Root workspace → Task: "Initialize pnpm monorepo workspace"
+├─ Step 2.1: Database package → Task: "Create database package structure"
+├─ Step 2.2: items schema → Task: "Implement items.schema.ts"
+├─ Step 2.3: item-features schema → Task: "Implement item-features.schema.ts with pgvector"
+└─ Step 3: Docker → Task: "Configure Docker Compose for dev environment"
+```
+
+#### Strategy B: Semantic Decomposition
+Use when no plan documents provided, or as sub-decomposition within Strategy A.
+
+1. **File-based**: New file creation = separate task
+2. **Complexity-based**: Complex file with multiple classes → split by class
+3. **Dependency-based**: Interface and implementation = separate tasks
+4. **Test-based**: Each independently testable unit = candidate task
+
+#### Granularity Rules
+
+- 1 task = 1-3 files changed (recommended)
+- 1 task = 10-30 minutes work (recommended)
+- 1 task = independently testable/verifiable
+
+#### Anti-patterns (Avoid)
+
+- ❌ "Setup entire workspace" (too broad)
+- ❌ "Implement backend" (too vague)
+- ❌ "Create all schemas" (bundles multiple files)
+
+#### Good patterns (Recommended)
+
+- ✅ "Create items.schema.ts with Item table"
+- ✅ "Add SearchUseCase with keyword search"
+- ✅ "Configure Docker Compose for PostgreSQL"
 
 **Role Assignment:**
 | Role       | When to Use                                |

@@ -34,6 +34,9 @@ const { getTaskFile } = require('../lib/project-utils.js');
  * @property {string} [action]
  * @property {string} [owner]
  * @property {boolean} [release]
+ * @property {string} [title]
+ * @property {string} [description]
+ * @property {string} [role]
  * @property {boolean} [help]
  */
 
@@ -55,6 +58,9 @@ const ARG_SPEC = {
   '--action': { key: 'action' },
   '--owner': { key: 'owner', aliases: ['-o'] },
   '--release': { key: 'release', aliases: ['-r'], flag: true },
+  '--title': { key: 'title' },
+  '--description': { key: 'description', aliases: ['-d'] },
+  '--role': { key: 'role' },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
@@ -96,6 +102,21 @@ async function main() {
       const content = fs.readFileSync(taskFile, 'utf-8');
       /** @type {Task} */
       const task = JSON.parse(content);
+
+      // Update title if provided
+      if (args.title !== undefined) {
+        task.title = args.title;
+      }
+
+      // Update description if provided
+      if (args.description !== undefined) {
+        task.description = args.description;
+      }
+
+      // Update role if provided
+      if (args.role !== undefined) {
+        task.role = args.role;
+      }
 
       // Update status if provided
       if (args.status) {
