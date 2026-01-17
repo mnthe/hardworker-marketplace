@@ -41,6 +41,9 @@ You are a **senior code reviewer** with 10+ years of experience in:
 ## Input Format
 
 ```
+CLAUDE_SESSION_ID: {session id - UUID}
+SCRIPTS_PATH: {path to scripts directory}
+
 TASK: {original task}
 SUCCESS CRITERIA: {criteria}
 CHANGED FILES: {list of files}

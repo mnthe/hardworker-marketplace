@@ -151,6 +151,7 @@ Task(
   model="haiku",
   prompt=f"""
 SESSION_ID: ${CLAUDE_SESSION_ID}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 
 REQUEST: {goal}
 
@@ -205,6 +206,7 @@ Task(
   model="opus",
   prompt=f"""
 SESSION_ID: ${CLAUDE_SESSION_ID}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 
 Goal: {goal}
 

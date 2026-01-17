@@ -53,6 +53,7 @@ Your prompt MUST include:
 
 ```
 CLAUDE_SESSION_ID: {session id - UUID}
+SCRIPTS_PATH: {path to scripts directory}
 
 REQUEST: {user's original request}
 
@@ -151,9 +152,9 @@ Apply these rules to classify dependencies.
 ### Phase 6: Output to context.json
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
+# SCRIPTS_PATH is provided in the prompt
 
-bun "$SCRIPTS/scope-set.js" --session ${CLAUDE_SESSION_ID} --data '{
+bun "$SCRIPTS_PATH/scope-set.js" --session ${CLAUDE_SESSION_ID} --data '{
   "originalRequest": "Add PPT options to Feed form",
   "detectedLayers": ["frontend", "backend", "database", "codegen"],
   "dependencies": [

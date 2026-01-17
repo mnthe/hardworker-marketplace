@@ -54,6 +54,7 @@ Your prompt MUST include:
 ```
 CLAUDE_SESSION_ID: {session id - UUID}
 EXPLORER_ID: {unique id for this explorer, e.g., exp-1, overview}
+SCRIPTS_PATH: {path to scripts directory}
 
 # For overview mode:
 EXPLORATION_MODE: overview
@@ -85,17 +86,16 @@ CONTEXT: {summary from overview, optional}
 Use these scripts for session operations:
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
-
+# SCRIPTS_PATH is provided in the prompt
 # Get session directory path
 SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 # Get session data
-bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
-bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --field goal  # Specific field
+bun "$SCRIPTS_PATH/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
+bun "$SCRIPTS_PATH/session-get.js" --session ${CLAUDE_SESSION_ID} --field goal  # Specific field
 
 # Add exploration results to context
-bun "$SCRIPTS/context-add.js" --session ${CLAUDE_SESSION_ID} \
+bun "$SCRIPTS_PATH/context-add.js" --session ${CLAUDE_SESSION_ID} \
   --explorer-id "{EXPLORER_ID}" \
   --summary "..." --key-files "..." --patterns "..."
 ```
@@ -154,7 +154,7 @@ Examples:
 ### Phase 1: Read Session
 
 ```bash
-bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID}
+bun "$SCRIPTS_PATH/session-get.js" --session ${CLAUDE_SESSION_ID}
 ```
 
 ### Phase 2: Explore
@@ -230,7 +230,7 @@ SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 ### Phase 4: Update Context Summary
 
 ```bash
-bun "$SCRIPTS/context-add.js" --session ${CLAUDE_SESSION_ID} \
+bun "$SCRIPTS_PATH/context-add.js" --session ${CLAUDE_SESSION_ID} \
   --explorer-id "{EXPLORER_ID}" \
   --hint "{SEARCH_HINT}" \
   --file "exploration/{EXPLORER_ID}.md" \

@@ -206,6 +206,7 @@ Task(
   model="opus",
   prompt=f"""
 SESSION_ID: ${CLAUDE_SESSION_ID}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 
 Goal: {goal}
 
@@ -426,7 +427,7 @@ tasks = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session ${C
 # Spawn workers (parallel in single message)
 for task in unblocked_tasks:
     model = "opus" if task["complexity"] == "complex" else "sonnet"
-    Task(subagent_type="ultrawork:worker:worker", model=model, prompt=f"SESSION_ID: ${CLAUDE_SESSION_ID}\nTASK_ID: {task['id']}...")
+    Task(subagent_type="ultrawork:worker:worker", model=model, prompt=f"SESSION_ID: ${CLAUDE_SESSION_ID}\nTASK_ID: {task['id']}\nSCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts\n...")
 ```
 
 **5c. Verification**
@@ -435,7 +436,7 @@ for task in unblocked_tasks:
 Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase VERIFICATION')
 
 # Spawn verifier
-Task(subagent_type="ultrawork:verifier:verifier", model="opus", prompt=f"SESSION_ID: ${CLAUDE_SESSION_ID}\nVerify all criteria...")
+Task(subagent_type="ultrawork:verifier:verifier", model="opus", prompt=f"SESSION_ID: ${CLAUDE_SESSION_ID}\nSCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts\nVerify all criteria...")
 ```
 
 **5d. Completion or Ralph Loop**

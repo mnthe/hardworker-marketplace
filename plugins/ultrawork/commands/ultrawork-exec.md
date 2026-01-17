@@ -215,6 +215,7 @@ def run_execution_phase(SESSION_ID, max_workers):
                 prompt=f"""
 SESSION_ID: ${CLAUDE_SESSION_ID}
 TASK_ID: {task["id"]}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 
 TASK: {task["subject"]}
 {task["description"]}
@@ -248,6 +249,7 @@ def run_verification_phase(SESSION_ID):
         model="opus",
         prompt=f"""
 SESSION_ID: ${CLAUDE_SESSION_ID}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 
 Verify all success criteria are met with evidence.
 Check for blocked patterns.

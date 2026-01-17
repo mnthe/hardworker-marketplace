@@ -53,6 +53,7 @@ Your prompt MUST include:
 
 ```
 CLAUDE_SESSION_ID: {session id - UUID}
+SCRIPTS_PATH: {path to scripts directory}
 
 Verify all success criteria are met with evidence.
 Check for blocked patterns.
@@ -79,27 +80,27 @@ Run final tests.
 ## Utility Scripts
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
+# SCRIPTS_PATH is provided in the prompt
 
 # Get session directory path
 SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 # Get session data
-bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
-bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase # Specific field
+bun "$SCRIPTS_PATH/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
+bun "$SCRIPTS_PATH/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase # Specific field
 
 # List tasks
-bun "$SCRIPTS/task-list.js" --session ${CLAUDE_SESSION_ID} --format json
+bun "$SCRIPTS_PATH/task-list.js" --session ${CLAUDE_SESSION_ID} --format json
 
 # Get single task
-bun "$SCRIPTS/task-get.js" --session ${CLAUDE_SESSION_ID} --id 1
+bun "$SCRIPTS_PATH/task-get.js" --session ${CLAUDE_SESSION_ID} --id 1
 
 # Update task
-bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
+bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
   --status resolved --add-evidence "VERDICT: PASS"
 
 # Update session
-bun "$SCRIPTS/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
+bun "$SCRIPTS_PATH/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
 ```
 
 ---
@@ -148,8 +149,8 @@ Each piece of evidence MUST include:
 ### Phase 1: Read Session & Tasks
 
 ```bash
-bun "$SCRIPTS/task-list.js" --session ${CLAUDE_SESSION_ID} --format json
-bun "$SCRIPTS/task-get.js" --session ${CLAUDE_SESSION_ID} --id 1
+bun "$SCRIPTS_PATH/task-list.js" --session ${CLAUDE_SESSION_ID} --format json
+bun "$SCRIPTS_PATH/task-get.js" --session ${CLAUDE_SESSION_ID} --id 1
 # ... read each task
 ```
 
@@ -231,29 +232,29 @@ Record ALL outputs as final evidence.
 **On PASS:**
 
 ```bash
-bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
+bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
   --status resolved \
   --add-evidence "VERDICT: PASS" \
   --add-evidence "All tasks verified with evidence"
 
-bun "$SCRIPTS/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
+bun "$SCRIPTS_PATH/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
 ```
 
 **On FAIL (Ralph Loop):**
 
 ```bash
 # Create fix tasks
-bun "$SCRIPTS/task-create.js" --session ${CLAUDE_SESSION_ID} \
+bun "$SCRIPTS_PATH/task-create.js" --session ${CLAUDE_SESSION_ID} \
   --subject "Fix: [Specific issue]" \
   --description "Verification failed: [reason]. Action: [fix]." \
   --criteria '["Issue resolved with evidence"]'
 
 # Update verify task
-bun "$SCRIPTS/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
+bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
   --add-evidence "VERDICT: FAIL - Created fix tasks"
 
 # Return to EXECUTION phase
-bun "$SCRIPTS/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
+bun "$SCRIPTS_PATH/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
 ```
 
 ---

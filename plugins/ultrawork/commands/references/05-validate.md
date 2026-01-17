@@ -30,6 +30,7 @@ Task(
     model="opus",  # Use opus for thorough verification
     prompt=f"""
 SESSION_ID: ${CLAUDE_SESSION_ID}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 
 Verify all success criteria are met with evidence.
 Check for blocked patterns.
@@ -259,6 +260,7 @@ Task(
     model="opus",
     prompt=f"""
 SESSION_ID: ${CLAUDE_SESSION_ID}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 
 Deep code review:
 - Read actual implementation code

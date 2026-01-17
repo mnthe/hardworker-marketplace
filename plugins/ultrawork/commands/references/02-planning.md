@@ -176,6 +176,7 @@ Task(
     model="inherit",
     prompt=f"""
 SESSION_ID: ${CLAUDE_SESSION_ID}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 
 Read exploration context and create:
 1. Design document (docs/plans/)

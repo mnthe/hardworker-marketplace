@@ -105,6 +105,7 @@ for i, hint in enumerate(hints):
       prompt=f"""
 SESSION_ID: ${CLAUDE_SESSION_ID}
 EXPLORER_ID: exp-{i+1}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 
 SEARCH_HINT: {hint}
 

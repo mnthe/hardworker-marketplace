@@ -43,6 +43,7 @@ while True:
             prompt=f"""
 SESSION_ID: ${CLAUDE_SESSION_ID}
 TASK_ID: {task["id"]}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 
 TASK: {task["subject"]}
 {task["description"]}
