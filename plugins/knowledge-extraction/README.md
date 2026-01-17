@@ -43,7 +43,7 @@ JWT tokens should include minimal claims. Store sensitive data server-side.
 
 The **Stop/SubagentStop hooks** parse Claude's transcript and extract these patterns to `~/.claude/knowledge-extraction/{session-id}/insights.md`.
 
-**Efficiency**: State tracking (`state/{session-id}.json`) ensures already-processed messages are skipped on subsequent hook calls.
+**Efficiency**: State tracking (`{session-id}/state.json`) ensures already-processed messages are skipped on subsequent hook calls.
 
 ## Commands
 
