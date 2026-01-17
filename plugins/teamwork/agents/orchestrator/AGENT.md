@@ -416,19 +416,19 @@ bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} \
 
 ```bash
 # Delete task (PLANNING phase only)
-bun $SCRIPTS/task-delete.js --project {PROJECT} --team {SUB_TEAM} --id "5"
+bun "$SCRIPTS_PATH/task-delete.js" --project {PROJECT} --team {SUB_TEAM} --id "5"
 # Output: OK: Task 5 deleted
 
 # Dependency warning
-bun $SCRIPTS/task-delete.js --project {PROJECT} --team {SUB_TEAM} --id "2"
+bun "$SCRIPTS_PATH/task-delete.js" --project {PROJECT} --team {SUB_TEAM} --id "2"
 # Output: WARNING: Task 3, 4 depend on Task 2. Use --force to delete.
 
 # Force delete (orphans dependencies)
-bun $SCRIPTS/task-delete.js --project {PROJECT} --team {SUB_TEAM} --id "2" --force
+bun "$SCRIPTS_PATH/task-delete.js" --project {PROJECT} --team {SUB_TEAM} --id "2" --force
 # Output: OK: Task 2 deleted (dependencies orphaned: 3, 4)
 
 # Attempt delete during EXECUTION phase
-bun $SCRIPTS/task-delete.js --project {PROJECT} --team {SUB_TEAM} --id "1"
+bun "$SCRIPTS_PATH/task-delete.js" --project {PROJECT} --team {SUB_TEAM} --id "1"
 # Output: ERROR: Cannot delete task after EXECUTION phase started. Add a new task instead.
 ```
 
@@ -445,10 +445,10 @@ bun $SCRIPTS/task-delete.js --project {PROJECT} --team {SUB_TEAM} --id "1"
 
 ```bash
 # Get next available task ID
-NEXT_ID=$(bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --format json | jq '.tasks | length + 1')
+NEXT_ID=$(bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --format json | jq '.tasks | length + 1')
 
 # Create new task
-bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
+bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "$NEXT_ID" \
   --title "Set up database migrations" \
   --description "Configure Drizzle ORM migration system" \
@@ -461,7 +461,7 @@ bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
 **After any task modification, ALWAYS recalculate waves:**
 
 ```bash
-bun $SCRIPTS/wave-calculate.js --project {PROJECT} --team {SUB_TEAM}
+bun "$SCRIPTS_PATH/wave-calculate.js" --project {PROJECT} --team {SUB_TEAM}
 ```
 
 ### Script-Prompt Interface Mapping
@@ -554,7 +554,7 @@ while (!isProjectComplete() && iteration < MAX_ITERATIONS) {
 
 ```bash
 # Get current wave status
-bun $SCRIPTS/wave-status.js --project {PROJECT} --team {SUB_TEAM} --format json
+bun "$SCRIPTS_PATH/wave-status.js" --project {PROJECT} --team {SUB_TEAM} --format json
 ```
 
 **Parse status:**
@@ -637,16 +637,16 @@ cat {TEAMWORK_DIR}/verification/wave-{current_wave}.json
 
 ```bash
 # Mark wave as verified
-bun $SCRIPTS/wave-update.js --project {PROJECT} --team {SUB_TEAM} \
+bun "$SCRIPTS_PATH/wave-update.js" --project {PROJECT} --team {SUB_TEAM} \
   --wave {current_wave} --status verified
 
 # Check if more waves exist
-WAVE_STATUS=$(bun $SCRIPTS/wave-status.js --project {PROJECT} --team {SUB_TEAM} --format json)
+WAVE_STATUS=$(bun "$SCRIPTS_PATH/wave-status.js" --project {PROJECT} --team {SUB_TEAM} --format json)
 
 # If next wave exists, start it
 if [ {current_wave} -lt {total_waves} ]; then
   NEXT_WAVE=$((current_wave + 1))
-  bun $SCRIPTS/wave-update.js --project {PROJECT} --team {SUB_TEAM} \
+  bun "$SCRIPTS_PATH/wave-update.js" --project {PROJECT} --team {SUB_TEAM} \
     --wave $NEXT_WAVE --status in_progress
 fi
 ```
@@ -713,10 +713,10 @@ Starting Wave {next_wave}...
 
 ```bash
 # Get next available task ID
-NEXT_ID=$(bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --format json | jq '.tasks | length + 1')
+NEXT_ID=$(bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --format json | jq '.tasks | length + 1')
 
 # Create fix task for conflict
-bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
+bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "$NEXT_ID" \
   --title "Resolve auth.ts conflict between task-3 and task-4" \
   --description "Merge conflicting changes in authenticate() function. Task-3 added JWT validation, Task-4 added rate limiting. Need to integrate both features." \
@@ -724,7 +724,7 @@ bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
   --blocked-by "3,4"
 
 # Create fix task for test failures
-bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
+bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "$((NEXT_ID + 1))" \
   --title "Fix auth.test.ts failures (5 tests)" \
   --description "Investigate and fix 5 failing tests in auth.test.ts. Expected 200 responses but getting 500 errors." \
@@ -735,7 +735,7 @@ bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
 **Recalculate waves:**
 
 ```bash
-bun $SCRIPTS/wave-calculate.js --project {PROJECT} --team {SUB_TEAM}
+bun "$SCRIPTS_PATH/wave-calculate.js" --project {PROJECT} --team {SUB_TEAM}
 ```
 
 **Report failure and recovery:**
@@ -760,12 +760,12 @@ Resuming monitoring...
 
 ```bash
 # Get all resolved tasks in current wave
-WAVE_TASKS=$(bun $SCRIPTS/wave-status.js --project {PROJECT} --team {SUB_TEAM} --format json \
+WAVE_TASKS=$(bun "$SCRIPTS_PATH/wave-status.js" --project {PROJECT} --team {SUB_TEAM} --format json \
   | jq ".waves[] | select(.id == $CURRENT_WAVE) | .tasks[]")
 
 # For each task, extract file modifications from evidence
 for TASK_ID in $WAVE_TASKS; do
-  TASK=$(bun $SCRIPTS/task-get.js --project {PROJECT} --team {SUB_TEAM} --id $TASK_ID)
+  TASK=$(bun "$SCRIPTS_PATH/task-get.js" --project {PROJECT} --team {SUB_TEAM} --id $TASK_ID)
   # Parse evidence for "Created/Modified/Updated {file}" patterns
 done
 ```
@@ -841,7 +841,7 @@ Checking again in {MONITOR_INTERVAL} seconds...
 1. **Verify all tasks resolved**
 
 ```bash
-TASK_STATUS=$(bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --format json)
+TASK_STATUS=$(bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --format json)
 ALL_RESOLVED=$(echo $TASK_STATUS | jq '[.tasks[] | select(.status != "resolved")] | length == 0')
 ```
 
