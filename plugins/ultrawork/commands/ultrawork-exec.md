@@ -70,8 +70,8 @@ Find and load the existing session:
 
 ```bash
 # Get SESSION_ID from hook output (see "Session ID Handling" section)
-# Get session directory via script
-SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
+# Get session directory via variable
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 # Verify session exists and has tasks
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session ${CLAUDE_SESSION_ID}
@@ -186,7 +186,7 @@ while iteration <= max_iterations:
 
 ```python
 def run_execution_phase(SESSION_ID, max_workers):
-    # Get session_dir via: Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
+    # SESSION_DIR is set via: SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
     while True:
         # Get current task states
@@ -235,7 +235,7 @@ SUCCESS CRITERIA:
 
 ```python
 def run_verification_phase(SESSION_ID):
-    # Get session_dir via: Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
+    # SESSION_DIR is set via: SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
     # Update phase
     Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase VERIFICATION')
@@ -398,7 +398,7 @@ Session ID: {session_id}
 
 ## Directory Structure
 
-Get session directory: `bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir`
+Get session directory: `~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}`
 
 ```
 $SESSION_DIR/

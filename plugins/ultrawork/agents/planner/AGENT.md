@@ -83,7 +83,7 @@ Options:
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Session data
-SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
 bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --field goal  # Specific field
 
@@ -120,7 +120,7 @@ Classify the work intent to adjust your approach:
 ### Phase 1: Read Context
 
 ```bash
-SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 # Session info
 bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --field goal

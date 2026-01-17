@@ -94,7 +94,8 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 Spawn explorers for each identified area (parallel, in single message):
 
 ```python
-# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
+# Get session directory directly
+SESSION_DIR = "~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}"
 
 # Call multiple Tasks in single message = automatic parallel execution
 for i, hint in enumerate(hints):
@@ -127,7 +128,7 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 
 ```bash
 # Get session directory
-SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 # Read session state via script (NEVER cat JSON directly)
 EXPLORATION_STAGE=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field exploration_stage)

@@ -75,7 +75,7 @@ while True:
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --plan-only "goal"
 
 # Get session directory
-SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session 37b6a60f-8e3e-4631-8f62-8eaf3d235642 --dir)
+SESSION_DIR=~/.claude/ultrawork/sessions/37b6a60f-8e3e-4631-8f62-8eaf3d235642
 ```
 
 ---
@@ -87,10 +87,10 @@ SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session 3
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session ${CLAUDE_SESSION_ID} --plan-only $ARGUMENTS
 ```
 
-**After initialization, get session_dir via script:**
+**After initialization, get session_dir via variable:**
 
 ```bash
-SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 ```
 
 Parse the setup output to get:
@@ -192,7 +192,7 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 Spawn Planner sub-agent:
 
 ```python
-# Get session_dir via: Bash('"bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir')
+# SESSION_DIR is set via: SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 Task(
   subagent_type="ultrawork:planner:planner",
@@ -224,7 +224,7 @@ Reference: `skills/planning/SKILL.md`
 
 ```bash
 # Get session directory
-SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 # Get context summary (AI-friendly markdown) - NEVER use Read on JSON
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-get.js" --session ${CLAUDE_SESSION_ID} --summary
@@ -395,7 +395,7 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 ```bash
 # Get working directory and session directory
 WORKING_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir)
-SESSION_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 # List tasks
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session ${CLAUDE_SESSION_ID}
@@ -463,7 +463,7 @@ Run `/ultrawork-exec` to execute the plan.
 ## Directory Structure
 
 **Session Directory** (internal metadata):
-`bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --dir`
+`~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}`
 
 ```
 $SESSION_DIR/

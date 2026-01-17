@@ -78,7 +78,7 @@ Use these scripts for session/task management:
 SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 # Get session directory path
-SESSION_DIR=$(bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID} --dir)
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 # Get session data
 bun "$SCRIPTS/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
