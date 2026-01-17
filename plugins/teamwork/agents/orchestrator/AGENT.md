@@ -102,7 +102,7 @@ bun "$SCRIPTS_PATH/project-get.js" --project {PROJECT} --team {SUB_TEAM}
 
 # Task management
 bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
-  --id "1" --title "..." --role backend --blocked-by "2,3"
+  --id "1" --title "..." --role backend --complexity standard --blocked-by "2,3"
 
 bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --format json
 
@@ -251,6 +251,28 @@ Use when no plan documents provided, or as sub-decomposition within Strategy A.
 | `review`   | Code review, refactoring                   |
 | `general`  | Miscellaneous, cross-cutting               |
 
+**Complexity Assignment (for dynamic model selection):**
+
+Workers use different models based on task complexity:
+
+| Complexity | Model | Criteria | Examples |
+| ---------- | ----- | -------- | -------- |
+| `simple`   | haiku | Single file, <10 lines, minor changes | Config updates, typo fixes, simple docs |
+| `standard` | sonnet | 1-3 files, typical CRUD, straightforward | API endpoints, UI components, tests |
+| `complex`  | opus | 5+ files, architecture, security-critical | Auth systems, DB migrations, major refactors |
+
+**Guidelines for complexity assessment:**
+- **simple**: Task is obvious, minimal thinking required, low risk
+- **standard**: Task requires moderate planning, some decision-making
+- **complex**: Task requires deep analysis, multiple considerations, high impact
+
+**Default to `standard`** when uncertain. Upgrade to `complex` if:
+- Task involves authentication/authorization
+- Task touches database schema
+- Task spans 5+ files
+- Task has architectural implications
+- Task is security-sensitive
+
 ### Step 4: Create Project and Tasks
 
 **Step 4a: Create project**
@@ -270,17 +292,30 @@ bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
   --title "Clear, actionable title" \
   --description "Specific deliverable with context" \
   --role backend \
+  --complexity standard \
   --blocked-by ""
 ```
 
-With dependencies:
+With dependencies and higher complexity:
 
 ```bash
 bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "3" \
-  --title "Build API endpoints" \
+  --title "Build API endpoints with authentication" \
   --role backend \
+  --complexity complex \
   --blocked-by "1,2"
+```
+
+Simple task example:
+
+```bash
+bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
+  --id "5" \
+  --title "Update README with new API docs" \
+  --role docs \
+  --complexity simple \
+  --blocked-by "3"
 ```
 
 ### Step 5: Set Dependencies and Calculate Waves

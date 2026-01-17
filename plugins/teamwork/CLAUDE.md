@@ -79,7 +79,7 @@ All scripts use Bun runtime with flag-based parameters. All task/project scripts
 | **project-get.js** | Get project metadata | `--project <name>` `--team <name>` |
 | **project-clean.js** | Clean project by deleting task and verification directories | `--project <name>` `--team <name>` |
 | **project-status.js** | Get project dashboard status | `--project <name>` `--team <name>` `[--format json\|table]` `[--field <path>]` `[--verbose]` |
-| **task-create.js** | Create new task file | `--project <name>` `--team <name>` `--id <id>` `--title "..."` `--description "..."` `--role <role>` `--blocked-by "1,2"` |
+| **task-create.js** | Create new task file | `--project <name>` `--team <name>` `--id <id>` `--title "..."` `--description "..."` `--role <role>` `--complexity simple\|standard\|complex` `--blocked-by "1,2"` |
 | **task-get.js** | Get single task details | `--project <name>` `--team <name>` `--id <id>` |
 | **task-list.js** | List all tasks in project | `--project <name>` `--team <name>` `--available` `--role <role>` `--format json\|table` |
 | **task-claim.js** | Atomically claim a task | `--project <name>` `--team <name>` `--id <id>` `--owner <session_id>` |
@@ -114,14 +114,24 @@ Skills provide reusable capabilities for agents. Each skill documents when to us
 | **wave-verifier** | sonnet | Wave-level verification | Cross-task dependency checking, file conflict detection, wave-scoped build/test execution |
 | **final-verifier** | opus | Project-level verification | Full build/test, blocked pattern scanning, evidence completeness, cross-wave dependency validation |
 | **coordinator** | opus | DEPRECATED - Planning (v1 compatibility) | **Deprecated in v2**: Use orchestrator instead. Kept for backward compatibility only. |
-| **worker** | inherit | General purpose task execution | Find available tasks, claim with file lock, implement, collect structured evidence, mark resolved |
-| **frontend** | inherit | Frontend development specialist | UI components, styling, state management, user interactions, responsive design, accessibility |
-| **backend** | inherit | Backend development specialist | API endpoints, services, database, business logic, data validation |
-| **devops** | inherit | DevOps and infrastructure specialist | CI/CD, deployment, infrastructure, containerization, monitoring |
-| **test** | inherit | Testing specialist | Unit tests, integration tests, fixtures, mocks, test coverage |
-| **docs** | inherit | Documentation specialist | README, API docs, examples, architectural documentation |
-| **security** | inherit | Security specialist | Authentication, authorization, input validation, security audits |
-| **review** | inherit | Code review specialist | Code quality, refactoring, best practices, architecture review |
+| **worker** | dynamic* | General purpose task execution | Find available tasks, claim with file lock, implement, collect structured evidence, mark resolved |
+| **frontend** | dynamic* | Frontend development specialist | UI components, styling, state management, user interactions, responsive design, accessibility |
+| **backend** | dynamic* | Backend development specialist | API endpoints, services, database, business logic, data validation |
+| **devops** | dynamic* | DevOps and infrastructure specialist | CI/CD, deployment, infrastructure, containerization, monitoring |
+| **test** | dynamic* | Testing specialist | Unit tests, integration tests, fixtures, mocks, test coverage |
+| **docs** | dynamic* | Documentation specialist | README, API docs, examples, architectural documentation |
+| **security** | dynamic* | Security specialist | Authentication, authorization, input validation, security audits |
+| **review** | dynamic* | Code review specialist | Code quality, refactoring, best practices, architecture review |
+
+**\*Dynamic model selection based on task complexity:**
+
+| Complexity | Model | When to Use |
+|------------|-------|-------------|
+| `simple` | haiku | Single file, <10 lines, config updates, simple docs |
+| `standard` | sonnet | 1-3 files, typical CRUD, straightforward implementation |
+| `complex` | opus | 5+ files, architecture changes, security-critical work |
+
+Model is determined at worker spawn time by reading `task.complexity` field.
 
 ## State Management
 
@@ -155,6 +165,7 @@ Skills provide reusable capabilities for agents. Each skill documents when to us
   "title": "Implement user authentication",
   "description": "Add JWT-based authentication middleware",
   "role": "backend",
+  "complexity": "complex",
   "status": "open",
   "blocked_by": [],
   "wave": 1,
@@ -184,6 +195,8 @@ Skills provide reusable capabilities for agents. Each skill documents when to us
 **Task status values**: `open` | `in_progress` | `resolved`
 
 **Role values**: `frontend` | `backend` | `devops` | `test` | `docs` | `security` | `review` | `worker`
+
+**Complexity values**: `simple` | `standard` | `complex` (default: `standard`)
 
 **Evidence types** (v2):
 - `command`: Command execution with exit code

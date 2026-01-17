@@ -20,6 +20,7 @@ const {
 /**
  * @typedef {import('../lib/types.js').Task} Task
  * @typedef {import('../lib/types.js').Role} Role
+ * @typedef {import('../lib/types.js').Complexity} Complexity
  */
 
 /**
@@ -30,6 +31,7 @@ const {
  * @property {string} [title]
  * @property {string} [description]
  * @property {Role} [role]
+ * @property {Complexity} [complexity]
  * @property {string} [wave]
  */
 
@@ -40,6 +42,7 @@ const ARG_SPEC = {
   '--title': { key: 'title', required: true },
   '--description': { key: 'description', aliases: ['-d'] },
   '--role': { key: 'role', aliases: ['-r'], default: 'worker' },
+  '--complexity': { key: 'complexity', aliases: ['-c'], default: 'standard' },
   '--wave': { key: 'wave', aliases: ['-w'] },
   '--blocked-by': { key: 'blocked_by', aliases: ['-b'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
@@ -77,12 +80,21 @@ function createTask(args) {
     ? args.blocked_by.split(',').map(s => s.trim()).filter(Boolean)
     : [];
 
+  // Validate complexity
+  const validComplexities = ['simple', 'standard', 'complex'];
+  const complexity = args.complexity || 'standard';
+  if (!validComplexities.includes(complexity)) {
+    console.error(`Error: Invalid complexity "${complexity}". Must be: simple, standard, or complex`);
+    process.exit(1);
+  }
+
   /** @type {Task} */
   const task = {
     id: args.id,
     title: args.title,
     description: args.description || args.title,
     role: args.role || 'worker',
+    complexity: complexity,
     status: 'open',
     blocked_by: blockedBy,
     version: 0,

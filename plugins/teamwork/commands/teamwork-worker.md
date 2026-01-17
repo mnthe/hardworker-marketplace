@@ -156,6 +156,32 @@ DETECTED_ROLE=$(echo "$AVAILABLE_TASKS" | bun -e "
 **If user specified `--role` flag:**
 Skip this step. Use user-specified role directly.
 
+## Step 2.6: Detect Task Complexity (for model selection)
+
+**Read the first available task's complexity field:**
+
+```bash
+TASK_COMPLEXITY=$(echo "$AVAILABLE_TASKS" | bun -e "
+  const tasks = JSON.parse(require('fs').readFileSync(0, 'utf-8'));
+  if (tasks.length > 0 && tasks[0].complexity) {
+    console.log(tasks[0].complexity);
+  } else {
+    console.log('standard');
+  }
+")
+```
+
+**Variable values:**
+- `TASK_COMPLEXITY`: Complexity from first available task ('simple', 'standard', 'complex'), or 'standard' if not specified
+
+**Model Selection Logic:**
+
+| Complexity | Model | Rationale |
+|------------|-------|-----------|
+| `simple` | haiku | Single file changes, minor edits |
+| `standard` | sonnet | Multi-file CRUD, typical implementation |
+| `complex` | opus | Architecture changes, 5+ files, security-critical |
+
 ## Step 3: Spawn Worker Agent
 
 **Determine agent type using precedence order:**
@@ -180,9 +206,21 @@ else:
 
 **Valid role values**: `frontend`, `backend`, `test`, `devops`, `docs`, `security`, `review`, `worker`
 
+**Determine model using complexity:**
+
+```python
+# Dynamic model selection based on task complexity
+if TASK_COMPLEXITY == "simple":
+    model = "haiku"
+elif TASK_COMPLEXITY == "complex":
+    model = "opus"
+else:  # "standard" or default
+    model = "sonnet"
+```
+
 **ACTION REQUIRED - Call Task tool with:**
 - subagent_type: `{subagent_type}` (determined using logic above)
-- model: "sonnet"
+- model: `{model}` (determined by complexity: simple→haiku, standard→sonnet, complex→opus)
 - prompt:
   ```
   TEAMWORK_DIR: {teamwork_dir}

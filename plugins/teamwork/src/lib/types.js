@@ -19,12 +19,21 @@
  */
 
 /**
+ * Task complexity levels for dynamic model selection
+ * - simple: Single file, minor changes → haiku
+ * - standard: Multi-file, typical CRUD work → sonnet
+ * - complex: Architecture changes, 5+ files, security-sensitive → opus
+ * @typedef {'simple' | 'standard' | 'complex'} Complexity
+ */
+
+/**
  * Task definition for teamwork project
  * @typedef {Object} Task
  * @property {string} id - Unique task identifier
  * @property {string} title - Task title/subject
  * @property {string} description - Detailed task description
  * @property {Role} role - Required worker role for this task
+ * @property {Complexity} [complexity] - Task complexity for model selection (default: 'standard')
  * @property {TaskStatus} status - Current task status
  * @property {number} [version] - Task version number (defaults to 0 for backward compatibility)
  * @property {string} created_at - ISO8601 timestamp
