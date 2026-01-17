@@ -497,6 +497,37 @@ process.exit(0); // success
 process.exit(1); // error
 ```
 
+### Agent Script Path Pattern
+
+**IMPORTANT**: When agents need to call scripts, they receive `SCRIPTS_PATH` via their prompt.
+
+#### Why?
+
+Claude Code expands `${CLAUDE_PLUGIN_ROOT}` in command/hook files at load time, but NOT in agent markdown content. Agents cannot rely on `${CLAUDE_PLUGIN_ROOT}` being available as a shell environment variable.
+
+#### Pattern
+
+1. **Commands** pass `SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts` to agents in the prompt
+2. **Agents** use `$SCRIPTS_PATH` in bash commands:
+   ```bash
+   bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM}
+   ```
+
+#### DO NOT
+
+```bash
+# WRONG - this will fail in agents
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
+bun "$SCRIPTS/task-list.js" ...
+```
+
+#### DO
+
+```bash
+# CORRECT - use SCRIPTS_PATH from prompt
+bun "$SCRIPTS_PATH/task-list.js" ...
+```
+
 ### Document Synchronization
 
 **When modifying teamwork commands or agents, you MUST check and update the following files:**
