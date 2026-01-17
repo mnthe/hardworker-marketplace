@@ -295,6 +295,204 @@ bun $SCRIPTS/wave-calculate.js --project {PROJECT} --team {SUB_TEAM}
 
 ---
 
+## User Review Gate
+
+**CRITICAL: After task decomposition and wave calculation, ALWAYS present the plan to the user for review.**
+
+### Purpose
+
+Allow user to review, modify, or regenerate the task plan before execution starts. This prevents wasted effort on incorrect decomposition.
+
+### Display Format
+
+Present both task list AND wave plan together:
+
+**Example output:**
+
+```markdown
+## Task Plan Review
+
+### Tasks Created
+
+| ID | Task | Role | Blocked By | Wave |
+|----|------|------|------------|------|
+| 1 | Initialize pnpm monorepo workspace | devops | - | 1 |
+| 2 | Create database package structure | backend | 1 | 2 |
+| 3 | Implement items.schema.ts | backend | 2 | 3 |
+| 4 | Implement item-features.schema.ts with pgvector | backend | 2 | 3 |
+| 5 | Configure Docker Compose for PostgreSQL | devops | 1 | 2 |
+| 6 | Add SearchUseCase with keyword search | backend | 3,4 | 4 |
+| 7 | Write integration tests for search | test | 6 | 5 |
+
+### Wave Plan
+
+- **Wave 1** (1 task): [1] - Foundation setup
+- **Wave 2** (2 tasks): [2, 5] - Database and infrastructure (parallel)
+- **Wave 3** (2 tasks): [3, 4] - Schema implementation (parallel)
+- **Wave 4** (1 task): [6] - Business logic
+- **Wave 5** (1 task): [7] - Testing
+
+**Review Options:**
+- Type "approve" to start execution
+- Type "modify" to adjust specific tasks
+- Type "regenerate" to redo task decomposition with new hints
+```
+
+### User Options
+
+| Option | Action | When to Use |
+|--------|--------|-------------|
+| **approve** | Proceed to monitoring phase | Plan looks correct, ready to execute |
+| **modify** | Adjust specific tasks (add/update/delete) | Small adjustments needed |
+| **regenerate** | Redo entire task decomposition | Major changes needed, wrong approach |
+
+### Modify Interaction (Natural Language First)
+
+**Strategy: Natural language first, structured prompts if ambiguous.**
+
+#### Step 1: Parse Natural Language
+
+User can describe changes in natural language:
+
+```
+User: "Change task 3's title to 'Create items table schema' and assign it to backend role"
+User: "Delete task 5, it's not needed"
+User: "Add a new task after task 2 to set up database migrations"
+User: "Task 6 should be blocked by both 3 and 4"
+```
+
+#### Step 2: Interpret and Confirm
+
+Orchestrator interprets the request and confirms understanding:
+
+```markdown
+Understood. I will:
+1. Update task 3: title → "Create items table schema", role → backend
+2. Delete task 5 (Configure Docker Compose for PostgreSQL)
+3. Recalculate waves after changes
+
+Proceed with these changes? (yes/no)
+```
+
+#### Step 3: Execute Changes Using Scripts
+
+Use the appropriate scripts for each modification type.
+
+### Task Adjustment Scripts
+
+#### Modify Task (task-update.js)
+
+**Update task title, description, or role:**
+
+```bash
+# Change title
+bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} \
+  --id "3" \
+  --title "Create items table schema"
+
+# Change description
+bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} \
+  --id "3" \
+  --description "Design and implement PostgreSQL schema for items table with proper indexes"
+
+# Change role
+bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} \
+  --id "3" \
+  --role backend
+
+# Multiple changes at once
+bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} \
+  --id "3" \
+  --title "Create items table schema" \
+  --description "Design and implement PostgreSQL schema" \
+  --role backend
+```
+
+#### Delete Task (task-delete.js)
+
+**PLANNING stage only. EXECUTION phase deletion is blocked.**
+
+```bash
+# Delete task (PLANNING phase only)
+bun $SCRIPTS/task-delete.js --project {PROJECT} --team {SUB_TEAM} --id "5"
+# Output: OK: Task 5 deleted
+
+# Dependency warning
+bun $SCRIPTS/task-delete.js --project {PROJECT} --team {SUB_TEAM} --id "2"
+# Output: WARNING: Task 3, 4 depend on Task 2. Use --force to delete.
+
+# Force delete (orphans dependencies)
+bun $SCRIPTS/task-delete.js --project {PROJECT} --team {SUB_TEAM} --id "2" --force
+# Output: OK: Task 2 deleted (dependencies orphaned: 3, 4)
+
+# Attempt delete during EXECUTION phase
+bun $SCRIPTS/task-delete.js --project {PROJECT} --team {SUB_TEAM} --id "1"
+# Output: ERROR: Cannot delete task after EXECUTION phase started. Add a new task instead.
+```
+
+**Deletion Policy:**
+
+| Phase | Deletion Allowed | Alternative |
+|-------|------------------|-------------|
+| PLANNING | ✅ Yes | - |
+| EXECUTION onward | ❌ No | Create new task to fix/revert |
+
+#### Add Task (task-create.js)
+
+**Add new task during review:**
+
+```bash
+# Get next available task ID
+NEXT_ID=$(bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --format json | jq '.tasks | length + 1')
+
+# Create new task
+bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
+  --id "$NEXT_ID" \
+  --title "Set up database migrations" \
+  --description "Configure Drizzle ORM migration system" \
+  --role backend \
+  --blocked-by "2"
+```
+
+#### Recalculate Waves
+
+**After any task modification, ALWAYS recalculate waves:**
+
+```bash
+bun $SCRIPTS/wave-calculate.js --project {PROJECT} --team {SUB_TEAM}
+```
+
+### Script-Prompt Interface Mapping
+
+| User Action | AGENT.md Instruction | Script Call |
+|-------------|---------------------|-------------|
+| "Show task list" | Display task table | `task-list.js --format table` |
+| "Modify task {id}" | Update task fields | `task-update.js --id {id} --title/--description/--role` |
+| "Delete task {id}" | Delete task (PLANNING only) | `task-delete.js --id {id}` |
+| "Add task" | Create new task | `task-create.js --id {next_id} ...` |
+| "Update dependencies" | Modify blocked_by | Edit task JSON, then `wave-calculate.js` |
+| "Recalculate waves" | Recompute wave groups | `wave-calculate.js` |
+| "Approve" | Start monitoring phase | (proceed to Phase 2) |
+
+### Regenerate Flow
+
+If user requests regeneration:
+
+1. **Ask for hints**: "What would you like me to focus on?"
+2. **Read hints**: User provides guidance (e.g., "Make tasks smaller", "Separate frontend/backend more")
+3. **Re-run decomposition**: Go back to Step 3 with new hints
+4. **Present new plan**: Show updated task list and waves
+5. **Repeat review gate**: User reviews again
+
+### Auto Mode Behavior
+
+If `--auto` flag is set:
+- **Skip review gate** entirely
+- Proceed directly from wave calculation to monitoring phase
+- User accepts responsibility for task plan accuracy
+
+---
+
 ## Phase 2: Monitoring Loop
 
 **CRITICAL: This is the core orchestration logic.**

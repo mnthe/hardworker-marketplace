@@ -360,6 +360,79 @@ Skills provide reusable capabilities for agents. Each skill documents when to us
    - PASS → Phase → COMPLETE
    - FAIL → Create fix tasks, new wave
 
+## Worker Polling Mode
+
+Workers can start before the orchestrator creates the project, continuously polling for work.
+
+### How It Works
+
+1. **Worker starts**: Worker agent starts with `--loop` flag
+2. **Project polling**: Checks if project.json exists
+   - If missing: Wait N seconds, retry
+   - If found: Proceed to task polling
+3. **Task polling**: Checks for available tasks matching role
+   - If none available: Wait N seconds, retry
+   - If found: Claim and execute task
+4. **Loop**: After task completion, return to task polling (step 3)
+
+### Required Parameters
+
+`--project` and `--team` are **REQUIRED** for polling mode to specify which project to watch:
+
+```bash
+# Correct: Specify target project
+/teamwork-worker --project my-app --team master --role backend --loop
+
+# Wrong: Missing project/team
+/teamwork-worker --role backend --loop  # ❌ Error: --project required
+```
+
+### Usage Examples
+
+```bash
+# Start worker before orchestrator creates project
+Terminal 1: /teamwork-worker --project my-app --team master --role backend --loop
+            → Polling: Waiting for project...
+
+Terminal 2: /teamwork-worker --project my-app --team master --role frontend --loop
+            → Polling: Waiting for project...
+
+Terminal 3: /teamwork "Build API"
+            → Creates project my-app/master
+            → Workers in Terminal 1 & 2 detect project and start working
+```
+
+### Configuration
+
+```bash
+# Default: 30 second wait between polls
+/teamwork-worker --project my-app --team master --role backend --loop
+
+# Custom wait interval (60 seconds)
+/teamwork-worker --project my-app --team master --role backend --loop --wait 60
+```
+
+### Termination
+
+Workers in polling mode run indefinitely until manually stopped:
+
+- **User action required**: Press Ctrl+C to stop worker
+- **No auto-exit**: Workers never exit automatically, even when all tasks complete
+
+### Status Output
+
+Workers display timestamped status messages during polling:
+
+```
+[23:30:01] Waiting for project...
+[23:30:31] Waiting for project...
+[23:31:01] Project found: my-app/master
+[23:31:01] No available tasks (role: backend). Waiting 30s...
+[23:31:31] Found task 3: "Implement items.schema.ts"
+[23:31:31] Claiming task 3...
+[23:31:32] Working on task 3...
+```
+
 ## Fresh Start Mechanism (v2)
 
 The fresh start mechanism prevents workers from getting stuck on difficult tasks:
