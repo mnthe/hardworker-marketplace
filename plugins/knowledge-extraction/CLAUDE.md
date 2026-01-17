@@ -75,7 +75,7 @@ All hook scripts use Bun runtime and read JSON input from stdin.
 
 | Agent | Model | Role | Key Responsibilities |
 |-------|-------|------|---------------------|
-| **insight-extractor** | inherit | Insight analysis | Analyzes insights, proposes extraction targets |
+| **insight-extractor** | sonnet | Insight analysis | Analyzes insights, proposes extraction targets |
 
 ### Skills
 
