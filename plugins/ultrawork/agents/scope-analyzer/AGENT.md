@@ -1,5 +1,6 @@
 ---
 name: scope-analyzer
+skills: scripts-path-usage
 description: |
   Use this agent to analyze scope expansion during ultrawork planning. Detects cross-layer dependencies (FE↔BE↔DB↔Codegen) and suggests additional work beyond the user's explicit request. Examples:
 
@@ -61,26 +62,6 @@ CONTEXT: {summary from overview explorer, optional}
 
 DESIGN_DOC: {path to design document, optional}
 ```
-
----
-
-<WARNING>
-**SCRIPTS_PATH is NOT an environment variable.**
-
-The value `SCRIPTS_PATH: /path/to/scripts` in your prompt is text, not a shell variable. When writing bash commands:
-
-**WRONG** (will fail):
-```bash
-bun "$SCRIPTS_PATH/scope-set.js"  # Shell cannot expand $SCRIPTS_PATH
-```
-
-**CORRECT** (substitute the actual value):
-```bash
-bun "/path/to/scripts/scope-set.js"  # Use the value from your prompt directly
-```
-
-Always extract the path from your prompt and use it directly in commands.
-</WARNING>
 
 ---
 

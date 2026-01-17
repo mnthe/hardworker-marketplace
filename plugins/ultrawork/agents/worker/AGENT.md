@@ -1,5 +1,6 @@
 ---
 name: worker
+skills: scripts-path-usage
 description: |
   Use this agent for executing implementation tasks in ultrawork sessions. Executes specific task, collects evidence, updates task file. Examples:
 
@@ -72,24 +73,6 @@ SUCCESS CRITERIA:
 - Consistent error handling and validation
 
 ## Utility Scripts
-
-<WARNING>
-**SCRIPTS_PATH is NOT an environment variable.**
-
-The value `SCRIPTS_PATH: /path/to/scripts` in your prompt is text, not a shell variable. When writing bash commands:
-
-**WRONG** (will fail):
-```bash
-bun "$SCRIPTS_PATH/task-get.js"  # Shell cannot expand $SCRIPTS_PATH
-```
-
-**CORRECT** (substitute the actual value):
-```bash
-bun "/path/to/scripts/task-get.js"  # Use the value from your prompt directly
-```
-
-Always extract the path from your prompt and use it directly in commands.
-</WARNING>
 
 Use these scripts for session/task management:
 
@@ -179,11 +162,19 @@ Do NOT mark as resolved if failed - leave status as "open" for retry.
 
 ### Phase 6: Commit Changes (Auto-Commit)
 
-**After task is marked resolved, commit all changes:**
+**After task is marked resolved, commit ONLY the files you modified:**
+
+⚠️ **CRITICAL: Selective File Staging**
 
 ```bash
-# Stage all changes and commit atomically to minimize race condition
-git add -A && git commit -m "$(cat <<'EOF'
+# ❌ FORBIDDEN - NEVER use these:
+git add -A        # Stages ALL files
+git add .         # Stages ALL files
+git add --all     # Stages ALL files
+git add *         # Glob expansion - dangerous
+
+# ✅ REQUIRED - Only add files YOU modified during this task:
+git add path/to/file1.ts path/to/file2.ts && git commit -m "$(cat <<'EOF'
 <type>(<scope>): <short description>
 
 [ultrawork] Session: ${CLAUDE_SESSION_ID} | Task: {TASK_ID}
@@ -195,11 +186,16 @@ Criteria met:
 - {criterion 2}
 
 Files changed:
-- {file 1}
-- {file 2}
+- path/to/file1.ts
+- path/to/file2.ts
 EOF
 )"
 ```
+
+**Why selective staging?**
+- Repo may have unrelated changes from other work
+- Only YOUR task changes should be in this commit
+- Enables clean rollback if needed
 
 **Angular Commit Message Types:**
 
@@ -428,6 +424,7 @@ Any additional context.
 6. **Be honest** - If something fails, report it (don't mark resolved)
 7. **Commit on success** - Always commit changes after task resolved (Phase 6)
 8. **Atomic commits** - One task = one commit for easy rollback
+9. **Selective staging** - ONLY `git add <your-files>`, NEVER `git add -A` or `git add .`
 
 ---
 

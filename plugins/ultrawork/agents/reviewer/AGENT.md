@@ -1,5 +1,6 @@
 ---
 name: reviewer
+skills: scripts-path-usage
 description: |
   Use this agent for code review in ultrawork sessions. Reviews implementation for quality, correctness, and adherence to criteria. Examples:
 
