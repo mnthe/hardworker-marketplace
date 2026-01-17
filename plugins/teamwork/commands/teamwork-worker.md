@@ -99,7 +99,7 @@ Show error and suggest `/teamwork "goal"` first (existing behavior).
 Register loop state for this terminal:
 
 ```!
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/loop-state.js" --set --project "{PROJECT}" --team "{SUB_TEAM}" --role "{ROLE}"
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/loop-state.js" --start --project "{PROJECT}" --team "{SUB_TEAM}" --role "{ROLE}"
 ```
 
 ## Step 2: Check for Available Tasks

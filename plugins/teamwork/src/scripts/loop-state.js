@@ -2,7 +2,8 @@
 /**
  * loop-state.js - Teamwork loop state management
  * Tracks active loop sessions per terminal/project
- * Usage: loop-state.js --get | --set --project <name> --team <name> --role <name> | --clear
+ * Usage: loop-state.js --get | --start --project <name> --team <name> --role <name> | --clear
+ * Note: --set is a deprecated alias for --start (kept for backward compatibility)
  */
 
 const fs = require('fs');
@@ -64,7 +65,7 @@ function getTimestamp() {
 /**
  * @typedef {Object} CliArgs
  * @property {boolean} [get]
- * @property {boolean} [set]
+ * @property {boolean} [start]
  * @property {boolean} [clear]
  * @property {string} [project]
  * @property {string} [team]
@@ -74,7 +75,7 @@ function getTimestamp() {
 
 const ARG_SPEC = {
   '--get': { key: 'get', aliases: ['-g'], flag: true },
-  '--set': { key: 'set', aliases: ['-s'], flag: true },
+  '--start': { key: 'start', aliases: ['--set', '-s'], flag: true },  // --set kept as alias for backward compatibility
   '--clear': { key: 'clear', aliases: ['-c'], flag: true },
   '--project': { key: 'project', aliases: ['-p'] },
   '--team': { key: 'team', aliases: ['-t'] },
@@ -173,7 +174,7 @@ function main() {
   const args = parseArgs(ARG_SPEC);
 
   // Show help if no operation specified
-  if (!args.get && !args.set && !args.clear) {
+  if (!args.get && !args.start && !args.clear) {
     console.log(generateHelp('loop-state.js', ARG_SPEC, 'Manage teamwork worker loop state per terminal session'));
     process.exit(1);
   }
@@ -181,10 +182,10 @@ function main() {
   // Execute operation
   if (args.get) {
     getLoopState();
-  } else if (args.set) {
+  } else if (args.start) {
     // Validate required parameters
     if (!args.project || !args.team || !args.role) {
-      console.error('Error: --set requires --project, --team, and --role');
+      console.error('Error: --start requires --project, --team, and --role');
       process.exit(1);
     }
     setLoopState(args.project, args.team, args.role);

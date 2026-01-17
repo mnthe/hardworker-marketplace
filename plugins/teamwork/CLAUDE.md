@@ -87,7 +87,7 @@ All scripts use Bun runtime with flag-based parameters. All task/project scripts
 | **wave-calculate.js** | Calculate wave groups from task DAG | `--project <name>` `--team <name>` |
 | **wave-update.js** | Update wave status | `--project <name>` `--team <name>` `--wave <id>` `--status planning\|in_progress\|completed\|verified\|failed` |
 | **wave-status.js** | Query wave progress | `--project <name>` `--team <name>` `--format json\|table` |
-| **loop-state.js** | Manage worker loop state | `--get` `--set --project <name> --team <name> --role <role>` `--clear` |
+| **loop-state.js** | Manage worker loop state | `--get` `--start --project <name> --team <name> --role <role>` `--clear` |
 | **worker-setup.js** | Setup worker session context | `--project <name>` `--team <name>` `--role <role>` |
 
 ## Hook Inventory
@@ -714,8 +714,8 @@ bun src/scripts/task-update.js \
 # Get loop state
 bun src/scripts/loop-state.js --get
 
-# Set loop state
-bun src/scripts/loop-state.js --set \
+# Start loop (register loop state)
+bun src/scripts/loop-state.js --start \
   --project my-app \
   --team auth-team \
   --role backend
