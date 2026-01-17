@@ -106,7 +106,12 @@ if "mcp__plugin_serena_serena__activate_project" in available_tools:
 
 ```bash
 # ${CLAUDE_SESSION_ID} is auto-replaced by Claude Code v2.1.9+
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session ${CLAUDE_SESSION_ID} $ARGUMENTS
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" \
+  --session ${CLAUDE_SESSION_ID} \
+  --goal "$(cat <<'EOF'
+$ARGUMENTS
+EOF
+)"
 ```
 
 **After initialization, get session_dir via variable:**

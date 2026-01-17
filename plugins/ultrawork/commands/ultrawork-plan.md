@@ -84,7 +84,13 @@ SESSION_DIR=~/.claude/ultrawork/sessions/37b6a60f-8e3e-4631-8f62-8eaf3d235642
 
 ```bash
 # ${CLAUDE_SESSION_ID} is auto-replaced by Claude Code v2.1.9+
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" --session ${CLAUDE_SESSION_ID} --plan-only $ARGUMENTS
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js" \
+  --session ${CLAUDE_SESSION_ID} \
+  --plan-only \
+  --goal "$(cat <<'EOF'
+$ARGUMENTS
+EOF
+)"
 ```
 
 **After initialization, get session_dir via variable:**
