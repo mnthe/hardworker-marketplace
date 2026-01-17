@@ -57,6 +57,7 @@ Your prompt MUST include:
 TEAMWORK_DIR: {path to teamwork directory}
 PROJECT: {project name}
 SUB_TEAM: {sub-team name}
+SCRIPTS_PATH: {path to scripts directory}
 
 Goal: {what to accomplish}
 
@@ -69,32 +70,33 @@ Options:
 ## Utility Scripts
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
+# SCRIPTS_PATH is provided in the prompt
+# Use $SCRIPTS_PATH directly in commands
 
 # Project management
-bun $SCRIPTS/project-create.js --project {PROJECT} --team {SUB_TEAM} --goal "..."
+bun "$SCRIPTS_PATH/project-create.js" --project {PROJECT} --team {SUB_TEAM} --goal "..."
 
-bun $SCRIPTS/project-get.js --project {PROJECT} --team {SUB_TEAM}
+bun "$SCRIPTS_PATH/project-get.js" --project {PROJECT} --team {SUB_TEAM}
 
 # Task management
-bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
+bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "1" --title "..." --role backend --blocked-by "2,3"
 
-bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --format json
+bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --format json
 
-bun $SCRIPTS/task-get.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
+bun "$SCRIPTS_PATH/task-get.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
 
-bun $SCRIPTS/task-claim.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} --owner ${CLAUDE_SESSION_ID}
+bun "$SCRIPTS_PATH/task-claim.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} --owner ${CLAUDE_SESSION_ID}
 
-bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
+bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
   --status resolved --add-evidence "..." --owner ${CLAUDE_SESSION_ID}
 
 # Wave management
-bun $SCRIPTS/wave-calculate.js --project {PROJECT} --team {SUB_TEAM}
+bun "$SCRIPTS_PATH/wave-calculate.js" --project {PROJECT} --team {SUB_TEAM}
 
-bun $SCRIPTS/wave-status.js --project {PROJECT} --team {SUB_TEAM} --format json
+bun "$SCRIPTS_PATH/wave-status.js" --project {PROJECT} --team {SUB_TEAM} --format json
 
-bun $SCRIPTS/wave-update.js --project {PROJECT} --team {SUB_TEAM} \
+bun "$SCRIPTS_PATH/wave-update.js" --project {PROJECT} --team {SUB_TEAM} \
   --wave {WAVE_ID} --status {STATUS}
 ```
 
@@ -232,7 +234,7 @@ Use when no plan documents provided, or as sub-decomposition within Strategy A.
 **Step 4a: Create project**
 
 ```bash
-bun $SCRIPTS/project-create.js --project {PROJECT} --team {SUB_TEAM} \
+bun "$SCRIPTS_PATH/project-create.js" --project {PROJECT} --team {SUB_TEAM} \
   --goal "{goal}"
 ```
 
@@ -241,7 +243,7 @@ bun $SCRIPTS/project-create.js --project {PROJECT} --team {SUB_TEAM} \
 For EACH task:
 
 ```bash
-bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
+bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "1" \
   --title "Clear, actionable title" \
   --description "Specific deliverable with context" \
@@ -252,7 +254,7 @@ bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
 With dependencies:
 
 ```bash
-bun $SCRIPTS/task-create.js --project {PROJECT} --team {SUB_TEAM} \
+bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "3" \
   --title "Build API endpoints" \
   --role backend \
@@ -272,7 +274,7 @@ Update task files with `blockedBy` arrays:
 **Calculate waves:**
 
 ```bash
-bun $SCRIPTS/wave-calculate.js --project {PROJECT} --team {SUB_TEAM}
+bun "$SCRIPTS_PATH/wave-calculate.js" --project {PROJECT} --team {SUB_TEAM}
 ```
 
 **Wave calculation output:**
@@ -386,22 +388,22 @@ Use the appropriate scripts for each modification type.
 
 ```bash
 # Change title
-bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} \
+bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "3" \
   --title "Create items table schema"
 
 # Change description
-bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} \
+bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "3" \
   --description "Design and implement PostgreSQL schema for items table with proper indexes"
 
 # Change role
-bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} \
+bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "3" \
   --role backend
 
 # Multiple changes at once
-bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} \
+bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "3" \
   --title "Create items table schema" \
   --description "Design and implement PostgreSQL schema" \

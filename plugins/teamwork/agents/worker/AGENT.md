@@ -51,6 +51,7 @@ Your prompt MUST include:
 TEAMWORK_DIR: {path to teamwork directory}
 PROJECT: {project name}
 SUB_TEAM: {sub-team name}
+SCRIPTS_PATH: {path to scripts directory}
 
 Options:
 - role_filter: {role} (optional, e.g., "frontend")
@@ -60,24 +61,24 @@ Options:
 
 ## Utility Scripts
 
-```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
+The prompt includes `SCRIPTS_PATH` for accessing teamwork scripts:
 
+```bash
 # List available tasks
-bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --available --format json
+bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --available --format json
 
 # List by role
-bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --available --role backend
+bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --available --role backend
 
 # Claim a task (--owner uses session ID for lock identification)
-bun $SCRIPTS/task-claim.js --project {PROJECT} --team {SUB_TEAM} --id 1 --owner ${CLAUDE_SESSION_ID}
+bun "$SCRIPTS_PATH/task-claim.js" --project {PROJECT} --team {SUB_TEAM} --id 1 --owner ${CLAUDE_SESSION_ID}
 
 # Update task (--owner for lock identification)
-bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id 1 \
+bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id 1 \
   --status resolved --add-evidence "npm test: 15/15 passed" --owner ${CLAUDE_SESSION_ID}
 
 # Release task (on failure)
-bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id 1 --release --owner ${CLAUDE_SESSION_ID}
+bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id 1 --release --owner ${CLAUDE_SESSION_ID}
 ```
 
 ## Process
@@ -86,10 +87,10 @@ bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id 1 --relea
 
 ```bash
 # List available tasks (open, unblocked, unclaimed)
-bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --available --format json
+bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --available --format json
 
 # Or filter by role
-bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --available --role {role_filter}
+bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --available --role {role_filter}
 ```
 
 **If no task found:** Report "No available tasks" and exit.
@@ -97,7 +98,7 @@ bun $SCRIPTS/task-list.js --project {PROJECT} --team {SUB_TEAM} --available --ro
 ### Phase 2: Claim Task
 
 ```bash
-bun $SCRIPTS/task-claim.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} --owner ${CLAUDE_SESSION_ID}
+bun "$SCRIPTS_PATH/task-claim.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} --owner ${CLAUDE_SESSION_ID}
 ```
 
 **If claim fails (conflict):** Find another task.
@@ -149,7 +150,7 @@ All command evidence MUST include exit code:
 **On Success:**
 
 ```bash
-bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
+bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
   --status resolved \
   --add-evidence "Created src/models/User.ts" \
   --add-evidence "npm test: 15/15 passed, exit 0" \
@@ -160,12 +161,12 @@ bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
 
 ```bash
 # Add evidence of what went wrong
-bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
+bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
   --add-evidence "FAILED: npm test exited with code 1" \
   --owner ${CLAUDE_SESSION_ID}
 
 # Release the task for another worker
-bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} --release --owner ${CLAUDE_SESSION_ID}
+bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} --release --owner ${CLAUDE_SESSION_ID}
 ```
 
 Do NOT mark as resolved if failed - release the task for retry.
@@ -402,7 +403,7 @@ When using --strict mode, use structured evidence:
 Set task verification status in task metadata:
 
 ```bash
-bun $SCRIPTS/task-update.js --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
+bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
   --verification-status pass \
   --verification-notes "All 3 criteria met with concrete evidence" \
   --owner ${CLAUDE_SESSION_ID}

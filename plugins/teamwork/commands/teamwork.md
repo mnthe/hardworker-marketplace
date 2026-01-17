@@ -97,6 +97,7 @@ The orchestrator handles the full project lifecycle:
   TEAMWORK_DIR: {teamwork_dir}
   PROJECT: {project}
   SUB_TEAM: {sub_team}
+  SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 
   Goal: {goal}
 
