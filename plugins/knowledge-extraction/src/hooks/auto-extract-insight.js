@@ -415,7 +415,10 @@ async function main() {
         ].join('\n');
 
         const output = {
-          systemMessage: message
+          hookSpecificOutput: {
+            hookEventName: "Stop",
+            additionalContext: message
+          }
         };
         console.log(JSON.stringify(output));
       }

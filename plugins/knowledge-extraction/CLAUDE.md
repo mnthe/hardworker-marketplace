@@ -193,7 +193,10 @@ if (stop_hook_active) {
 
 // Hook output (for Stop hook)
 const output = {
-  additionalContext: "Message to display to user"
+  hookSpecificOutput: {
+    hookEventName: "Stop",
+    additionalContext: "Message to display to user"
+  }
 };
 console.log(JSON.stringify(output));
 ```
