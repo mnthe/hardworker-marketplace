@@ -36,6 +36,8 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  * @property {boolean} autoMode
  * @property {boolean} force
  * @property {boolean} resume
+ * @property {boolean} worktree
+ * @property {string} branch
  * @property {boolean} help
  */
 
@@ -49,6 +51,8 @@ const ARG_SPEC = {
   '--auto': { key: 'autoMode', aliases: ['-a'], flag: true },
   '--force': { key: 'force', aliases: ['-f'], flag: true },
   '--resume': { key: 'resume', aliases: ['-r'], flag: true },
+  '--worktree': { key: 'worktree', aliases: ['-W'], flag: true },
+  '--branch': { key: 'branch', aliases: ['-b'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
@@ -79,6 +83,8 @@ function parseCliArgs(argv) {
     '--auto', '-a',
     '--force', '-f',
     '--resume', '-r',
+    '--worktree', '-W',
+    '--branch', '-b',
     '--help', '-h'
   ]);
 
@@ -88,7 +94,7 @@ function parseCliArgs(argv) {
     // Skip known flags
     if (knownFlags.has(arg)) {
       // Skip flag and its value (if not a boolean flag)
-      if (!['--skip-verify', '-V', '--plan-only', '-p', '--auto', '-a', '--force', '-f', '--resume', '-r', '--help', '-h'].includes(arg)) {
+      if (!['--skip-verify', '-V', '--plan-only', '-p', '--auto', '-a', '--force', '-f', '--resume', '-r', '--worktree', '-W', '--help', '-h'].includes(arg)) {
         i++; // Skip next arg (the value)
       }
       continue;
