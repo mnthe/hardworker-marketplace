@@ -2,9 +2,9 @@
 # https://bun.sh/docs/runtime/bunfig
 
 [test]
-# Preload test isolation script to ensure tests don't affect real user data
-# This sets ULTRAWORK_TEST_BASE_DIR before any test files are loaded
-preload = ["./tests/ultrawork/preload.js"]
+# Preload test isolation scripts to ensure tests don't affect real user data
+# These set ULTRAWORK_TEST_BASE_DIR and TEAMWORK_TEST_BASE_DIR before any test files are loaded
+preload = ["./tests/ultrawork/preload.js", "./tests/teamwork/preload.js"]
 
 # Test coverage settings (optional)
 # coverage = true

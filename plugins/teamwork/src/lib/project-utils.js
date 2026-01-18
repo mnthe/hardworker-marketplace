@@ -22,9 +22,14 @@ const fs = require('fs');
 
 /**
  * Get the base teamwork directory
- * @returns {string} ~/.claude/teamwork
+ * Supports TEAMWORK_TEST_BASE_DIR env var for test isolation
+ * @returns {string} ~/.claude/teamwork (or test override)
  */
 function getTeamworkBase() {
+  // Allow test override to prevent tests from affecting real user data
+  if (process.env.TEAMWORK_TEST_BASE_DIR) {
+    return process.env.TEAMWORK_TEST_BASE_DIR;
+  }
   return path.join(os.homedir(), '.claude', 'teamwork');
 }
 
@@ -266,6 +271,54 @@ function updateProjectStats(project, team) {
 }
 
 // ============================================================================
+// Safety Functions (for tests and validation)
+// ============================================================================
+
+/**
+ * Check if current path is a test directory (safe to delete)
+ * @returns {boolean} True if running in test mode with test directory
+ */
+function isTestDirectory() {
+  return !!process.env.TEAMWORK_TEST_BASE_DIR;
+}
+
+/**
+ * Validate that a path is safe to delete (prevents accidental deletion of real user data)
+ * @param {string} targetPath - Path to validate
+ * @throws {Error} If path is not safe to delete
+ */
+function validateSafeDelete(targetPath) {
+  const realUserPath = path.join(os.homedir(), '.claude', 'teamwork');
+
+  // If we're in test mode, only allow deletion within test directory
+  if (process.env.TEAMWORK_TEST_BASE_DIR) {
+    const testBase = path.resolve(process.env.TEAMWORK_TEST_BASE_DIR);
+    const resolvedTarget = path.resolve(targetPath);
+
+    if (!resolvedTarget.startsWith(testBase + path.sep) && resolvedTarget !== testBase) {
+      throw new Error(
+        `SAFETY: Attempted to delete outside test directory.\n` +
+        `  Test base: ${testBase}\n` +
+        `  Target: ${resolvedTarget}\n` +
+        `  This is a bug in the test code.`
+      );
+    }
+  }
+
+  // Prevent deletion of the base teamwork directory itself
+  const resolvedTarget = path.resolve(targetPath);
+  const resolvedBase = path.resolve(realUserPath);
+
+  if (resolvedTarget === resolvedBase || resolvedTarget === path.dirname(resolvedBase)) {
+    throw new Error(
+      `SAFETY: Attempted to delete teamwork base directory.\n` +
+      `  Target: ${resolvedTarget}\n` +
+      `  This would delete all teamwork data!`
+    );
+  }
+}
+
+// ============================================================================
 // Exports
 // ============================================================================
 
@@ -284,4 +337,7 @@ module.exports = {
   writeProject,
   listTasks,
   updateProjectStats,
+  // Safety functions (for tests and validation)
+  isTestDirectory,
+  validateSafeDelete,
 };
