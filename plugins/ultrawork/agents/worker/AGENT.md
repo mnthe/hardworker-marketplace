@@ -1,6 +1,6 @@
 ---
 name: worker
-skills: [scripts-path-usage, data-access-patterns, utility-scripts]
+skills: [scripts-path-usage, data-access-patterns, utility-scripts, tdd-workflow]
 description: |
   Use this agent for executing implementation tasks in ultrawork sessions. Executes specific task, collects evidence, updates task file. Examples:
 
@@ -297,91 +297,16 @@ Document why tests are not applicable in your evidence.
 
 ## TDD Process (when task.approach === 'tdd')
 
-**CRITICAL: TDD tasks MUST follow this exact sequence. Gate hooks will block out-of-order operations.**
+**When task has `approach: "tdd"`, follow the TDD workflow skill.**
 
-### TDD Phase 1: RED - Write Failing Test
+The TDD workflow enforces:
+- **RED phase**: Write test first, verify it fails
+- **GREEN phase**: Write minimal implementation, verify test passes
+- **REFACTOR phase**: Improve code quality (optional)
 
-1. **Create test file FIRST** (before any implementation code)
-2. Write test for expected behavior
-3. Run test and **VERIFY IT FAILS**
+Gate hooks will block implementation files before TDD-RED evidence is collected.
 
-```bash
-# Record test creation
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
-  --add-evidence "TDD-RED: Created test file tests/validateUser.test.ts"
-
-# Run test - MUST FAIL
-npm test -- tests/validateUser.test.ts
-
-# Record failure (expected)
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
-  --add-evidence "TDD-RED: Test fails as expected (exit code 1)"
-```
-
-**Evidence Required:**
-- Test file path created
-- Test execution output showing failure
-- Exit code 1 (expected)
-
-### TDD Phase 2: GREEN - Minimal Implementation
-
-1. Write **MINIMAL** code to make the test pass
-2. Do NOT add extra functionality beyond what test requires
-3. Run test and **VERIFY IT PASSES**
-
-```bash
-# Record implementation
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
-  --add-evidence "TDD-GREEN: Implemented src/validateUser.ts"
-
-# Run test - MUST PASS
-npm test -- tests/validateUser.test.ts
-
-# Record success
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
-  --add-evidence "TDD-GREEN: Test passes (exit code 0)"
-```
-
-**Evidence Required:**
-- Implementation file path
-- Test execution output showing pass
-- Exit code 0
-
-### TDD Phase 3: REFACTOR (Optional)
-
-1. Improve code quality (naming, structure, performance)
-2. Run tests again to ensure they still pass
-3. Record any refactoring done
-
-```bash
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
-  --add-evidence "TDD-REFACTOR: Renamed variables for clarity, tests still pass"
-```
-
-### TDD Evidence Chain
-
-A complete TDD task MUST have this evidence sequence:
-
-```
-1. TDD-RED: Test file created
-2. TDD-RED: Test execution failed (exit code 1)
-3. TDD-GREEN: Implementation created
-4. TDD-GREEN: Test execution passed (exit code 0)
-5. (Optional) TDD-REFACTOR: Improvements made, tests still pass
-```
-
-**Verification will FAIL if:**
-- Implementation evidence appears before TDD-RED evidence
-- Missing TDD-RED or TDD-GREEN evidence
-- Test never failed (suggests code-first, not test-first)
-
-### TDD Task Completion
-
-```bash
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
-  --status resolved \
-  --add-evidence "TDD complete: RED→GREEN→REFACTOR cycle finished"
-```
+**Reference**: See `tdd-workflow` skill for complete RED-GREEN-REFACTOR cycle, evidence requirements, and gate enforcement details.
 
 ---
 
