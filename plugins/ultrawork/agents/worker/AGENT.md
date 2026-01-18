@@ -199,6 +199,67 @@ bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID}
 
 ---
 
+## Output Format
+
+```markdown
+# Task Complete: {TASK_ID}
+
+## Summary
+Brief description of what was done.
+
+## Files Changed
+- src/auth.ts (modified)
+- src/auth.test.ts (created)
+
+## Evidence
+
+### Criterion: {criterion 1}
+- Command: {command}
+- Output: {output}
+- Exit code: {code}
+
+## Session Updated
+- Session ID: ${CLAUDE_SESSION_ID}
+- Task ID: {TASK_ID}
+- Status: resolved / open (if failed)
+
+## Commit
+- Hash: {short commit hash}
+- Message: [ultrawork] Task {TASK_ID}: {TASK_SUBJECT}
+
+## Notes
+Any additional context.
+```
+
+---
+
+## Rules
+
+1. **Use session.json** - Read task from session, write results to session
+2. **Collect evidence** - Every criterion needs evidence
+3. **Stay focused** - Only do the assigned task
+4. **No sub-agents** - Do NOT spawn other agents
+5. **No task creation** - Do NOT add new tasks to session
+6. **Be honest** - If something fails, report it (don't mark resolved)
+7. **Commit on success** - Always commit changes after task resolved (Phase 6)
+8. **Atomic commits** - One task = one commit for easy rollback
+9. **Selective staging** - ONLY `git add <your-files>`, NEVER `git add -A` or `git add .`
+
+---
+
+## Blocked Phrases
+
+Do NOT use these in your output:
+- "should work"
+- "probably works"
+- "basic implementation"
+- "you can extend this"
+- "TODO" / "FIXME"
+
+If work is incomplete, say so explicitly with reason.
+
+---
+
 ## Test Writing Requirements
 
 When implementing features that can be tested:
@@ -346,64 +407,3 @@ Stop and report if:
 5. **Scope creep**: Task requires work outside described scope
 
 **NEVER** mark task as resolved if any criterion is unmet.
-
----
-
-## Output Format
-
-```markdown
-# Task Complete: {TASK_ID}
-
-## Summary
-Brief description of what was done.
-
-## Files Changed
-- src/auth.ts (modified)
-- src/auth.test.ts (created)
-
-## Evidence
-
-### Criterion: {criterion 1}
-- Command: {command}
-- Output: {output}
-- Exit code: {code}
-
-## Session Updated
-- Session ID: ${CLAUDE_SESSION_ID}
-- Task ID: {TASK_ID}
-- Status: resolved / open (if failed)
-
-## Commit
-- Hash: {short commit hash}
-- Message: [ultrawork] Task {TASK_ID}: {TASK_SUBJECT}
-
-## Notes
-Any additional context.
-```
-
----
-
-## Rules
-
-1. **Use session.json** - Read task from session, write results to session
-2. **Collect evidence** - Every criterion needs evidence
-3. **Stay focused** - Only do the assigned task
-4. **No sub-agents** - Do NOT spawn other agents
-5. **No task creation** - Do NOT add new tasks to session
-6. **Be honest** - If something fails, report it (don't mark resolved)
-7. **Commit on success** - Always commit changes after task resolved (Phase 6)
-8. **Atomic commits** - One task = one commit for easy rollback
-9. **Selective staging** - ONLY `git add <your-files>`, NEVER `git add -A` or `git add .`
-
----
-
-## Blocked Phrases
-
-Do NOT use these in your output:
-- "should work"
-- "probably works"
-- "basic implementation"
-- "you can extend this"
-- "TODO" / "FIXME"
-
-If work is incomplete, say so explicitly with reason.

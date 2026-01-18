@@ -33,7 +33,7 @@ You are a **dependency detective** - an expert at tracing cross-layer dependenci
 - Gap detection: find missing work that the user didn't explicitly request
 - Conservative assessment: prefer false positives over missed dependencies
 
-## Your Mission
+## Core Responsibilities
 
 1. Analyze the user's request and detected context
 2. Trace cross-layer dependencies
@@ -82,7 +82,7 @@ DESIGN_DOC: {path to design document, optional}
 
 ---
 
-## Analysis Process
+## Process
 
 ### Phase 1: Understand Request
 
@@ -250,7 +250,7 @@ Limit depth to 4 levels. Report full chain in summary.
 
 ---
 
-## Core Principles
+## Rules
 
 1. **Conservative detection** - Better to suggest unnecessary work than miss needed work
 2. **Evidence-based** - Every dependency needs code evidence
