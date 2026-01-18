@@ -859,9 +859,51 @@ test("script-name fails without required param", async () => {
 
 **Best practices:**
 - Use `mockProject()` for isolated test environments
-- Pass `HOME` env var to ensure scripts find test project directory
 - Clean up test artifacts after test completion
 - Run tests before committing changes
+
+### Test Isolation (CRITICAL)
+
+**Tests MUST be isolated from real user data.** The `~/.claude/teamwork/` directory contains real user projects that must never be affected by tests.
+
+#### How It Works
+
+1. **Environment Variable**: `TEAMWORK_TEST_BASE_DIR` overrides the base directory
+2. **Preload Script**: `tests/teamwork/preload.js` sets this before any test runs
+3. **Safety Validation**: `validateSafeDelete()` blocks deletion of real paths
+
+#### Test File Pattern
+
+```javascript
+// Use test utilities that automatically handle isolation
+const { runScript, mockProject, TEAMWORK_TEST_BASE_DIR } = require('../test-utils.js');
+
+// mockProject() creates in isolated test directory
+const project = mockProject({ project: 'test-proj', team: 'test-team' });
+
+// runScript() automatically passes TEAMWORK_TEST_BASE_DIR
+const result = runScript(SCRIPT_PATH, { project: 'test-proj', team: 'test-team' });
+
+// Clean up in afterAll
+afterAll(() => {
+  project.cleanup();
+});
+```
+
+#### Safety Mechanisms
+
+| Mechanism | Purpose |
+|-----------|---------|
+| `TEAMWORK_TEST_BASE_DIR` | Redirects all paths to tmpdir |
+| `validateSafeDelete()` | Throws error if deleting outside test dir |
+| `bunfig.toml` preload | Auto-sets env for all tests |
+| `test-isolation.test.js` | Verifies isolation is working |
+
+#### If Tests Delete Real Data
+
+1. Check if `TEAMWORK_TEST_BASE_DIR` is set before import
+2. Run `bun test tests/teamwork/test-isolation.test.js` to verify setup
+3. Check `bunfig.toml` has preload configured
 
 ### Updating Tests on Plugin Changes
 
