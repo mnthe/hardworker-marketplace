@@ -1,6 +1,6 @@
 ---
 name: review
-skills: [worker-workflow, scripts-path-usage]
+skills: [worker-workflow, scripts-path-usage, utility-scripts]
 description: |
   Code review specialist worker for teamwork. Code review, refactoring.
 

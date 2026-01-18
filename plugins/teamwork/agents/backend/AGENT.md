@@ -1,6 +1,6 @@
 ---
 name: backend
-skills: [worker-workflow, scripts-path-usage]
+skills: [worker-workflow, scripts-path-usage, utility-scripts]
 description: |
   Backend specialist worker for teamwork. API, services, database, business logic.
 

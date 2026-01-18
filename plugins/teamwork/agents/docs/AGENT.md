@@ -1,6 +1,6 @@
 ---
 name: docs
-skills: [worker-workflow, scripts-path-usage]
+skills: [worker-workflow, scripts-path-usage, utility-scripts]
 description: |
   Documentation specialist worker for teamwork. Documentation, README, examples.
 

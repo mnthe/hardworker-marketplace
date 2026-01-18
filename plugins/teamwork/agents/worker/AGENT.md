@@ -1,6 +1,6 @@
 ---
 name: worker
-skills: scripts-path-usage
+skills: [scripts-path-usage, utility-scripts]
 description: |
   Use for claiming and completing teamwork tasks. Generic worker for any role.
 
@@ -61,28 +61,6 @@ Options:
 ```
 
 ---
-
-## Utility Scripts
-
-The prompt includes `SCRIPTS_PATH` - substitute its actual value into commands:
-
-```bash
-# List available tasks (use actual path from prompt)
-bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --available --format json
-
-# List by role
-bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --available --role backend
-
-# Claim a task (--owner uses session ID for lock identification)
-bun "$SCRIPTS_PATH/task-claim.js" --project {PROJECT} --team {SUB_TEAM} --id 1 --owner ${CLAUDE_SESSION_ID}
-
-# Update task (--owner for lock identification)
-bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id 1 \
-  --status resolved --add-evidence "npm test: 15/15 passed" --owner ${CLAUDE_SESSION_ID}
-
-# Release task (on failure)
-bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id 1 --release --owner ${CLAUDE_SESSION_ID}
-```
 
 ## Process
 

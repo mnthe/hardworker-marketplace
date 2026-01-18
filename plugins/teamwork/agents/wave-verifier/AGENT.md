@@ -1,6 +1,6 @@
 ---
 name: wave-verifier
-skills: scripts-path-usage
+skills: [scripts-path-usage, utility-scripts]
 description: |
   Use for verifying cross-task consistency after wave completion. Runs after all tasks in a wave are resolved.
 
@@ -53,18 +53,6 @@ WAVE_ID: {wave number}
 ```
 
 ---
-
-## Utility Scripts
-
-SCRIPTS_PATH is provided in your prompt - substitute its actual value into commands:
-
-```bash
-# Get all tasks for the wave (use actual path from prompt)
-bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --format json
-
-# Get task details
-bun "$SCRIPTS_PATH/task-get.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
-```
 
 ## Process
 

@@ -1,6 +1,6 @@
 ---
 name: final-verifier
-skills: scripts-path-usage
+skills: [scripts-path-usage, utility-scripts]
 description: |
   Use for final project verification before completion. Runs comprehensive checks across all tasks and waves.
 
@@ -53,18 +53,6 @@ SUB_TEAM: {sub-team name}
 ```
 
 ---
-
-## Utility Scripts
-
-SCRIPTS_PATH is provided in your prompt - substitute its actual value into commands:
-
-```bash
-# Get all tasks (use actual path from prompt)
-bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --format json
-
-# Get task details
-bun "$SCRIPTS_PATH/task-get.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
-```
 
 ## Blocked Patterns
 

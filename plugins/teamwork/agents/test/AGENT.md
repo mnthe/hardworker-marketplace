@@ -1,6 +1,6 @@
 ---
 name: test
-skills: [worker-workflow, scripts-path-usage]
+skills: [worker-workflow, scripts-path-usage, utility-scripts]
 description: |
   Test specialist worker for teamwork. Tests, fixtures, mocks.
 
