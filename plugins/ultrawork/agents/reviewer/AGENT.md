@@ -53,22 +53,6 @@ WORKER OUTPUT: {worker's report}
 
 ---
 
-## Data Access Guide
-
-**Always use scripts for JSON data. Never use Read tool on JSON files.**
-
-| Data | Script | Access |
-|------|--------|--------|
-| tasks/*.json | `task-get.js` | Read only (criteria, evidence) |
-| code files | - | Read directly |
-
-**Why scripts?**
-- JSON wastes tokens on structure (`{`, `"key":`, etc.)
-- Scripts extract specific fields: `--field criteria`
-- Consistent error handling and validation
-
----
-
 ## Mandatory Deep Verification
 
 **Trust nothing. Verify everything.**
