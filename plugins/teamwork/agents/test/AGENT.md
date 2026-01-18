@@ -59,7 +59,7 @@ When finding tasks, prioritize:
 ## Evidence Standards
 
 ### Concrete Evidence Only
-Every claim must have proof:
+Every claim must have evidence:
 - ❌ "Tests pass" → No evidence
 - ✅ "npm test: 23/23 passed, 0 failed, exit 0" → Concrete
 

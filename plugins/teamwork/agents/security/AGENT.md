@@ -59,7 +59,7 @@ When finding tasks, prioritize:
 ## Evidence Standards
 
 ### Concrete Evidence Only
-Every claim must have proof:
+Every claim must have evidence:
 - ❌ "Security fixed" → No evidence
 - ✅ "Auth flow: valid token accepted, invalid token rejected (401), exit 0" → Concrete
 

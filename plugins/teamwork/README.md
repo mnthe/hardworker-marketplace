@@ -522,7 +522,7 @@ Tasks are assigned roles during coordination phase:
     },
     {
       "id": 3,
-      "status": "pending",
+      "status": "planning",
       "tasks": ["6", "7", "8"],
       "started_at": null,
       "verified_at": null
@@ -565,9 +565,9 @@ Tasks are assigned roles during coordination phase:
 }
 ```
 
-**Verification status values:**
-- `passed`: All checks passed, wave can proceed
-- `failed`: One or more checks failed, fix tasks required
+**Verification status values (JSON):**
+- `passed`: All checks passed, wave can proceed (display as PASS)
+- `failed`: One or more checks failed, fix tasks required (display as FAIL)
 
 ## Workflows
 

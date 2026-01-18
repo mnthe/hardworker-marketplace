@@ -59,7 +59,7 @@ When finding tasks, prioritize:
 ## Evidence Standards
 
 ### Concrete Evidence Only
-Every claim must have proof:
+Every claim must have evidence:
 - ❌ "Code improved" → No evidence
 - ✅ "Refactored auth.ts: cyclomatic complexity reduced from 15 to 8, exit 0" → Concrete
 

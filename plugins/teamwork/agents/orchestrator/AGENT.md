@@ -1070,7 +1070,7 @@ bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "1" --title "..." --role backend
 
 # ❌ WRONG - never do this
-Write("{TEAMWORK_DIR}/tasks/1.json", '{"id": "1", "status": "pending", ...}')
+Write("{TEAMWORK_DIR}/tasks/1.json", '{"id": "1", "status": "open", ...}')
 ```
 
 ### Monitoring Phase

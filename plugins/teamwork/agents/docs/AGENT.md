@@ -59,7 +59,7 @@ When finding tasks, prioritize:
 ## Evidence Standards
 
 ### Concrete Evidence Only
-Every claim must have proof:
+Every claim must have evidence:
 - ❌ "Documentation updated" → No evidence
 - ✅ "Created API.md (247 lines, 15 endpoints documented)" → Concrete
 

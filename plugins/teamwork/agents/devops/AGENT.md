@@ -59,7 +59,7 @@ When finding tasks, prioritize:
 ## Evidence Standards
 
 ### Concrete Evidence Only
-Every claim must have proof:
+Every claim must have evidence:
 - ❌ "Pipeline works" → No evidence
 - ✅ "CI pipeline: all stages passed, exit 0" → Concrete
 

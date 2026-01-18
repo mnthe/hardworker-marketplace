@@ -272,7 +272,7 @@ Model is determined at worker spawn time by reading `task.complexity` field.
     },
     {
       "id": 3,
-      "status": "pending",
+      "status": "open",
       "tasks": ["6", "7", "8"],
       "started_at": null,
       "verified_at": null

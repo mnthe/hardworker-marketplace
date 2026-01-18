@@ -59,7 +59,7 @@ When finding tasks, prioritize:
 ## Evidence Standards
 
 ### Concrete Evidence Only
-Every claim must have proof:
+Every claim must have evidence:
 - ❌ "API works" → No evidence
 - ✅ "curl /api/users: 200 OK, returned 5 users, exit 0" → Concrete
 

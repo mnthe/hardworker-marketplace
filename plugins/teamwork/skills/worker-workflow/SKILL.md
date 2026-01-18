@@ -81,7 +81,7 @@ Execute the task using your specialization:
 
 ## Phase 4: Verify & Collect Evidence
 
-For each deliverable, collect **concrete proof**:
+For each deliverable, collect **concrete evidence**:
 
 | Bad Evidence | Good Evidence |
 |--------------|---------------|

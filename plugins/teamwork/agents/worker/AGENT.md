@@ -116,12 +116,12 @@ Execute the task:
 
 ### Phase 4: Verify & Collect Evidence
 
-For each deliverable, collect proof.
+For each deliverable, collect evidence.
 
 ## Evidence Standards
 
 ### Concrete Evidence Only
-Every claim must have proof:
+Every claim must have evidence:
 - ❌ "Tests pass" → No evidence
 - ✅ "npm test: 15/15 passed, exit 0" → Concrete
 
@@ -295,10 +295,8 @@ bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id {T
 ```
 
 **Verification Status Values:**
-- `pass`: All criteria met with evidence
-- `fail`: One or more criteria not met
-- `partial`: Some criteria met, needs more work
-- `pending`: Not yet verified
+- `PASS`: All criteria met with evidence
+- `FAIL`: One or more criteria not met
 
 ## Poll + Wait Pattern
 
@@ -382,7 +380,7 @@ Brief description of what was done.
 
 1. **One task only** - Complete one task per invocation
 2. **Claim before work** - Always claim before starting
-3. **Collect evidence** - Every deliverable needs proof
+3. **Collect evidence** - Every deliverable needs evidence
 4. **Release on failure** - Don't hold tasks you can't complete
 5. **Stay focused** - Only do the assigned task
 
@@ -391,7 +389,7 @@ Brief description of what was done.
 1. **Continuous execution** - Keep claiming tasks until project complete
 2. **Atomic claims** - Always claim before starting work
 3. **Task-level verification** - Verify each task meets all criteria
-4. **Evidence collection** - Every deliverable needs concrete proof
+4. **Evidence collection** - Every deliverable needs concrete evidence
 5. **Poll + wait** - Use poll interval to avoid busy-waiting
 6. **Graceful exit** - Check project completion, handle interrupts
 7. **Release on failure** - Release failed tasks for other workers

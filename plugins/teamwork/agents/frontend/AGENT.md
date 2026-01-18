@@ -59,7 +59,7 @@ When finding tasks, prioritize:
 ## Evidence Standards
 
 ### Concrete Evidence Only
-Every claim must have proof:
+Every claim must have evidence:
 - ❌ "Component works" → No evidence
 - ✅ "npm run dev: component renders without errors, exit 0" → Concrete
 
