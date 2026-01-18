@@ -1,6 +1,6 @@
 ---
 name: verifier
-skills: [scripts-path-usage, data-access-patterns, utility-scripts-ultrawork]
+skills: [scripts-path-usage, data-access-patterns, utility-scripts]
 description: |
   Use this agent for verification phase in ultrawork sessions. Validates evidence, checks success criteria, scans for blocked patterns, runs final tests. Examples:
 

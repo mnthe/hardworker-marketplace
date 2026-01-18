@@ -1,6 +1,6 @@
 ---
 name: explorer
-skills: [scripts-path-usage, data-access-patterns, utility-scripts-ultrawork]
+skills: [scripts-path-usage, data-access-patterns, utility-scripts]
 description: |
   Use this agent for fast codebase exploration in ultrawork sessions. Gathers context, writes detailed findings to exploration/*.md, updates context.json summary. Examples:
 

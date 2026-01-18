@@ -1,6 +1,6 @@
 ---
 name: worker
-skills: [scripts-path-usage, data-access-patterns, utility-scripts-ultrawork]
+skills: [scripts-path-usage, data-access-patterns, utility-scripts]
 description: |
   Use this agent for executing implementation tasks in ultrawork sessions. Executes specific task, collects evidence, updates task file. Examples:
 

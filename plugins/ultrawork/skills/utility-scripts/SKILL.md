@@ -1,5 +1,5 @@
 ---
-name: utility-scripts-ultrawork
+name: utility-scripts
 description: |
   Comprehensive guide for ultrawork agents on using session, task, and context management scripts.
   Covers all common script patterns with $SCRIPTS_PATH variable usage.

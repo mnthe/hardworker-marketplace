@@ -1,6 +1,6 @@
 ---
 name: planner
-skills: [scripts-path-usage, data-access-patterns, utility-scripts-ultrawork]
+skills: [scripts-path-usage, data-access-patterns, utility-scripts]
 description: |
   Use this agent for auto-mode planning in ultrawork sessions. Reads context from explorers, makes automatic decisions, creates task graph. Does NOT spawn sub-agents. Examples:
 
