@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-skills: [scripts-path-usage, utility-scripts]
+skills: [scripts-path-usage, utility-scripts, monitoring-loop, task-decomposition]
 description: |
   Use for orchestrating entire teamwork project lifecycle from planning to completion. Handles goal understanding, codebase exploration, task decomposition, wave execution monitoring, and verification coordination.
 
