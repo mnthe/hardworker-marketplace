@@ -1,24 +1,47 @@
 ---
 name: ultrawork-clean
 description: "Clean current ultrawork session or batch cleanup old sessions"
-argument-hint: "[--session ID] | [--all | --completed | --older-than N]"
+argument-hint: "[--all | --completed | --older-than N]"
 allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-clean.js:*)"]
 ---
 
 # Ultrawork Clean Command
 
-Two modes:
+## Overview
+
+Clean ultrawork sessions. Two modes:
 1. **Single session clean** (default): Delete current session for fresh `/ultrawork` start
-2. **Batch cleanup**: Delete multiple sessions based on criteria
+2. **Batch cleanup**: Delete multiple sessions based on criteria (requires explicit flags)
 
 ---
 
-## Single Session Clean (Default)
+## Step 1: Parse Arguments
 
-With no batch flags, deletes the current session so you can run `/ultrawork` fresh.
+Parse command arguments to determine cleanup mode:
 
-```!
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-clean.js" --session "${CLAUDE_SESSION_ID}"
+| Argument | Mode | Behavior |
+|----------|------|----------|
+| (no args) | Single session | Delete ONLY current session (`CLAUDE_SESSION_ID`) |
+| `--older-than N` | Batch | Delete terminal-state sessions older than N days |
+| `--completed` | Batch | Delete all terminal-state sessions |
+| `--all` | Batch | Delete ALL sessions (dangerous!) |
+
+**IMPORTANT**: Without batch flags (`--all`, `--completed`, `--older-than`), ONLY the current session is deleted.
+
+---
+
+## Step 2: Execute Cleanup
+
+### Default Mode (No Arguments) - Single Session Clean
+
+**This is the DEFAULT behavior when `/ultrawork-clean` is run without arguments.**
+
+Deletes ONLY the current session (identified by `CLAUDE_SESSION_ID`) to allow a fresh `/ultrawork` start.
+
+```bash
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
+
+bun "${SCRIPTS}/ultrawork-clean.js" --session "${CLAUDE_SESSION_ID}"
 ```
 
 **Output:**
@@ -32,67 +55,39 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-clean.js" --session "${CLAUDE_S
 }
 ```
 
-After cleanup, `/ultrawork "new goal"` will start a completely fresh session.
+### Batch Mode: --older-than N
 
----
+Delete sessions older than N days **in terminal states only** (COMPLETE, CANCELLED, FAILED).
 
-## Batch Cleanup Modes
+```bash
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
-### Mode: --older-than N
-
-Delete sessions older than N days in terminal states only.
-
-```!
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-clean.js" --older-than 7
+bun "${SCRIPTS}/ultrawork-clean.js" --older-than ${N}
 ```
 
-### Mode: --completed
+### Batch Mode: --completed
 
 Delete **all** sessions in terminal states, regardless of age.
 
-```!
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-clean.js" --completed
+```bash
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
+
+bun "${SCRIPTS}/ultrawork-clean.js" --completed
 ```
 
-### Mode: --all
+### Batch Mode: --all
 
-Delete **ALL** sessions, including active ones. **Use with caution.**
+Delete **ALL** sessions, including active ones. **Use with extreme caution.**
 
-```!
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-clean.js" --all
+```bash
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
+
+bun "${SCRIPTS}/ultrawork-clean.js" --all
 ```
 
 **Warning**: This will delete active sessions (PLANNING, EXECUTION, VERIFICATION) and may cause data loss.
 
----
-
-## Terminal vs Active States
-
-| State | Type | Batch Behavior |
-|-------|------|----------------|
-| COMPLETE | Terminal | Deleted by --completed, --older-than, --all |
-| CANCELLED | Terminal | Deleted by --completed, --older-than, --all |
-| FAILED | Terminal | Deleted by --completed, --older-than, --all |
-| PLANNING | Active | Only deleted by --all |
-| EXECUTION | Active | Only deleted by --all |
-| VERIFICATION | Active | Only deleted by --all |
-
----
-
-## Output Formats
-
-### Single Session Clean
-```json
-{
-  "success": true,
-  "session_id": "abc-123",
-  "goal": "Add user auth",
-  "phase": "PLANNING",
-  "message": "Session deleted. Run /ultrawork to start fresh."
-}
-```
-
-### Batch Cleanup
+**Batch output format:**
 ```json
 {
   "deleted_count": 5,
@@ -110,24 +105,54 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-clean.js" --all
 
 ---
 
+## Step 3: Display Results
+
+Format the cleanup result for the user:
+
+**Single session clean:**
+```
+Session {session_id} deleted.
+- Goal: {goal}
+- Phase: {phase}
+
+Run /ultrawork to start fresh.
+```
+
+**Batch cleanup:**
+```
+{deleted_count} sessions deleted, {preserved_count} preserved.
+
+Deleted:
+{list of deleted sessions with goal and phase}
+```
+
+---
+
+## Reference: Terminal vs Active States
+
+| State | Type | Batch Behavior |
+|-------|------|----------------|
+| COMPLETE | Terminal | Deleted by --completed, --older-than, --all |
+| CANCELLED | Terminal | Deleted by --completed, --older-than, --all |
+| FAILED | Terminal | Deleted by --completed, --older-than, --all |
+| PLANNING | Active | Only deleted by --all |
+| EXECUTION | Active | Only deleted by --all |
+| VERIFICATION | Active | Only deleted by --all |
+
+---
+
 ## Usage Examples
 
-### Clean current session (start fresh)
-```!
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-clean.js" --session "${CLAUDE_SESSION_ID}"
-```
+```bash
+# Clean current session only (DEFAULT - no flags needed)
+/ultrawork-clean
 
-### Clean sessions older than 30 days
-```!
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-clean.js" --older-than 30
-```
+# Clean sessions older than 30 days (terminal states only)
+/ultrawork-clean --older-than 30
 
-### Clean all completed sessions
-```!
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-clean.js" --completed
-```
+# Clean all completed/cancelled/failed sessions
+/ultrawork-clean --completed
 
-### Clean ALL sessions (dangerous)
-```!
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/ultrawork-clean.js" --all
+# Clean ALL sessions (dangerous - includes active sessions)
+/ultrawork-clean --all
 ```
