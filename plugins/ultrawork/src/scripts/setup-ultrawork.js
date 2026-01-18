@@ -194,21 +194,21 @@ const { execSync } = require('child_process');
 /**
  * Generate branch name from goal
  * @param {string} goal - The ultrawork goal
- * @returns {string} Branch name in format ultrawork/{slug}-{date}
+ * @returns {string} Branch name in format ultrawork/YYYY-MM-DD-{brief}
  */
 function generateBranchName(goal) {
   // Slugify goal: lowercase, remove special chars, spaces to hyphens, limit length
-  const slug = goal
+  const brief = goal
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
-    .substring(0, 40)
+    .substring(0, 30)
     .replace(/-$/, '');
 
-  // Add date
-  const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  return `ultrawork/${slug}-${date}`;
+  // Add date (YYYY-MM-DD format)
+  const date = new Date().toISOString().split('T')[0];
+  return `ultrawork/${date}-${brief}`;
 }
 
 /**
