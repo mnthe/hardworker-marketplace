@@ -1,17 +1,34 @@
 #!/usr/bin/env bun
 /**
  * Tests for session-update.js
+ *
+ * IMPORTANT: Uses ULTRAWORK_TEST_BASE_DIR for test isolation
  */
 
-const { describe, test, expect, beforeEach, afterEach } = require('bun:test');
-const { createMockSession, runScript, assertJsonSchema, assertHelpText } = require('./test-utils.js');
-const { readSession } = require('../../plugins/ultrawork/src/lib/session-utils.js');
+const { describe, test, expect, beforeEach, afterEach, afterAll } = require('bun:test');
+const {
+  createMockSession,
+  runScript,
+  assertJsonSchema,
+  assertHelpText,
+  TEST_BASE_DIR,
+  cleanupAllTestSessions
+} = require('./test-utils.js');
 const path = require('path');
+
+// Set test base directory BEFORE importing session-utils
+process.env.ULTRAWORK_TEST_BASE_DIR = TEST_BASE_DIR;
+const { readSession } = require('../../plugins/ultrawork/src/lib/session-utils.js');
 
 const SCRIPT_PATH = path.join(__dirname, '../../plugins/ultrawork/src/scripts/session-update.js');
 
 describe('session-update.js', () => {
   let session;
+
+  afterAll(() => {
+    cleanupAllTestSessions();
+    delete process.env.ULTRAWORK_TEST_BASE_DIR;
+  });
 
   beforeEach(() => {
     session = createMockSession('test-session-update', {

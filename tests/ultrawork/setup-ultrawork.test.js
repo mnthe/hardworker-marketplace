@@ -1,19 +1,39 @@
 #!/usr/bin/env bun
 /**
  * Tests for setup-ultrawork.js
+ *
+ * IMPORTANT: Uses ULTRAWORK_TEST_BASE_DIR for test isolation
  */
 
-const { describe, test, expect, afterEach } = require('bun:test');
-const { runScript, assertHelpText } = require('./test-utils.js');
-const { getSessionDir, getSessionFile, readSession } = require('../../plugins/ultrawork/src/lib/session-utils.js');
+const { describe, test, expect, afterEach, afterAll } = require('bun:test');
+const {
+  runScript,
+  assertHelpText,
+  TEST_BASE_DIR,
+  getTestSessionDir,
+  getTestSessionFile,
+  cleanupAllTestSessions
+} = require('./test-utils.js');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+
+// Set test base directory for any direct session-utils imports
+process.env.ULTRAWORK_TEST_BASE_DIR = TEST_BASE_DIR;
+
+// Now import session-utils (will use TEST_BASE_DIR)
+const { readSession } = require('../../plugins/ultrawork/src/lib/session-utils.js');
 
 const SCRIPT_PATH = path.join(__dirname, '../../plugins/ultrawork/src/scripts/setup-ultrawork.js');
 
 describe('setup-ultrawork.js', () => {
   const testSessionId = 'test-setup-session';
-  const sessionDir = getSessionDir(testSessionId);
+  const sessionDir = getTestSessionDir(testSessionId);
+
+  afterAll(() => {
+    cleanupAllTestSessions();
+    delete process.env.ULTRAWORK_TEST_BASE_DIR;
+  });
 
   afterEach(() => {
     // Cleanup test session
@@ -43,7 +63,7 @@ describe('setup-ultrawork.js', () => {
       expect(result.stdout).toContain('Test goal');
 
       // Verify session file created
-      const sessionFile = getSessionFile(testSessionId);
+      const sessionFile = getTestSessionFile(testSessionId);
       expect(fs.existsSync(sessionFile)).toBe(true);
 
       // Verify session data

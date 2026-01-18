@@ -94,7 +94,8 @@ describe('session-get.js', () => {
 
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain(session.sessionId);
-      expect(result.stdout).toContain('.claude/ultrawork/sessions');
+      // Check path ends with sessions/{sessionId} (works for both real and test paths)
+      expect(result.stdout).toContain(`sessions/${session.sessionId}`);
     });
   });
 

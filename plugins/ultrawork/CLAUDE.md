@@ -664,6 +664,59 @@ When adding new scripts or modifying existing ones:
 - Use descriptive test names
 - Include error path testing
 
+### Test Isolation (CRITICAL)
+
+**Tests MUST be isolated from real user data.** The `~/.claude/ultrawork/` directory contains real user sessions that must never be affected by tests.
+
+#### How It Works
+
+1. **Environment Variable**: `ULTRAWORK_TEST_BASE_DIR` overrides the base directory
+2. **Preload Script**: `tests/ultrawork/preload.js` sets this before any test runs
+3. **Safety Validation**: `validateSafeDelete()` blocks deletion of real paths
+
+#### Test File Pattern
+
+```javascript
+// 1. Set env BEFORE importing session-utils
+const { TEST_BASE_DIR, createMockSession, runScript } = require('./test-utils.js');
+process.env.ULTRAWORK_TEST_BASE_DIR = TEST_BASE_DIR;
+
+// 2. Now import session-utils (will use test path)
+const { readSession } = require('../../plugins/ultrawork/src/lib/session-utils.js');
+
+// 3. Use test utilities for mock sessions
+const session = createMockSession('test-session');
+
+// 4. Clean up in afterAll
+afterAll(() => {
+  cleanupAllTestSessions();
+  delete process.env.ULTRAWORK_TEST_BASE_DIR;
+});
+```
+
+#### Safety Mechanisms
+
+| Mechanism | Purpose |
+|-----------|---------|
+| `ULTRAWORK_TEST_BASE_DIR` | Redirects all paths to tmpdir |
+| `validateSafeDelete()` | Throws error if deleting outside test dir |
+| `bunfig.toml` preload | Auto-sets env for all tests |
+| `test-isolation.test.js` | Verifies isolation is working |
+
+#### DO NOT
+
+```javascript
+// WRONG: Imports session-utils before setting env
+const { getSessionDir } = require('../lib/session-utils.js');
+process.env.ULTRAWORK_TEST_BASE_DIR = TEST_BASE_DIR;  // Too late!
+```
+
+#### If Tests Delete Real Data
+
+1. Check if `ULTRAWORK_TEST_BASE_DIR` is set before import
+2. Run `bun test tests/ultrawork/test-isolation.test.js` to verify setup
+3. Check `bunfig.toml` has preload configured
+
 ## Usage Examples
 
 ### Create Session

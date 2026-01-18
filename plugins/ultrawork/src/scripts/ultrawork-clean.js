@@ -9,7 +9,7 @@
  */
 
 const fs = require('fs');
-const { getSessionsDir, getSessionDir, readSessionField } = require('../lib/session-utils.js');
+const { getSessionsDir, getSessionDir, readSessionField, validateSafeDelete } = require('../lib/session-utils.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
@@ -125,6 +125,10 @@ function cleanSingleSession(sessionId) {
 
   try {
     const metadata = getSessionMetadata(sessionId, sessionDir);
+
+    // Safety check: prevent accidental deletion of wrong directories
+    validateSafeDelete(sessionDir);
+
     fs.rmSync(sessionDir, { recursive: true, force: true });
 
     return {
@@ -179,6 +183,9 @@ function cleanSessions(mode) {
 
     if (shouldDeleteSession(metadata.phase, metadata.age_days, mode)) {
       try {
+        // Safety check: prevent accidental deletion of wrong directories
+        validateSafeDelete(sessionDir);
+
         fs.rmSync(sessionDir, { recursive: true, force: true });
         deletedSessions.push(metadata);
       } catch (error) {

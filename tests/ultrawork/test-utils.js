@@ -1,23 +1,41 @@
 #!/usr/bin/env bun
 /**
  * Shared test utilities for ultrawork script tests
+ *
+ * IMPORTANT: Uses os.tmpdir() to isolate tests from real user data.
+ * Never use real ~/.claude/ paths in tests!
  */
 
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { spawn } = require('child_process');
-const { getSessionDir, getSessionFile } = require('../../plugins/ultrawork/src/lib/session-utils.js');
+
+// Test-specific path functions (isolated from real user data)
+const TEST_BASE_DIR = path.join(os.tmpdir(), 'ultrawork-test');
+
+function getTestSessionsDir() {
+  return path.join(TEST_BASE_DIR, 'sessions');
+}
+
+function getTestSessionDir(sessionId) {
+  return path.join(getTestSessionsDir(), sessionId);
+}
+
+function getTestSessionFile(sessionId) {
+  return path.join(getTestSessionDir(sessionId), 'session.json');
+}
 
 /**
  * Create a temporary session directory for testing
+ * Uses os.tmpdir() to avoid affecting real user sessions
  * @param {string} sessionId - Session ID
  * @param {Object} [options] - Session options
  * @returns {Object} Session info with cleanup function
  */
 function createMockSession(sessionId, options = {}) {
-  const sessionDir = getSessionDir(sessionId);
-  const sessionFile = getSessionFile(sessionId);
+  const sessionDir = getTestSessionDir(sessionId);
+  const sessionFile = getTestSessionFile(sessionId);
 
   // Create directory structure
   fs.mkdirSync(sessionDir, { recursive: true });
@@ -87,7 +105,7 @@ function createMockSession(sessionId, options = {}) {
  * @returns {Object} Task info
  */
 function createMockTask(sessionId, taskId, options = {}) {
-  const sessionDir = getSessionDir(sessionId);
+  const sessionDir = getTestSessionDir(sessionId);
   const tasksDir = path.join(sessionDir, 'tasks');
   const taskFile = path.join(tasksDir, `${taskId}.json`);
 
@@ -117,6 +135,7 @@ function createMockTask(sessionId, taskId, options = {}) {
 
 /**
  * Run a script with given arguments
+ * Automatically sets ULTRAWORK_TEST_BASE_DIR for test isolation
  * @param {string} scriptPath - Path to script
  * @param {string[]} args - Script arguments
  * @returns {Promise<{stdout: string, stderr: string, exitCode: number}>}
@@ -124,7 +143,11 @@ function createMockTask(sessionId, taskId, options = {}) {
 async function runScript(scriptPath, args = []) {
   return new Promise((resolve) => {
     const proc = spawn('bun', [scriptPath, ...args], {
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        ULTRAWORK_TEST_BASE_DIR: TEST_BASE_DIR  // Isolate tests from real user data
+      }
     });
 
     let stdout = '';
@@ -201,10 +224,29 @@ function assertHelpText(helpText, requiredFlags = []) {
   return true;
 }
 
+/**
+ * Clean up all test sessions (call in afterAll or when needed)
+ */
+function cleanupAllTestSessions() {
+  if (fs.existsSync(TEST_BASE_DIR)) {
+    fs.rmSync(TEST_BASE_DIR, { recursive: true, force: true });
+  }
+}
+
 module.exports = {
+  // Path helpers (for test isolation)
+  TEST_BASE_DIR,
+  getTestSessionsDir,
+  getTestSessionDir,
+  getTestSessionFile,
+  // Session/task creation
   createMockSession,
   createMockTask,
+  // Script execution
   runScript,
+  // Assertions
   assertJsonSchema,
-  assertHelpText
+  assertHelpText,
+  // Cleanup
+  cleanupAllTestSessions
 };
