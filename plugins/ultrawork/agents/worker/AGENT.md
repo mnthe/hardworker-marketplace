@@ -47,6 +47,7 @@ Your prompt MUST include:
 CLAUDE_SESSION_ID: {session id - UUID}
 TASK_ID: {task id}
 SCRIPTS_PATH: {path to scripts directory}
+WORKING_DIR: {project directory path}
 
 TASK: {task subject}
 {task description}
@@ -54,6 +55,12 @@ TASK: {task subject}
 SUCCESS CRITERIA:
 {list of criteria}
 ```
+
+**Parameter descriptions:**
+- `CLAUDE_SESSION_ID`: Unique session identifier (UUID)
+- `TASK_ID`: Task identifier to execute
+- `SCRIPTS_PATH`: Absolute path to ultrawork scripts directory
+- `WORKING_DIR`: Project directory path (worktree path when `--worktree` enabled, otherwise original project directory)
 
 ---
 
