@@ -1,9 +1,0 @@
-{
-  "name": "shared",
-  "version": "0.1.0",
-  "description": "Shared components for hardworker-marketplace plugins",
-  "author": { "name": "mnthe" },
-  "keywords": ["shared", "components", "documentation"],
-  "license": "MIT",
-  "skills": "./skills/"
-}

@@ -80,6 +80,7 @@ TEAMWORK_DIR: {absolute path to teamwork directory}
 PROJECT: {project name}
 SUB_TEAM: {sub-team name}
 WAVE_ID: {wave number}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 
 Task: Verify wave {N} for project {PROJECT}/{SUB_TEAM}
 
@@ -105,6 +106,7 @@ Context:
 TEAMWORK_DIR: {absolute path to teamwork directory}
 PROJECT: {project name}
 SUB_TEAM: {sub-team name}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 
 Task: Run final verification for project {PROJECT}/{SUB_TEAM}
 

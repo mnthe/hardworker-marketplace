@@ -343,6 +343,40 @@ Hook safety rules:
 - Lifecycle hooks for automation support
 - CLAUDE.md for AI agent context
 
+### Shared Component Management
+
+**Claude Code does not support cross-plugin dependencies.** Each plugin is loaded independently; skills, scripts, and agents from one plugin cannot be referenced by another.
+
+**Policy: Copy and maintain separately**
+
+When multiple plugins need the same component (skill, script, lib):
+
+1. **Copy the component** to each plugin that needs it
+2. **Adapt for context** - modify descriptions and examples for the specific plugin
+3. **Maintain independently** - changes in one plugin don't automatically propagate
+
+**Example: `scripts-path-usage` skill**
+
+| Plugin | Status | Notes |
+|--------|--------|-------|
+| ultrawork | ✅ Has copy | Tailored for ultrawork agents |
+| teamwork | ✅ Has copy | Tailored for teamwork agents |
+
+**When updating shared components:**
+
+```bash
+# Find all copies of a shared skill/component
+find plugins -name "SKILL.md" -path "*scripts-path-usage*"
+
+# After updating one copy, manually sync critical changes to others
+# (Adapt context-specific examples, keep core patterns consistent)
+```
+
+**Why not a shared plugin?**
+- Claude Code loads plugins independently
+- Agent frontmatter `skills: [skill-name]` only resolves within the same plugin
+- A "shared" plugin would require separate installation and wouldn't auto-link
+
 ### Code Review Checklist
 
 - [ ] Flag-based parameter parsing in Bun scripts
