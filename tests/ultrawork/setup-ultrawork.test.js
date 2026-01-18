@@ -174,4 +174,113 @@ describe('setup-ultrawork.js', () => {
       expect(context.exploration_complete).toBe(false);
     });
   });
+
+  describe('generateBranchName()', () => {
+    const { generateBranchName } = require(SCRIPT_PATH);
+
+    test('should generate date-first format (YYYY-MM-DD-{brief})', () => {
+      const result = generateBranchName('Implement user authentication');
+
+      // Verify it starts with ultrawork/ prefix
+      expect(result).toMatch(/^ultrawork\//);
+
+      // Verify date format YYYY-MM-DD appears after prefix
+      expect(result).toMatch(/^ultrawork\/\d{4}-\d{2}-\d{2}-/);
+
+      // Verify brief part exists
+      expect(result).toMatch(/^ultrawork\/\d{4}-\d{2}-\d{2}-.+/);
+    });
+
+    test('should truncate brief to 30 characters', () => {
+      const longGoal = 'This is a very long goal description that should be truncated to fit the 30 character limit';
+      const result = generateBranchName(longGoal);
+
+      // Extract brief part (everything after the date)
+      const match = result.match(/^ultrawork\/\d{4}-\d{2}-\d{2}-(.+)$/);
+      expect(match).toBeTruthy();
+
+      const brief = match[1];
+      expect(brief.length).toBeLessThanOrEqual(30);
+    });
+
+    test('should remove special characters', () => {
+      const goalWithSpecialChars = 'Add @user #authentication & $validation!';
+      const result = generateBranchName(goalWithSpecialChars);
+
+      // Extract brief part
+      const match = result.match(/^ultrawork\/\d{4}-\d{2}-\d{2}-(.+)$/);
+      expect(match).toBeTruthy();
+
+      const brief = match[1];
+      // Brief should only contain lowercase letters, numbers, and hyphens
+      expect(brief).toMatch(/^[a-z0-9-]+$/);
+      expect(brief).toContain('add');
+      expect(brief).toContain('user');
+      expect(brief).toContain('authentication');
+    });
+
+    test('should remove trailing hyphens', () => {
+      const goalEndingWithSpaces = 'Test goal with spaces   ';
+      const result = generateBranchName(goalEndingWithSpaces);
+
+      // Extract brief part
+      const match = result.match(/^ultrawork\/\d{4}-\d{2}-\d{2}-(.+)$/);
+      expect(match).toBeTruthy();
+
+      const brief = match[1];
+      // Brief should not end with a hyphen
+      expect(brief).not.toMatch(/-$/);
+    });
+
+    test('should convert spaces to single hyphens', () => {
+      const goalWithSpaces = 'add user  authentication   system';
+      const result = generateBranchName(goalWithSpaces);
+
+      // Extract brief part
+      const match = result.match(/^ultrawork\/\d{4}-\d{2}-\d{2}-(.+)$/);
+      expect(match).toBeTruthy();
+
+      const brief = match[1];
+      // Should have single hyphens, no consecutive hyphens
+      expect(brief).not.toMatch(/--/);
+      expect(brief).toBe('add-user-authentication-system');
+    });
+
+    test('should handle goal with only special characters gracefully', () => {
+      const specialCharsOnly = '@#$%^&*()!';
+      const result = generateBranchName(specialCharsOnly);
+
+      // Should still have valid format with empty or minimal brief
+      expect(result).toMatch(/^ultrawork\/\d{4}-\d{2}-\d{2}/);
+
+      // Extract brief part (might be empty or just have remaining valid chars)
+      const match = result.match(/^ultrawork\/\d{4}-\d{2}-\d{2}-?(.*)$/);
+      expect(match).toBeTruthy();
+    });
+
+    test('should use current date', () => {
+      const result = generateBranchName('test goal');
+
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+
+      // Verify the result contains today's date
+      expect(result).toContain(today);
+    });
+
+    test('should lowercase the goal text', () => {
+      const mixedCaseGoal = 'Add USER Authentication System';
+      const result = generateBranchName(mixedCaseGoal);
+
+      // Extract brief part
+      const match = result.match(/^ultrawork\/\d{4}-\d{2}-\d{2}-(.+)$/);
+      expect(match).toBeTruthy();
+
+      const brief = match[1];
+      // Should be all lowercase
+      expect(brief).toBe(brief.toLowerCase());
+      expect(brief).toContain('user');
+      expect(brief).not.toContain('USER');
+    });
+  });
 });

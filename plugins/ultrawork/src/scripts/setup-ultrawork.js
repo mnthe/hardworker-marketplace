@@ -574,8 +574,15 @@ async function main() {
   createSession(args);
 }
 
-// Run main and handle errors
-main().catch((error) => {
-  console.error('❌ Error:', error.message);
-  process.exit(1);
-});
+// Export for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { generateBranchName };
+}
+
+// Only run main if this is the main module (not imported for testing)
+if (require.main === module) {
+  main().catch((error) => {
+    console.error('❌ Error:', error.message);
+    process.exit(1);
+  });
+}
