@@ -1,6 +1,6 @@
 ---
 name: verifier
-skills: scripts-path-usage
+skills: [scripts-path-usage, data-access-patterns, utility-scripts-ultrawork]
 description: |
   Use this agent for verification phase in ultrawork sessions. Validates evidence, checks success criteria, scans for blocked patterns, runs final tests. Examples:
 
@@ -59,49 +59,6 @@ SCRIPTS_PATH: {path to scripts directory}
 Verify all success criteria are met with evidence.
 Check for blocked patterns.
 Run final tests.
-```
-
----
-
-## Data Access Guide
-
-**Always use scripts for JSON data. Never use Read tool on JSON files.**
-
-| Data | Script | Access |
-|------|--------|--------|
-| session.json | `session-get.js` (read), `session-update.js` (write) | Read/Write |
-| tasks/*.json | `task-list.js`, `task-get.js` (read), `task-update.js` (write) | Read/Write |
-| exploration/*.md | - | Read directly (Markdown OK) |
-
-**Why scripts?**
-- JSON wastes tokens on structure (`{`, `"key":`, etc.)
-- Scripts extract specific fields: `--field status`
-- Consistent error handling and validation
-
-## Utility Scripts
-
-```bash
-# SCRIPTS_PATH value comes from your prompt input (substitute the actual path)
-
-# Get session directory path
-SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
-
-# Get session data
-bun "$SCRIPTS_PATH/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
-bun "$SCRIPTS_PATH/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase # Specific field
-
-# List tasks
-bun "$SCRIPTS_PATH/task-list.js" --session ${CLAUDE_SESSION_ID} --format json
-
-# Get single task
-bun "$SCRIPTS_PATH/task-get.js" --session ${CLAUDE_SESSION_ID} --id 1
-
-# Update task
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
-  --status resolved --add-evidence "VERDICT: PASS"
-
-# Update session
-bun "$SCRIPTS_PATH/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
 ```
 
 ---

@@ -1,6 +1,6 @@
 ---
 name: worker
-skills: scripts-path-usage
+skills: [scripts-path-usage, data-access-patterns, utility-scripts-ultrawork]
 description: |
   Use this agent for executing implementation tasks in ultrawork sessions. Executes specific task, collects evidence, updates task file. Examples:
 
@@ -61,44 +61,6 @@ SUCCESS CRITERIA:
 - `TASK_ID`: Task identifier to execute
 - `SCRIPTS_PATH`: Absolute path to ultrawork scripts directory
 - `WORKING_DIR`: Project directory path (worktree path when `--worktree` enabled, otherwise original project directory)
-
----
-
-## Data Access Guide
-
-**Always use scripts for JSON data. Never use Read tool on JSON files.**
-
-| Data | Script | Access |
-|------|--------|--------|
-| session.json | `session-get.js` | Read only (dir, phase) |
-| tasks/*.json | `task-get.js` (read), `task-update.js` (write) | Read/Write |
-| exploration/*.md | - | Read directly (Markdown OK) |
-
-**Why scripts?**
-- JSON wastes tokens on structure (`{`, `"key":`, etc.)
-- Scripts extract specific fields: `--field status`
-- Consistent error handling and validation
-
-## Utility Scripts
-
-Use these scripts for session/task management:
-
-```bash
-# SCRIPTS_PATH value comes from your prompt input (substitute the actual path)
-# Get session directory path
-SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
-
-# Get session data
-bun "$SCRIPTS_PATH/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
-bun "$SCRIPTS_PATH/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase # Specific field
-
-# Get task details
-bun "$SCRIPTS_PATH/task-get.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID}
-
-# Update task
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
-  --status resolved --add-evidence "npm test: 15/15 passed"
-```
 
 ---
 
