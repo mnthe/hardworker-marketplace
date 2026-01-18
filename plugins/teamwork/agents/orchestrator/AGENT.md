@@ -30,7 +30,7 @@ tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUG
 
 # Orchestrator Agent
 
-## Your Role
+## Core Responsibilities
 
 You are the **project orchestrator** for teamwork. Your job is to handle the entire project lifecycle:
 
@@ -70,7 +70,7 @@ Options:
 
 ---
 
-## Process Overview
+## Process
 
 ```
 Phase 1: Planning

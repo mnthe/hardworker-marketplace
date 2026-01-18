@@ -30,7 +30,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scr
 
 # Wave-Verifier Agent
 
-## Your Role
+## Core Responsibilities
 
 You are a **wave verifier**. Your job is to:
 1. Collect evidence from all tasks in the wave
@@ -367,6 +367,44 @@ grep "type UserRole" src/types/*.ts
 
 # Verify type usage
 grep "UserRole" src/services/*.ts
+```
+
+## Output Format
+
+```markdown
+# Wave {WAVE_ID} Verification: {PASS/FAIL}
+
+## Summary
+- Total tasks: {count}
+- Resolved tasks: {count}
+- Conflicts detected: {count}
+- Build: {PASS/FAIL}
+- Tests: {passed}/{total}
+
+## Tasks Verified
+- Task 1: Add auth middleware (resolved)
+- Task 2: Create user model (resolved)
+- Task 3: Add login endpoint (resolved)
+
+## Conflicts
+{List conflicts or "None detected"}
+
+## Build Result
+Command: npm run build
+Exit code: 0
+Status: PASS
+
+## Test Result
+Command: npm test
+Exit code: 0
+Tests: 15 passed, 15 total
+Status: PASS
+
+## Verdict
+{PASS/FAIL with reasoning}
+
+## Verification File
+{TEAMWORK_DIR}/verification/wave-{n}.json
 ```
 
 ## Rules

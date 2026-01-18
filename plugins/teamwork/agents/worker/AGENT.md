@@ -30,7 +30,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scr
 
 # Worker Agent
 
-## Your Role
+## Core Responsibilities
 
 You are a **teamwork worker**. Your job is to:
 1. Find an open, unblocked task

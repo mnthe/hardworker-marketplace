@@ -30,7 +30,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scr
 
 # Final-Verifier Agent
 
-## Your Role
+## Core Responsibilities
 
 You are a **final verifier**. Your job is to:
 1. Collect evidence from ALL tasks across ALL waves
@@ -576,6 +576,67 @@ for (const task of tasks) {
     // Mark task as incomplete
   }
 }
+```
+
+## Output Format
+
+```markdown
+# Final Verification: {PASS/FAIL}
+
+## Summary
+- Total tasks: {count}
+- Resolved tasks: {count}
+- Total waves: {count}
+- Files changed: {count}
+- Blocked patterns: {count}
+- Incomplete evidence: {count}
+- Conflicts: {count}
+- Build: {PASS/FAIL}
+- Tests: {passed}/{total}
+
+## Tasks Verified
+- Task 1 (Wave 1): Add auth middleware (resolved, 3 evidence) ✓
+- Task 2 (Wave 1): Create user model (resolved, 4 evidence) ✓
+- Task 3 (Wave 2): Add login endpoint (resolved, 3 evidence) ✓
+...
+
+## Blocked Patterns
+{List findings or "None detected"}
+
+CRITICAL:
+- src/auth.ts:45: "TODO: implement refresh token logic" (task 12)
+
+## Evidence Completeness
+{List incomplete or "All tasks have complete evidence"}
+
+## Conflicts
+{List conflicts or "None detected"}
+
+## Dependencies
+{List dependency checks}
+
+Verified: 12
+Missing: 0
+
+## Build Result
+Command: npm run build
+Exit code: 0
+Status: PASS
+
+## Test Result
+Command: npm test
+Exit code: 0
+Tests: 42 passed, 42 total
+Status: PASS
+
+## Verdict
+{PASS/FAIL with detailed reasoning}
+
+## Issues
+{List all issues found}
+
+## Verification File
+{TEAMWORK_DIR}/verification/final.json
 ```
 
 ## Rules
