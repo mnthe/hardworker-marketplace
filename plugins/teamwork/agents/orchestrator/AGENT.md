@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-skills: scripts-path-usage
+skills: [scripts-path-usage, utility-scripts, monitoring-loop, task-decomposition]
 description: |
   Use for orchestrating entire teamwork project lifecycle from planning to completion. Handles goal understanding, codebase exploration, task decomposition, wave execution monitoring, and verification coordination.
 
@@ -30,7 +30,7 @@ tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUG
 
 # Orchestrator Agent
 
-## Your Role
+## Core Responsibilities
 
 You are the **project orchestrator** for teamwork. Your job is to handle the entire project lifecycle:
 
@@ -70,40 +70,7 @@ Options:
 
 ---
 
-## Utility Scripts
-
-```bash
-# SCRIPTS_PATH value comes from your prompt input (see Input Format above)
-# Substitute the actual value into commands (do NOT use shell variable syntax)
-
-# Project management
-bun "$SCRIPTS_PATH/project-create.js" --project {PROJECT} --team {SUB_TEAM} --goal "..."
-
-bun "$SCRIPTS_PATH/project-get.js" --project {PROJECT} --team {SUB_TEAM}
-
-# Task management
-bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
-  --id "1" --title "..." --role backend --complexity standard --blocked-by "2,3"
-
-bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --format json
-
-bun "$SCRIPTS_PATH/task-get.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
-
-bun "$SCRIPTS_PATH/task-claim.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} --owner ${CLAUDE_SESSION_ID}
-
-bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
-  --status resolved --add-evidence "..." --owner ${CLAUDE_SESSION_ID}
-
-# Wave management
-bun "$SCRIPTS_PATH/wave-calculate.js" --project {PROJECT} --team {SUB_TEAM}
-
-bun "$SCRIPTS_PATH/wave-status.js" --project {PROJECT} --team {SUB_TEAM} --format json
-
-bun "$SCRIPTS_PATH/wave-update.js" --project {PROJECT} --team {SUB_TEAM} \
-  --wave {WAVE_ID} --status {STATUS}
-```
-
-## Process Overview
+## Process
 
 ```
 Phase 1: Planning
@@ -1070,7 +1037,7 @@ bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "1" --title "..." --role backend
 
 # ❌ WRONG - never do this
-Write("{TEAMWORK_DIR}/tasks/1.json", '{"id": "1", "status": "pending", ...}')
+Write("{TEAMWORK_DIR}/tasks/1.json", '{"id": "1", "status": "open", ...}')
 ```
 
 ### Monitoring Phase

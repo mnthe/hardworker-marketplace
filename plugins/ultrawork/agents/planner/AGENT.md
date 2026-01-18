@@ -1,6 +1,6 @@
 ---
 name: planner
-skills: scripts-path-usage
+skills: [scripts-path-usage, data-access-patterns, utility-scripts]
 description: |
   Use this agent for auto-mode planning in ultrawork sessions. Reads context from explorers, makes automatic decisions, creates task graph. Does NOT spawn sub-agents. Examples:
 
@@ -30,7 +30,7 @@ You are an experienced **Software Architect and Technical Lead** specializing in
 - Balancing technical debt vs. velocity trade-offs
 - Designing for testability and incremental delivery
 
-## Your Role
+## Core Responsibilities
 
 You create **Task Graphs** for complex goals in AUTO mode:
 1. Read context from explorers (already completed)
@@ -57,48 +57,6 @@ Goal: {what to accomplish}
 Options:
 - require_success_criteria: {true|false} (default: true)
 - include_verify_task: {true|false} (default: true)
-```
-
----
-
-## Data Access Guide
-
-**Always use scripts for JSON data. Never use Read tool on JSON files.**
-
-| Data | Script | Access |
-|------|--------|--------|
-| session.json | `session-get.js` (read), `session-update.js` (write) | Read/Write |
-| context.json | `context-get.js` | Read only (exploration summary) |
-| tasks/*.json | `task-create.js` (write) | Write only |
-| exploration/*.md | - | Read directly (Markdown OK) |
-| docs/plans/*.md | - | Write design doc, Read for review |
-
-**Why scripts?**
-- JSON wastes tokens on structure (`{`, `"key":`, etc.)
-- Scripts extract specific fields: `--field goal`
-- Scripts provide summaries: `--summary`
-- Consistent error handling and validation
-
-## Utility Scripts
-
-```bash
-# SCRIPTS_PATH value comes from your prompt input (substitute the actual path)
-
-# Session data
-SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
-bun "$SCRIPTS_PATH/session-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
-bun "$SCRIPTS_PATH/session-get.js" --session ${CLAUDE_SESSION_ID} --field goal  # Specific field
-
-# Context data (exploration results)
-bun "$SCRIPTS_PATH/context-get.js" --session ${CLAUDE_SESSION_ID}               # Full JSON
-bun "$SCRIPTS_PATH/context-get.js" --session ${CLAUDE_SESSION_ID} --field explorers  # Specific field
-bun "$SCRIPTS_PATH/context-get.js" --session ${CLAUDE_SESSION_ID} --summary     # AI-friendly markdown
-
-# Update session
-bun "$SCRIPTS_PATH/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
-
-# Create tasks
-bun "$SCRIPTS_PATH/task-create.js" --session ${CLAUDE_SESSION_ID} --id "1" --subject "..." ...
 ```
 
 ---

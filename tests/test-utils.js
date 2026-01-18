@@ -173,6 +173,10 @@ function mockSession(options = {}) {
 // Mock Project Creation (Teamwork)
 // ============================================================================
 
+// Test isolation: Use TEAMWORK_TEST_BASE_DIR if set, otherwise use tmpdir/.claude/teamwork
+// This ensures consistency between mockProject() and scripts using project-utils.js
+const TEAMWORK_TEST_BASE_DIR = process.env.TEAMWORK_TEST_BASE_DIR || path.join(os.tmpdir(), 'teamwork-test');
+
 /**
  * Create a mock teamwork project for testing
  * @param {MockProjectOptions} [options] - Project configuration options
@@ -184,8 +188,8 @@ function mockProject(options = {}) {
   const goal = options.goal || 'Test project goal';
   const phase = options.phase || 'PLANNING';
 
-  // Create project directory structure
-  const projectDir = path.join(os.tmpdir(), '.claude', 'teamwork', project, team);
+  // Create project directory structure using the test base directory
+  const projectDir = path.join(TEAMWORK_TEST_BASE_DIR, project, team);
   fs.mkdirSync(projectDir, { recursive: true });
 
   const tasksDir = path.join(projectDir, 'tasks');
@@ -214,9 +218,8 @@ function mockProject(options = {}) {
   fs.writeFileSync(projectFile, JSON.stringify(projectData, null, 2), 'utf-8');
 
   const cleanup = () => {
-    const baseDir = path.join(os.tmpdir(), '.claude', 'teamwork');
-    if (fs.existsSync(baseDir)) {
-      fs.rmSync(baseDir, { recursive: true, force: true });
+    if (fs.existsSync(TEAMWORK_TEST_BASE_DIR)) {
+      fs.rmSync(TEAMWORK_TEST_BASE_DIR, { recursive: true, force: true });
     }
   };
 
@@ -249,10 +252,18 @@ function runScript(scriptPath, params = {}, options = {}) {
     args.push(`--${key}`, value);
   }
 
+  // Merge environment variables - always include test isolation vars
+  const env = {
+    ...process.env,
+    TEAMWORK_TEST_BASE_DIR: TEAMWORK_TEST_BASE_DIR,
+    ...(options.env || {})
+  };
+
   // Execute script with bun
   const result = spawnSync('bun', args, {
     encoding: 'utf-8',
-    ...options
+    ...options,
+    env
   });
 
   // Parse JSON output if possible
@@ -358,5 +369,7 @@ module.exports = {
   mockSession,
   mockProject,
   runScript,
-  assertJsonSchema
+  assertJsonSchema,
+  // Test isolation constants
+  TEAMWORK_TEST_BASE_DIR
 };

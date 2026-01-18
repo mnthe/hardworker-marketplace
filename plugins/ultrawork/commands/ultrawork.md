@@ -56,6 +56,38 @@ result = TaskOutput(task_id=task_id, block=True)
 
 **Parallel execution**: Call multiple Tasks in a single message for automatic parallelization.
 
+### Context Variables for Sub-agents
+
+All sub-agents (explorer, planner, worker, verifier) MUST receive these context variables in their prompt:
+
+```python
+# Extract working directory from session
+working_dir = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir')
+
+# Pass to sub-agent
+Task(
+  subagent_type="ultrawork:worker",
+  prompt=f"""
+CLAUDE_SESSION_ID: ${CLAUDE_SESSION_ID}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
+WORKING_DIR: {working_dir}
+...
+"""
+)
+```
+
+**Why WORKING_DIR?**
+- Agent threads reset cwd between bash calls
+- Worktrees change working directory from original location
+- Sub-agents need explicit directory context for file operations
+
+**When WORKING_DIR differs from original directory:**
+- **Normal mode**: WORKING_DIR = original project directory
+- **Worktree mode** (`--worktree`): WORKING_DIR = `.worktrees/{branch-name}/`
+  - Example: Original `/project` → Worktree `/project/.worktrees/ultrawork-auth-2026-01-18`
+  - All file operations happen in isolated worktree
+  - Original directory preserved in `session.original_dir`
+
 ---
 
 ## Session ID Handling (CRITICAL)
@@ -173,12 +205,29 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/context-init.js" --session ${CLAUDE_SESSI
 
 **Stage 3: Targeted Exploration**
 ```bash
+# Get working directory
+working_dir = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir')
+
 # Update stage
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --exploration-stage targeted
+```
 
+```python
 # Spawn explorers (parallel, in single message)
-# Task(subagent_type="ultrawork:explorer:explorer", ...) for each hint
+for hint in exploration_hints:
+    Task(
+      subagent_type="ultrawork:explorer:explorer",
+      prompt=f"""
+CLAUDE_SESSION_ID: ${CLAUDE_SESSION_ID}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
+WORKING_DIR: {working_dir}
+EXPLORER_ID: {hint['id']}
+SEARCH_HINT: {hint['description']}
+"""
+    )
+```
 
+```bash
 # After completion
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --exploration-stage complete
 ```
@@ -198,15 +247,18 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 Spawn Planner sub-agent:
 
 ```python
-# SESSION_DIR is set via: SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
+# Get session context
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
+working_dir = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir')
 
 # Foreground execution - waits for completion
 Task(
   subagent_type="ultrawork:planner:planner",
   model="opus",
   prompt=f"""
-SESSION_ID: ${CLAUDE_SESSION_ID}
+CLAUDE_SESSION_ID: ${CLAUDE_SESSION_ID}
 SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
+WORKING_DIR: {working_dir}
 
 Goal: {goal}
 
@@ -421,22 +473,48 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 
 **5b. Execution Loop**
 ```python
+# Get working directory
+working_dir = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir')
+
 # Find unblocked tasks
 tasks = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" --session ${CLAUDE_SESSION_ID} --format json')
 
 # Spawn workers (parallel in single message)
 for task in unblocked_tasks:
     model = "opus" if task["complexity"] == "complex" else "sonnet"
-    Task(subagent_type="ultrawork:worker:worker", model=model, prompt=f"SESSION_ID: ${CLAUDE_SESSION_ID}\nTASK_ID: {task['id']}\nSCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts\n...")
+    Task(
+      subagent_type="ultrawork:worker:worker",
+      model=model,
+      prompt=f"""
+CLAUDE_SESSION_ID: ${CLAUDE_SESSION_ID}
+TASK_ID: {task['id']}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
+WORKING_DIR: {working_dir}
+...
+"""
+    )
 ```
 
 **5c. Verification**
 ```python
+# Get working directory
+working_dir = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir')
+
 # Update phase
 Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase VERIFICATION')
 
 # Spawn verifier
-Task(subagent_type="ultrawork:verifier:verifier", model="opus", prompt=f"SESSION_ID: ${CLAUDE_SESSION_ID}\nSCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts\nVerify all criteria...")
+Task(
+  subagent_type="ultrawork:verifier:verifier",
+  model="opus",
+  prompt=f"""
+CLAUDE_SESSION_ID: ${CLAUDE_SESSION_ID}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
+WORKING_DIR: {working_dir}
+
+Verify all criteria...
+"""
+)
 ```
 
 **5d. Completion or Ralph Loop**
@@ -504,7 +582,7 @@ $WORKING_DIR/
 | `--skip-verify`      | Skip verification phase                                  |
 | `--plan-only`        | Stop after planning, don't execute                       |
 | `--worktree`         | Create isolated git worktree for development             |
-| `--branch NAME`      | Custom branch name (default: ultrawork/{goal-slug}-date) |
+| `--branch NAME`      | Custom branch name (default: ultrawork/{date}-{brief})   |
 
 ---
 

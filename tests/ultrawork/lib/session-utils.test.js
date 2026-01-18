@@ -1,9 +1,19 @@
 #!/usr/bin/env bun
 /**
  * Tests for session-utils.js - Session management utilities
+ *
+ * IMPORTANT: Uses ULTRAWORK_TEST_BASE_DIR for test isolation
  */
 
-const { describe, test, expect, beforeEach, afterEach } = require('bun:test');
+const { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } = require('bun:test');
+const os = require('os');
+const path = require('path');
+const fs = require('fs');
+
+// Set test base directory BEFORE importing session-utils
+const TEST_BASE_DIR = path.join(os.tmpdir(), 'ultrawork-session-utils-test');
+process.env.ULTRAWORK_TEST_BASE_DIR = TEST_BASE_DIR;
+
 const {
   getUltraworkBase,
   getSessionsDir,
@@ -20,12 +30,9 @@ const {
   cleanupOldSessions,
   getCurrentSessionId
 } = require('../../../plugins/ultrawork/src/lib/session-utils.js');
-const os = require('os');
-const path = require('path');
-const fs = require('fs');
 
 /**
- * Create a mock session in the actual ultrawork directory
+ * Create a mock session in the TEST ultrawork directory (not real user data)
  * @param {string} sessionId - Session ID
  * @param {string} phase - Session phase
  * @returns {Object} Mock session data
@@ -77,6 +84,14 @@ function createMockSession(sessionId, phase = 'PLANNING') {
 describe('session-utils.js', () => {
   let session;
 
+  // Cleanup test directory after all tests
+  afterAll(() => {
+    if (fs.existsSync(TEST_BASE_DIR)) {
+      fs.rmSync(TEST_BASE_DIR, { recursive: true, force: true });
+    }
+    delete process.env.ULTRAWORK_TEST_BASE_DIR;
+  });
+
   beforeEach(() => {
     session = createMockSession('test-session-123', 'PLANNING');
   });
@@ -86,24 +101,25 @@ describe('session-utils.js', () => {
   });
 
   describe('path functions', () => {
-    test('getUltraworkBase should return base directory', () => {
+    test('getUltraworkBase should return test base directory (isolated)', () => {
       const base = getUltraworkBase();
-      expect(base).toBe(path.join(os.homedir(), '.claude', 'ultrawork'));
+      // With ULTRAWORK_TEST_BASE_DIR set, should return test path
+      expect(base).toBe(TEST_BASE_DIR);
     });
 
     test('getSessionsDir should return sessions directory', () => {
       const dir = getSessionsDir();
-      expect(dir).toBe(path.join(os.homedir(), '.claude', 'ultrawork', 'sessions'));
+      expect(dir).toBe(path.join(TEST_BASE_DIR, 'sessions'));
     });
 
     test('getSessionDir should return session directory', () => {
       const dir = getSessionDir('abc-123');
-      expect(dir).toBe(path.join(os.homedir(), '.claude', 'ultrawork', 'sessions', 'abc-123'));
+      expect(dir).toBe(path.join(TEST_BASE_DIR, 'sessions', 'abc-123'));
     });
 
     test('getSessionFile should return session.json path', () => {
       const file = getSessionFile('abc-123');
-      expect(file).toBe(path.join(os.homedir(), '.claude', 'ultrawork', 'sessions', 'abc-123', 'session.json'));
+      expect(file).toBe(path.join(TEST_BASE_DIR, 'sessions', 'abc-123', 'session.json'));
     });
   });
 

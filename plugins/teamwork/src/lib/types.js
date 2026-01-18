@@ -198,7 +198,7 @@
 /**
  * Task-level verification status
  * @typedef {Object} TaskVerification
- * @property {'passed' | 'failed' | 'pending'} status - Verification status
+ * @property {'passed' | 'failed'} status - Verification status (PASS/FAIL)
  * @property {string | null} verified_at - ISO8601 timestamp when verified
  * @property {string[]} criteria_met - List of criteria that were met
  * @property {string[]} criteria_unmet - List of criteria that were not met

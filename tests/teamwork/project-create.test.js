@@ -3,24 +3,18 @@
  * Tests for project-create.js
  */
 
-const { test, expect, describe, beforeEach, afterEach } = require('bun:test');
+const { test, expect, describe, afterAll } = require('bun:test');
 const path = require('path');
 const fs = require('fs');
-const { runScript, createTempDir, assertJsonSchema } = require('../test-utils.js');
+const { runScript, assertJsonSchema, TEAMWORK_TEST_BASE_DIR } = require('../test-utils.js');
 
 const SCRIPT_PATH = path.join(__dirname, '../../plugins/teamwork/src/scripts/project-create.js');
 
 describe('project-create.js', () => {
-  let tempDir;
-
-  beforeEach(() => {
-    const temp = createTempDir('teamwork-test-');
-    tempDir = temp.path;
-  });
-
-  afterEach(() => {
-    if (tempDir && fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+  afterAll(() => {
+    // Clean up test projects
+    if (fs.existsSync(TEAMWORK_TEST_BASE_DIR)) {
+      fs.rmSync(TEAMWORK_TEST_BASE_DIR, { recursive: true, force: true });
     }
   });
 
@@ -33,15 +27,14 @@ describe('project-create.js', () => {
   });
 
   test('creates project with valid parameters', () => {
-    const projectDir = path.join(tempDir, '.claude', 'teamwork', 'test-project', 'test-team');
+    // Use TEAMWORK_TEST_BASE_DIR for path assertions
+    const projectDir = path.join(TEAMWORK_TEST_BASE_DIR, 'create-test-project', 'create-test-team');
     const projectFile = path.join(projectDir, 'project.json');
 
     const result = runScript(SCRIPT_PATH, {
-      project: 'test-project',
-      team: 'test-team',
+      project: 'create-test-project',
+      team: 'create-test-team',
       goal: 'Build API'
-    }, {
-      env: { ...process.env, HOME: tempDir }
     });
 
     expect(result.exitCode).toBe(0);
@@ -58,11 +51,11 @@ describe('project-create.js', () => {
       stats: 'object'
     });
 
-    expect(result.json.project).toBe('test-project');
-    expect(result.json.team).toBe('test-team');
+    expect(result.json.project).toBe('create-test-project');
+    expect(result.json.team).toBe('create-test-team');
     expect(result.json.goal).toBe('Build API');
 
-    // Check file was created
+    // Check file was created in test isolation directory
     expect(fs.existsSync(projectFile)).toBe(true);
   });
 
@@ -76,14 +69,12 @@ describe('project-create.js', () => {
   });
 
   test('creates tasks directory', () => {
-    const tasksDir = path.join(tempDir, '.claude', 'teamwork', 'test-project', 'test-team', 'tasks');
+    const tasksDir = path.join(TEAMWORK_TEST_BASE_DIR, 'tasks-test-project', 'tasks-test-team', 'tasks');
 
     const result = runScript(SCRIPT_PATH, {
-      project: 'test-project',
-      team: 'test-team',
+      project: 'tasks-test-project',
+      team: 'tasks-test-team',
       goal: 'Test goal'
-    }, {
-      env: { ...process.env, HOME: tempDir }
     });
 
     expect(result.exitCode).toBe(0);
@@ -92,11 +83,9 @@ describe('project-create.js', () => {
 
   test('sets initial stats to zero', () => {
     const result = runScript(SCRIPT_PATH, {
-      project: 'test-project',
-      team: 'test-team',
+      project: 'stats-test-project',
+      team: 'stats-test-team',
       goal: 'Test goal'
-    }, {
-      env: { ...process.env, HOME: tempDir }
     });
 
     expect(result.exitCode).toBe(0);

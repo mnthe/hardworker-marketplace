@@ -1,19 +1,39 @@
 #!/usr/bin/env bun
 /**
  * Tests for setup-ultrawork.js
+ *
+ * IMPORTANT: Uses ULTRAWORK_TEST_BASE_DIR for test isolation
  */
 
-const { describe, test, expect, afterEach } = require('bun:test');
-const { runScript, assertHelpText } = require('./test-utils.js');
-const { getSessionDir, getSessionFile, readSession } = require('../../plugins/ultrawork/src/lib/session-utils.js');
+const { describe, test, expect, afterEach, afterAll } = require('bun:test');
+const {
+  runScript,
+  assertHelpText,
+  TEST_BASE_DIR,
+  getTestSessionDir,
+  getTestSessionFile,
+  cleanupAllTestSessions
+} = require('./test-utils.js');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+
+// Set test base directory for any direct session-utils imports
+process.env.ULTRAWORK_TEST_BASE_DIR = TEST_BASE_DIR;
+
+// Now import session-utils (will use TEST_BASE_DIR)
+const { readSession } = require('../../plugins/ultrawork/src/lib/session-utils.js');
 
 const SCRIPT_PATH = path.join(__dirname, '../../plugins/ultrawork/src/scripts/setup-ultrawork.js');
 
 describe('setup-ultrawork.js', () => {
   const testSessionId = 'test-setup-session';
-  const sessionDir = getSessionDir(testSessionId);
+  const sessionDir = getTestSessionDir(testSessionId);
+
+  afterAll(() => {
+    cleanupAllTestSessions();
+    delete process.env.ULTRAWORK_TEST_BASE_DIR;
+  });
 
   afterEach(() => {
     // Cleanup test session
@@ -43,7 +63,7 @@ describe('setup-ultrawork.js', () => {
       expect(result.stdout).toContain('Test goal');
 
       // Verify session file created
-      const sessionFile = getSessionFile(testSessionId);
+      const sessionFile = getTestSessionFile(testSessionId);
       expect(fs.existsSync(sessionFile)).toBe(true);
 
       // Verify session data
@@ -172,6 +192,145 @@ describe('setup-ultrawork.js', () => {
       const context = JSON.parse(fs.readFileSync(contextFile, 'utf-8'));
       expect(context.explorers).toEqual([]);
       expect(context.exploration_complete).toBe(false);
+    });
+  });
+
+  describe('generateBranchName()', () => {
+    const { generateBranchName } = require(SCRIPT_PATH);
+
+    test('should generate date-first format (YYYY-MM-DD-{brief})', () => {
+      const result = generateBranchName('implement-user-authentication');
+
+      // Verify it starts with ultrawork/ prefix
+      expect(result).toMatch(/^ultrawork\//);
+
+      // Verify date format YYYY-MM-DD appears after prefix
+      expect(result).toMatch(/^ultrawork\/\d{4}-\d{2}-\d{2}-/);
+
+      // Verify brief part exists
+      expect(result).toMatch(/^ultrawork\/\d{4}-\d{2}-\d{2}-.+/);
+    });
+
+    test('should use current date', () => {
+      const result = generateBranchName('test-brief');
+
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+
+      // Verify the result contains today's date
+      expect(result).toContain(today);
+    });
+
+    test('should preserve brief as-is', () => {
+      const brief = 'my-custom-brief';
+      const result = generateBranchName(brief);
+
+      // Extract brief part
+      const match = result.match(/^ultrawork\/\d{4}-\d{2}-\d{2}-(.+)$/);
+      expect(match).toBeTruthy();
+      expect(match[1]).toBe(brief);
+    });
+  });
+
+  describe('generateBrief()', () => {
+    const { generateBrief } = require(SCRIPT_PATH);
+    const testSessionId = 'abc12345-1234-5678-abcd-1234567890ab';
+
+    test('should slugify ASCII goal text', () => {
+      const brief = generateBrief('Implement user authentication', testSessionId);
+
+      expect(brief).toBe('implement-user-authentication');
+    });
+
+    test('should truncate brief to 30 characters', () => {
+      const longGoal = 'This is a very long goal description that should be truncated to fit the 30 character limit';
+      const brief = generateBrief(longGoal, testSessionId);
+
+      expect(brief.length).toBeLessThanOrEqual(30);
+    });
+
+    test('should remove special characters', () => {
+      const goalWithSpecialChars = 'Add @user #authentication & $validation!';
+      const brief = generateBrief(goalWithSpecialChars, testSessionId);
+
+      // Brief should only contain lowercase letters, numbers, and hyphens
+      expect(brief).toMatch(/^[a-z0-9-]+$/);
+      expect(brief).toContain('add');
+      expect(brief).toContain('user');
+      expect(brief).toContain('authentication');
+    });
+
+    test('should remove trailing hyphens', () => {
+      const goalEndingWithSpaces = 'Test goal with spaces   ';
+      const brief = generateBrief(goalEndingWithSpaces, testSessionId);
+
+      // Brief should not end with a hyphen
+      expect(brief).not.toMatch(/-$/);
+    });
+
+    test('should convert spaces to single hyphens', () => {
+      const goalWithSpaces = 'add user  authentication   system';
+      const brief = generateBrief(goalWithSpaces, testSessionId);
+
+      // Should have single hyphens, no consecutive hyphens
+      expect(brief).not.toMatch(/--/);
+      expect(brief).toBe('add-user-authentication-system');
+    });
+
+    test('should use session ID fallback for Korean goals', () => {
+      const koreanGoal = '사용자 인증 기능 추가';
+      const brief = generateBrief(koreanGoal, testSessionId);
+
+      // Should use session ID prefix as fallback
+      expect(brief).toBe('session-abc12345');
+    });
+
+    test('should use session ID fallback for mixed Korean/English goals', () => {
+      const mixedGoal = 'API 인증 시스템 구현';
+      const brief = generateBrief(mixedGoal, testSessionId);
+
+      // Contains non-ASCII, should use fallback
+      expect(brief).toBe('session-abc12345');
+    });
+
+    test('should use session ID fallback for goals with only special characters', () => {
+      const specialCharsOnly = '@#$%^&*()!';
+      const brief = generateBrief(specialCharsOnly, testSessionId);
+
+      // Empty after slugification, should use fallback
+      expect(brief).toBe('session-abc12345');
+    });
+
+    test('should lowercase the goal text', () => {
+      const mixedCaseGoal = 'Add USER Authentication System';
+      const brief = generateBrief(mixedCaseGoal, testSessionId);
+
+      // Should be all lowercase
+      expect(brief).toBe(brief.toLowerCase());
+      expect(brief).toContain('user');
+      expect(brief).not.toContain('USER');
+    });
+  });
+
+  describe('containsNonAscii()', () => {
+    const { containsNonAscii } = require(SCRIPT_PATH);
+
+    test('should return false for ASCII-only text', () => {
+      expect(containsNonAscii('Hello World')).toBe(false);
+      expect(containsNonAscii('implement-auth-123')).toBe(false);
+      expect(containsNonAscii('@#$%^&*()')).toBe(false);
+    });
+
+    test('should return true for Korean text', () => {
+      expect(containsNonAscii('사용자 인증')).toBe(true);
+      expect(containsNonAscii('Hello 세계')).toBe(true);
+    });
+
+    test('should return true for other non-ASCII text', () => {
+      expect(containsNonAscii('日本語')).toBe(true); // Japanese
+      expect(containsNonAscii('中文')).toBe(true); // Chinese
+      expect(containsNonAscii('Ümlauts')).toBe(true); // German
+      expect(containsNonAscii('Привет')).toBe(true); // Russian
     });
   });
 });

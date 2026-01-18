@@ -19,6 +19,32 @@ Claude Code plugin marketplace. A collection of plugins focused on "hardworker" 
 - **Data Format**: JSON (state), Markdown (documentation)
 - **Runtime**: Claude Code CLI environment (Bun 1.0+)
 
+## Standard Vocabulary
+
+Use consistent terminology across all plugins, agents, and documentation.
+
+| Category | Use ✅ | Avoid ❌ | Notes |
+|----------|--------|----------|-------|
+| **Verification** | evidence | proof, confirmation | Concrete output demonstrating completion |
+| **Criteria** | criterion (singular)<br>criteria (plural) | criterias, criterions | "One criterion was met"<br>"All criteria are satisfied" |
+| **Task Status** | open<br>in_progress<br>resolved | pending<br>working<br>complete, done, closed | Matches JSON state values |
+| **Test Results** | PASS<br>FAIL | passed, failed, success, error | Uppercase for verification outcomes |
+| **Exit Codes** | exit code 0<br>exit code 1 | return code, status code | 0 = success, 1 = error |
+
+**Examples:**
+
+```markdown
+### Criterion: Tests pass
+Command: npm test
+Output: PASS src/auth.test.ts
+Exit code: 0
+
+Evidence:
+- Test execution completed
+- All criteria met
+- Task status: resolved
+```
+
 ## Development Standards
 
 ### plugin.json Specification (Required)
@@ -473,7 +499,6 @@ CLAUDE.md files provide context to AI agents.
 | ------- | ---------------------------------- | ---------------------------- |
 | Root    | `/CLAUDE.md`                       | Project overview, guidelines |
 | Plugin  | `/plugins/*/CLAUDE.md`             | Plugin-specific context      |
-| Agent   | `/plugins/*/agents/*/CLAUDE.md`    | Agent role context           |
 | Session | `~/.claude/*/sessions/*/CLAUDE.md` | Session activity             |
 
 ### When to Update CLAUDE.md

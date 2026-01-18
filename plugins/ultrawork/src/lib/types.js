@@ -39,6 +39,7 @@
  * @property {string} working_dir
  * @property {string | null} [original_dir] - Original project dir when using worktree
  * @property {string} goal
+ * @property {string} [goal_brief] - English brief for branch/file naming (auto-generated for non-ASCII goals)
  * @property {string} started_at
  * @property {string} updated_at
  * @property {Phase} phase

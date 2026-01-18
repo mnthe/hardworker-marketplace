@@ -20,9 +20,14 @@ const { acquireLock, releaseLock } = require('./file-lock');
 
 /**
  * Get the base ultrawork directory
- * @returns {string} ~/.claude/ultrawork
+ * Supports ULTRAWORK_TEST_BASE_DIR env var for test isolation
+ * @returns {string} ~/.claude/ultrawork (or test override)
  */
 function getUltraworkBase() {
+  // Allow test override to prevent tests from affecting real user data
+  if (process.env.ULTRAWORK_TEST_BASE_DIR) {
+    return process.env.ULTRAWORK_TEST_BASE_DIR;
+  }
   return path.join(os.homedir(), '.claude', 'ultrawork');
 }
 
@@ -287,6 +292,50 @@ function getCurrentSessionFile() {
 }
 
 /**
+ * Check if current path is a test directory (safe to delete)
+ * @returns {boolean} True if running in test mode with test directory
+ */
+function isTestDirectory() {
+  return !!process.env.ULTRAWORK_TEST_BASE_DIR;
+}
+
+/**
+ * Validate that a path is safe to delete (prevents accidental deletion of real user data)
+ * @param {string} targetPath - Path to validate
+ * @throws {Error} If path is not safe to delete
+ */
+function validateSafeDelete(targetPath) {
+  const realUserPath = path.join(os.homedir(), '.claude', 'ultrawork');
+
+  // If we're in test mode, only allow deletion within test directory
+  if (process.env.ULTRAWORK_TEST_BASE_DIR) {
+    const testBase = path.resolve(process.env.ULTRAWORK_TEST_BASE_DIR);
+    const resolvedTarget = path.resolve(targetPath);
+
+    if (!resolvedTarget.startsWith(testBase + path.sep) && resolvedTarget !== testBase) {
+      throw new Error(
+        `SAFETY: Attempted to delete outside test directory.\n` +
+        `  Test base: ${testBase}\n` +
+        `  Target: ${resolvedTarget}\n` +
+        `  This is a bug in the test code.`
+      );
+    }
+  }
+
+  // Prevent deletion of the base ultrawork directory itself
+  const resolvedTarget = path.resolve(targetPath);
+  const resolvedBase = path.resolve(realUserPath);
+
+  if (resolvedTarget === resolvedBase || resolvedTarget === path.dirname(resolvedBase)) {
+    throw new Error(
+      `SAFETY: Attempted to delete ultrawork base directory.\n` +
+      `  Target: ${resolvedTarget}\n` +
+      `  This would delete all ultrawork data!`
+    );
+  }
+}
+
+/**
  * Clean up old sessions (completed/cancelled/failed older than N days)
  * @param {number} [days=7] - Number of days to keep sessions
  * @returns {void}
@@ -317,6 +366,7 @@ function cleanupOldSessions(days = 7) {
 
     // Only delete non-active sessions
     if (!isSessionActive(sessionId)) {
+      validateSafeDelete(sessionDir);
       fs.rmSync(sessionDir, { recursive: true, force: true });
     }
   }
@@ -339,18 +389,25 @@ function getCurrentSessionId() {
 // ============================================================================
 
 module.exports = {
+  // Path functions
   getUltraworkBase,
   getSessionsDir,
   getSessionDir,
   getSessionFile,
+  // Session operations
   resolveSessionId,
   isSessionActive,
   listActiveSessions,
   readSession,
   readSessionField,
   updateSession,
+  // Environment helpers
   getClaudeSessionId,
   getCurrentSessionFile,
-  cleanupOldSessions,
   getCurrentSessionId,
+  // Cleanup
+  cleanupOldSessions,
+  // Safety functions (for tests and validation)
+  isTestDirectory,
+  validateSafeDelete,
 };

@@ -1,6 +1,6 @@
 ---
 name: wave-verifier
-skills: scripts-path-usage
+skills: [scripts-path-usage, utility-scripts]
 description: |
   Use for verifying cross-task consistency after wave completion. Runs after all tasks in a wave are resolved.
 
@@ -30,7 +30,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scr
 
 # Wave-Verifier Agent
 
-## Your Role
+## Core Responsibilities
 
 You are a **wave verifier**. Your job is to:
 1. Collect evidence from all tasks in the wave
@@ -53,18 +53,6 @@ WAVE_ID: {wave number}
 ```
 
 ---
-
-## Utility Scripts
-
-SCRIPTS_PATH is provided in your prompt - substitute its actual value into commands:
-
-```bash
-# Get all tasks for the wave (use actual path from prompt)
-bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --format json
-
-# Get task details
-bun "$SCRIPTS_PATH/task-get.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID}
-```
 
 ## Process
 
@@ -379,6 +367,44 @@ grep "type UserRole" src/types/*.ts
 
 # Verify type usage
 grep "UserRole" src/services/*.ts
+```
+
+## Output Format
+
+```markdown
+# Wave {WAVE_ID} Verification: {PASS/FAIL}
+
+## Summary
+- Total tasks: {count}
+- Resolved tasks: {count}
+- Conflicts detected: {count}
+- Build: {PASS/FAIL}
+- Tests: {passed}/{total}
+
+## Tasks Verified
+- Task 1: Add auth middleware (resolved)
+- Task 2: Create user model (resolved)
+- Task 3: Add login endpoint (resolved)
+
+## Conflicts
+{List conflicts or "None detected"}
+
+## Build Result
+Command: npm run build
+Exit code: 0
+Status: PASS
+
+## Test Result
+Command: npm test
+Exit code: 0
+Tests: 15 passed, 15 total
+Status: PASS
+
+## Verdict
+{PASS/FAIL with reasoning}
+
+## Verification File
+{TEAMWORK_DIR}/verification/wave-{n}.json
 ```
 
 ## Rules

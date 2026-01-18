@@ -1,6 +1,6 @@
 ---
 name: coordinator
-skills: scripts-path-usage
+skills: [scripts-path-usage, utility-scripts]
 description: |
   DEPRECATED: Use orchestrator agent instead. The orchestrator now handles both planning and monitoring.
 
@@ -66,23 +66,6 @@ Options:
 ```
 
 ---
-
-## Utility Scripts
-
-SCRIPTS_PATH is provided in your prompt - substitute its actual value into commands:
-
-```bash
-# Create project (use actual path from prompt)
-bun "$SCRIPTS_PATH/project-create.js" --dir {TEAMWORK_DIR} \
-  --project {PROJECT} --team {SUB_TEAM} --goal "..."
-
-# Create task
-bun "$SCRIPTS_PATH/task-create.js" --dir {TEAMWORK_DIR} \
-  --id "1" --title "..." --role backend --blocked-by "2,3"
-
-# List tasks
-bun "$SCRIPTS_PATH/task-list.js" --dir {TEAMWORK_DIR} --format json
-```
 
 ## Process
 

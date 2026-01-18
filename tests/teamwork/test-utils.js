@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Shared test utilities for ultrawork script tests
+ * Teamwork-specific test utilities
  *
  * IMPORTANT: Uses os.tmpdir() to isolate tests from real user data.
  * Never use real ~/.claude/ paths in tests!
@@ -12,86 +12,80 @@ const os = require('os');
 const { spawn } = require('child_process');
 
 // Test-specific path functions (isolated from real user data)
-const TEST_BASE_DIR = path.join(os.tmpdir(), 'ultrawork-test');
+const TEST_BASE_DIR = path.join(os.tmpdir(), 'teamwork-test');
 
-function getTestSessionsDir() {
-  return path.join(TEST_BASE_DIR, 'sessions');
+function getTestTeamworkBase() {
+  return TEST_BASE_DIR;
 }
 
-function getTestSessionDir(sessionId) {
-  return path.join(getTestSessionsDir(), sessionId);
+function getTestProjectDir(project, team) {
+  return path.join(TEST_BASE_DIR, project, team);
 }
 
-function getTestSessionFile(sessionId) {
-  return path.join(getTestSessionDir(sessionId), 'session.json');
+function getTestProjectFile(project, team) {
+  return path.join(getTestProjectDir(project, team), 'project.json');
+}
+
+function getTestTasksDir(project, team) {
+  return path.join(getTestProjectDir(project, team), 'tasks');
+}
+
+function getTestTaskFile(project, team, taskId) {
+  return path.join(getTestTasksDir(project, team), `${taskId}.json`);
 }
 
 /**
- * Create a temporary session directory for testing
- * Uses os.tmpdir() to avoid affecting real user sessions
- * @param {string} sessionId - Session ID
- * @param {Object} [options] - Session options
- * @returns {Object} Session info with cleanup function
+ * Create a mock project directory for testing
+ * Uses os.tmpdir() to avoid affecting real user projects
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @param {Object} [options] - Project options
+ * @returns {Object} Project info with cleanup function
  */
-function createMockSession(sessionId, options = {}) {
-  const sessionDir = getTestSessionDir(sessionId);
-  const sessionFile = getTestSessionFile(sessionId);
+function createMockProject(project, team, options = {}) {
+  const projectDir = getTestProjectDir(project, team);
+  const projectFile = getTestProjectFile(project, team);
+  const tasksDir = getTestTasksDir(project, team);
 
   // Create directory structure
-  fs.mkdirSync(sessionDir, { recursive: true });
-  fs.mkdirSync(path.join(sessionDir, 'tasks'), { recursive: true });
-  fs.mkdirSync(path.join(sessionDir, 'exploration'), { recursive: true });
+  fs.mkdirSync(projectDir, { recursive: true });
+  fs.mkdirSync(tasksDir, { recursive: true });
+  fs.mkdirSync(path.join(projectDir, 'verification'), { recursive: true });
 
-  // Create session.json
-  const sessionData = {
-    version: '6.0',
-    session_id: sessionId,
-    working_dir: options.working_dir || '/tmp/test-project',
-    goal: options.goal || 'Test session goal',
-    started_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+  // Create project.json
+  const projectData = {
+    project: project,
+    team: team,
+    goal: options.goal || 'Test project goal',
     phase: options.phase || 'PLANNING',
-    exploration_stage: options.exploration_stage || 'not_started',
-    iteration: options.iteration || 1,
-    plan: {
-      approved_at: options.plan_approved_at || null
-    },
-    options: {
-      max_workers: options.max_workers || 0,
-      max_iterations: options.max_iterations || 5,
-      skip_verify: options.skip_verify || false,
-      plan_only: options.plan_only || false,
-      auto_mode: options.auto_mode || false
-    },
-    evidence_log: options.evidence_log || [],
-    cancelled_at: options.cancelled_at || null
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    stats: {
+      total: options.total || 0,
+      open: options.open || 0,
+      in_progress: options.in_progress || 0,
+      resolved: options.resolved || 0
+    }
   };
 
-  fs.writeFileSync(sessionFile, JSON.stringify(sessionData, null, 2), 'utf-8');
+  fs.writeFileSync(projectFile, JSON.stringify(projectData, null, 2), 'utf-8');
 
-  // Create context.json
-  const contextData = {
-    version: '2.1',
-    expected_explorers: options.expected_explorers || [],
-    exploration_complete: options.exploration_complete || false,
-    explorers: options.explorers || [],
-    key_files: options.key_files || [],
-    patterns: options.patterns || [],
-    constraints: options.constraints || []
-  };
-
-  const contextFile = path.join(sessionDir, 'context.json');
-  fs.writeFileSync(contextFile, JSON.stringify(contextData, null, 2), 'utf-8');
+  // Create waves.json if wave data provided
+  if (options.waves) {
+    const wavesFile = path.join(projectDir, 'waves.json');
+    fs.writeFileSync(wavesFile, JSON.stringify(options.waves, null, 2), 'utf-8');
+  }
 
   return {
-    sessionId,
-    sessionDir,
-    sessionFile,
-    sessionData,
-    contextData,
+    project,
+    team,
+    projectDir,
+    projectFile,
+    tasksDir,
+    projectData,
     cleanup: () => {
-      if (fs.existsSync(sessionDir)) {
-        fs.rmSync(sessionDir, { recursive: true, force: true });
+      if (fs.existsSync(projectDir)) {
+        fs.rmSync(projectDir, { recursive: true, force: true });
       }
     }
   };
@@ -99,29 +93,36 @@ function createMockSession(sessionId, options = {}) {
 
 /**
  * Create a mock task file
- * @param {string} sessionId - Session ID
+ * @param {string} project - Project name
+ * @param {string} team - Team name
  * @param {string} taskId - Task ID
  * @param {Object} [options] - Task options
  * @returns {Object} Task info
  */
-function createMockTask(sessionId, taskId, options = {}) {
-  const sessionDir = getTestSessionDir(sessionId);
-  const tasksDir = path.join(sessionDir, 'tasks');
+function createMockTask(project, team, taskId, options = {}) {
+  const tasksDir = getTestTasksDir(project, team);
   const taskFile = path.join(tasksDir, `${taskId}.json`);
+
+  // Ensure tasks directory exists
+  if (!fs.existsSync(tasksDir)) {
+    fs.mkdirSync(tasksDir, { recursive: true });
+  }
 
   const taskData = {
     id: taskId,
-    subject: options.subject || 'Test task',
+    title: options.title || 'Test task',
     description: options.description || 'Test task description',
+    role: options.role || 'backend',
     complexity: options.complexity || 'standard',
     status: options.status || 'open',
     blocked_by: options.blocked_by || [],
-    criteria: options.criteria || ['Test criterion'],
-    evidence: options.evidence || [],
+    wave: options.wave || null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    ...(options.approach && { approach: options.approach }),
-    ...(options.test_file && { test_file: options.test_file })
+    claimed_by: options.claimed_by || null,
+    claimed_at: options.claimed_at || null,
+    completed_at: options.completed_at || null,
+    evidence: options.evidence || []
   };
 
   fs.writeFileSync(taskFile, JSON.stringify(taskData, null, 2), 'utf-8');
@@ -135,7 +136,7 @@ function createMockTask(sessionId, taskId, options = {}) {
 
 /**
  * Run a script with given arguments
- * Automatically sets ULTRAWORK_TEST_BASE_DIR for test isolation
+ * Automatically sets TEAMWORK_TEST_BASE_DIR for test isolation
  * @param {string} scriptPath - Path to script
  * @param {string[]} args - Script arguments
  * @returns {Promise<{stdout: string, stderr: string, exitCode: number}>}
@@ -146,7 +147,7 @@ async function runScript(scriptPath, args = []) {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
         ...process.env,
-        ULTRAWORK_TEST_BASE_DIR: TEST_BASE_DIR  // Isolate tests from real user data
+        TEAMWORK_TEST_BASE_DIR: TEST_BASE_DIR  // Isolate tests from real user data
       }
     });
 
@@ -225,9 +226,9 @@ function assertHelpText(helpText, requiredFlags = []) {
 }
 
 /**
- * Clean up all test sessions (call in afterAll or when needed)
+ * Clean up all test projects (call in afterAll or when needed)
  */
-function cleanupAllTestSessions() {
+function cleanupAllTestProjects() {
   if (fs.existsSync(TEST_BASE_DIR)) {
     fs.rmSync(TEST_BASE_DIR, { recursive: true, force: true });
   }
@@ -236,11 +237,13 @@ function cleanupAllTestSessions() {
 module.exports = {
   // Path helpers (for test isolation)
   TEST_BASE_DIR,
-  getTestSessionsDir,
-  getTestSessionDir,
-  getTestSessionFile,
-  // Session/task creation
-  createMockSession,
+  getTestTeamworkBase,
+  getTestProjectDir,
+  getTestProjectFile,
+  getTestTasksDir,
+  getTestTaskFile,
+  // Project/task creation
+  createMockProject,
   createMockTask,
   // Script execution
   runScript,
@@ -248,5 +251,5 @@ module.exports = {
   assertJsonSchema,
   assertHelpText,
   // Cleanup
-  cleanupAllTestSessions
+  cleanupAllTestProjects
 };
