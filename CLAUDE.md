@@ -236,6 +236,199 @@ Hook configuration (`hooks/hooks.json`):
 - Silent on success (no stdout unless necessary)
 - Log errors to stderr
 
+### Skill Specification
+
+Skills are reusable knowledge modules that provide specialized guidance to agents. They document patterns, workflows, and best practices for specific capabilities.
+
+**File**: `skills/{skill-name}/SKILL.md`
+
+```markdown
+---
+name: skill-name
+description: |
+  Brief description of what this skill provides.
+  Who should use it and when.
+  Required context or dependencies.
+---
+
+# Skill Title
+
+## What This Skill Provides
+
+Clear explanation of the skill's purpose and capabilities.
+
+## When to Use This Skill
+
+Specific scenarios where this skill applies.
+
+## Usage Examples
+
+Concrete examples of using the skill's patterns.
+
+## Best Practices
+
+Guidelines for effective skill usage.
+```
+
+**Frontmatter fields:**
+- `name`: Skill identifier (lowercase, hyphen-separated, must match directory name)
+- `description`: Multi-line or single-line description (use `|` for multi-line)
+
+**Skill Directory Structure:**
+
+```
+skills/{skill-name}/
+├── SKILL.md          # Main skill file (REQUIRED)
+└── references/       # Supporting files (OPTIONAL)
+    ├── example.md
+    └── diagram.png
+```
+
+**Agent Integration:**
+
+Agents reference skills in their frontmatter:
+
+```markdown
+---
+name: worker
+description: Task implementation agent
+model: claude-sonnet-4-5
+tools: [Read, Write, Edit, Bash]
+skills: [utility-scripts, data-access-patterns, tdd-workflow]
+---
+```
+
+Skills are injected into the agent's context at spawn time, providing specialized knowledge without bloating the agent definition.
+
+### Skill Development Patterns
+
+**Pattern 1: Workflow Skills**
+
+Document step-by-step processes with concrete bash commands and evidence requirements.
+
+**Examples**: `tdd-workflow`, `worker-workflow`, `monitoring-loop`
+
+```markdown
+## Phase 1: Setup
+```bash
+bun "$SCRIPTS_PATH/script.js" --session ${ID} --param value
+```
+
+## Phase 2: Execute
+[Concrete steps with expected outputs]
+
+## Phase 3: Verify
+[Evidence collection patterns]
+```
+
+**Pattern 2: Reference Skills**
+
+Provide quick reference tables and command templates for utility scripts.
+
+**Examples**: `utility-scripts`, `scripts-path-usage`
+
+```markdown
+| Data | Access Method |
+|------|---------------|
+| session.json | `bun "$SCRIPTS_PATH/session-get.js" --session ${ID}` |
+| tasks/*.json | `bun "$SCRIPTS_PATH/task-get.js" --session ${ID} --id N` |
+```
+
+**Pattern 3: Concept Skills**
+
+Explain design principles, rationale, and decision-making frameworks.
+
+**Examples**: `data-access-patterns`, `insight-awareness`
+
+```markdown
+## Why This Pattern?
+
+### 1. Token Efficiency
+[Explanation with examples]
+
+### 2. Error Handling
+[Concrete benefits]
+```
+
+**Pattern 4: Orchestration Skills**
+
+Document complex coordination logic with pseudocode and state transitions.
+
+**Examples**: `monitoring-loop`, `task-decomposition`, `planning`
+
+```markdown
+## Loop Structure
+
+### Pseudocode
+```javascript
+while (!isComplete()) {
+  checkStatus();
+  handleResult();
+  sleep(interval);
+}
+```
+
+### State Transitions
+[Flowcharts or decision trees]
+```
+
+### Skill Inventory
+
+**Total skills across all plugins: 14**
+
+| Plugin | Skill | Purpose |
+|--------|-------|---------|
+| **ultrawork** (7) | `planning` | Task decomposition and design workflow |
+| | `overview-exploration` | Codebase discovery patterns |
+| | `scripts-path-usage` | Quick reference for SCRIPTS_PATH usage |
+| | `data-access-patterns` | JSON vs Markdown access rules |
+| | `tdd-workflow` | Test-driven development cycle |
+| | `utility-scripts` | Comprehensive script usage guide |
+| | `ultrawork` | Core ultrawork concepts and workflow |
+| **teamwork** (6) | `scripts-path-usage` | Quick reference for SCRIPTS_PATH usage |
+| | `monitoring-loop` | Wave-based monitoring algorithm |
+| | `task-decomposition` | Breaking goals into tasks |
+| | `utility-scripts` | Comprehensive script usage guide |
+| | `worker-workflow` | Task execution workflow (Phase 1-5) |
+| | `teamwork-clean` | Project reset and recovery |
+| **knowledge-extraction** (1) | `insight-awareness` | Knowledge extraction principles |
+
+### Cross-Plugin Skill Management
+
+**Important**: Claude Code does not support cross-plugin skill dependencies. Each plugin loads skills independently.
+
+**Strategy: Copy and adapt**
+
+When multiple plugins need the same skill (e.g., `scripts-path-usage`, `utility-scripts`):
+
+1. **Copy the skill** to each plugin's `skills/` directory
+2. **Adapt for context** - Customize examples, variable names, and script paths for the target plugin
+3. **Maintain independently** - Changes in one plugin's version don't propagate to others
+
+**Example: `scripts-path-usage` skill**
+
+| Plugin | Location | Adapted For |
+|--------|----------|-------------|
+| ultrawork | `plugins/ultrawork/skills/scripts-path-usage/` | ultrawork session scripts, CLAUDE_SESSION_ID variable |
+| teamwork | `plugins/teamwork/skills/scripts-path-usage/` | teamwork project scripts, PROJECT/SUB_TEAM variables |
+
+**When updating shared skills:**
+
+```bash
+# Find all copies of a skill
+find plugins -name "SKILL.md" -path "*scripts-path-usage*"
+
+# After updating one copy, manually sync critical changes to others
+# Adapt context-specific examples while keeping core patterns consistent
+```
+
+**Why not a shared plugin?**
+- Claude Code loads plugins independently
+- Agent frontmatter `skills: [skill-name]` only resolves within the same plugin
+- A "shared" plugin would require separate installation and wouldn't auto-link
+
+**Trade-off**: Copy-and-adapt creates duplication but ensures plugin independence and context-appropriate documentation.
+
 ### State File Specification
 
 JSON state files must be valid JSON and follow schema:
