@@ -177,6 +177,19 @@ claude --plugin-dir /path/to/teamwork
 | **review**          | inherit | Code Review               | Code quality, refactoring, best practices, architecture review |
 | **worker**          | inherit | General Purpose           | Find available tasks, claim with file lock, implement, collect structured evidence, mark resolved |
 
+## Skills
+
+Teamwork provides 6 reusable skills that support collaborative development:
+
+| Skill | Purpose |
+| ----- | ------- |
+| **monitoring-loop** | Continuous monitoring patterns for orchestrator agents |
+| **scripts-path-usage** | How to use SCRIPTS_PATH for calling utility scripts |
+| **task-decomposition** | Breaking down goals into parallelizable tasks with dependencies |
+| **teamwork-clean** | Project reset procedures while preserving metadata |
+| **utility-scripts** | Common script invocation patterns for project and task management |
+| **worker-workflow** | Core task execution workflow (find, claim, implement, evidence, update) |
+
 ## How It Works
 
 ### Architecture Diagram

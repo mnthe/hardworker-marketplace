@@ -229,6 +229,20 @@ flowchart TD
     style Complete fill:#f3e5f5
 ```
 
+## Skills
+
+Ultrawork provides 7 reusable skills that enhance agent capabilities:
+
+| Skill | Purpose |
+| ----- | ------- |
+| **data-access-patterns** | Guidelines for accessing session data via scripts vs direct file reads |
+| **overview-exploration** | Codebase discovery patterns for quick project understanding |
+| **planning** | Task decomposition and design document creation strategies |
+| **scripts-path-usage** | How to use SCRIPTS_PATH for calling utility scripts |
+| **tdd-workflow** | Test-Driven Development workflow enforcement patterns |
+| **ultrawork** | Core ultrawork workflow and phase transition rules |
+| **utility-scripts** | Common script invocation patterns and data access utilities |
+
 ## How It Works
 
 ### Workflow Diagram

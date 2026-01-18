@@ -59,6 +59,14 @@ The **Stop/SubagentStop hooks** parse Claude's transcript and extract these patt
 | ----------------- | ------- | --------------------------------- | --------------------------------------------------------------------------------------------- |
 | insight-extractor | inherit | Convert insights to components    | Analyzes collected insights, classifies by type and extraction target, proposes component creation, executes approved extractions |
 
+## Skills
+
+Knowledge-extraction provides 1 skill for insight capture:
+
+| Skill | Purpose |
+| ----- | ------- |
+| **insight-awareness** | Guides Claude to recognize valuable insights and use ★ Insight format for automatic extraction |
+
 ## How It Works
 
 ### Insight Collection Workflow
