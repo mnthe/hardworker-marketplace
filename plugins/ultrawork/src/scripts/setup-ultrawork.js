@@ -192,11 +192,29 @@ async function resumeSession(sessionId) {
 const { execSync } = require('child_process');
 
 /**
- * Generate branch name from goal
- * @param {string} goal - The ultrawork goal
- * @returns {string} Branch name in format ultrawork/YYYY-MM-DD-{brief}
+ * Check if string contains non-ASCII characters (e.g., Korean, Chinese, Japanese)
+ * @param {string} str - String to check
+ * @returns {boolean} True if contains non-ASCII
  */
-function generateBranchName(goal) {
+function containsNonAscii(str) {
+  // eslint-disable-next-line no-control-regex
+  return /[^\x00-\x7F]/.test(str);
+}
+
+/**
+ * Generate English brief from goal text
+ * If goal contains non-ASCII, uses session ID prefix as fallback
+ * @param {string} goal - The ultrawork goal
+ * @param {string} sessionId - Session ID for fallback
+ * @returns {string} English brief (max 30 chars, lowercase, hyphenated)
+ */
+function generateBrief(goal, sessionId) {
+  // If goal contains non-ASCII (Korean, etc.), use session ID prefix
+  if (containsNonAscii(goal)) {
+    // Use first 8 chars of session ID as fallback brief
+    return `session-${sessionId.substring(0, 8)}`;
+  }
+
   // Slugify goal: lowercase, remove special chars, spaces to hyphens, limit length
   const brief = goal
     .toLowerCase()
@@ -206,6 +224,20 @@ function generateBranchName(goal) {
     .substring(0, 30)
     .replace(/-$/, '');
 
+  // If brief is empty after slugification, use session ID
+  if (!brief) {
+    return `session-${sessionId.substring(0, 8)}`;
+  }
+
+  return brief;
+}
+
+/**
+ * Generate branch name from brief
+ * @param {string} brief - English brief for naming
+ * @returns {string} Branch name in format ultrawork/YYYY-MM-DD-{brief}
+ */
+function generateBranchName(brief) {
   // Add date (YYYY-MM-DD format)
   const date = new Date().toISOString().split('T')[0];
   return `ultrawork/${date}-${brief}`;
@@ -367,12 +399,15 @@ function createSession(args) {
   // Get original working directory
   const originalDir = process.cwd();
 
+  // Generate goal_brief for naming (handles non-ASCII goals like Korean)
+  const goalBrief = generateBrief(goal, sessionId);
+
   // Setup worktree if requested
   let workingDir = originalDir;
   let worktreeInfo = null;
 
   if (worktree) {
-    const branchName = branch || generateBranchName(goal);
+    const branchName = branch || generateBranchName(goalBrief);
     console.log(`\n🔧 Setting up worktree...`);
     worktreeInfo = setupWorktree(branchName, originalDir);
     workingDir = worktreeInfo.worktreePath;
@@ -382,11 +417,12 @@ function createSession(args) {
   // Create session.json
   /** @type {Session} */
   const session = {
-    version: '6.1',
+    version: '6.2',
     session_id: sessionId,
     working_dir: workingDir,
     original_dir: worktreeInfo ? originalDir : null,
     goal: goal,
+    goal_brief: goalBrief,
     started_at: timestamp,
     updated_at: timestamp,
     phase: 'PLANNING',
@@ -576,7 +612,7 @@ async function main() {
 
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { generateBranchName };
+  module.exports = { generateBranchName, generateBrief, containsNonAscii };
 }
 
 // Only run main if this is the main module (not imported for testing)

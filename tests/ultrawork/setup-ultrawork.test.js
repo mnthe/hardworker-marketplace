@@ -179,7 +179,7 @@ describe('setup-ultrawork.js', () => {
     const { generateBranchName } = require(SCRIPT_PATH);
 
     test('should generate date-first format (YYYY-MM-DD-{brief})', () => {
-      const result = generateBranchName('Implement user authentication');
+      const result = generateBranchName('implement-user-authentication');
 
       // Verify it starts with ultrawork/ prefix
       expect(result).toMatch(/^ultrawork\//);
@@ -191,27 +191,48 @@ describe('setup-ultrawork.js', () => {
       expect(result).toMatch(/^ultrawork\/\d{4}-\d{2}-\d{2}-.+/);
     });
 
-    test('should truncate brief to 30 characters', () => {
-      const longGoal = 'This is a very long goal description that should be truncated to fit the 30 character limit';
-      const result = generateBranchName(longGoal);
+    test('should use current date', () => {
+      const result = generateBranchName('test-brief');
 
-      // Extract brief part (everything after the date)
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+
+      // Verify the result contains today's date
+      expect(result).toContain(today);
+    });
+
+    test('should preserve brief as-is', () => {
+      const brief = 'my-custom-brief';
+      const result = generateBranchName(brief);
+
+      // Extract brief part
       const match = result.match(/^ultrawork\/\d{4}-\d{2}-\d{2}-(.+)$/);
       expect(match).toBeTruthy();
+      expect(match[1]).toBe(brief);
+    });
+  });
 
-      const brief = match[1];
+  describe('generateBrief()', () => {
+    const { generateBrief } = require(SCRIPT_PATH);
+    const testSessionId = 'abc12345-1234-5678-abcd-1234567890ab';
+
+    test('should slugify ASCII goal text', () => {
+      const brief = generateBrief('Implement user authentication', testSessionId);
+
+      expect(brief).toBe('implement-user-authentication');
+    });
+
+    test('should truncate brief to 30 characters', () => {
+      const longGoal = 'This is a very long goal description that should be truncated to fit the 30 character limit';
+      const brief = generateBrief(longGoal, testSessionId);
+
       expect(brief.length).toBeLessThanOrEqual(30);
     });
 
     test('should remove special characters', () => {
       const goalWithSpecialChars = 'Add @user #authentication & $validation!';
-      const result = generateBranchName(goalWithSpecialChars);
+      const brief = generateBrief(goalWithSpecialChars, testSessionId);
 
-      // Extract brief part
-      const match = result.match(/^ultrawork\/\d{4}-\d{2}-\d{2}-(.+)$/);
-      expect(match).toBeTruthy();
-
-      const brief = match[1];
       // Brief should only contain lowercase letters, numbers, and hyphens
       expect(brief).toMatch(/^[a-z0-9-]+$/);
       expect(brief).toContain('add');
@@ -221,66 +242,75 @@ describe('setup-ultrawork.js', () => {
 
     test('should remove trailing hyphens', () => {
       const goalEndingWithSpaces = 'Test goal with spaces   ';
-      const result = generateBranchName(goalEndingWithSpaces);
+      const brief = generateBrief(goalEndingWithSpaces, testSessionId);
 
-      // Extract brief part
-      const match = result.match(/^ultrawork\/\d{4}-\d{2}-\d{2}-(.+)$/);
-      expect(match).toBeTruthy();
-
-      const brief = match[1];
       // Brief should not end with a hyphen
       expect(brief).not.toMatch(/-$/);
     });
 
     test('should convert spaces to single hyphens', () => {
       const goalWithSpaces = 'add user  authentication   system';
-      const result = generateBranchName(goalWithSpaces);
+      const brief = generateBrief(goalWithSpaces, testSessionId);
 
-      // Extract brief part
-      const match = result.match(/^ultrawork\/\d{4}-\d{2}-\d{2}-(.+)$/);
-      expect(match).toBeTruthy();
-
-      const brief = match[1];
       // Should have single hyphens, no consecutive hyphens
       expect(brief).not.toMatch(/--/);
       expect(brief).toBe('add-user-authentication-system');
     });
 
-    test('should handle goal with only special characters gracefully', () => {
-      const specialCharsOnly = '@#$%^&*()!';
-      const result = generateBranchName(specialCharsOnly);
+    test('should use session ID fallback for Korean goals', () => {
+      const koreanGoal = '사용자 인증 기능 추가';
+      const brief = generateBrief(koreanGoal, testSessionId);
 
-      // Should still have valid format with empty or minimal brief
-      expect(result).toMatch(/^ultrawork\/\d{4}-\d{2}-\d{2}/);
-
-      // Extract brief part (might be empty or just have remaining valid chars)
-      const match = result.match(/^ultrawork\/\d{4}-\d{2}-\d{2}-?(.*)$/);
-      expect(match).toBeTruthy();
+      // Should use session ID prefix as fallback
+      expect(brief).toBe('session-abc12345');
     });
 
-    test('should use current date', () => {
-      const result = generateBranchName('test goal');
+    test('should use session ID fallback for mixed Korean/English goals', () => {
+      const mixedGoal = 'API 인증 시스템 구현';
+      const brief = generateBrief(mixedGoal, testSessionId);
 
-      // Get today's date in YYYY-MM-DD format
-      const today = new Date().toISOString().split('T')[0];
+      // Contains non-ASCII, should use fallback
+      expect(brief).toBe('session-abc12345');
+    });
 
-      // Verify the result contains today's date
-      expect(result).toContain(today);
+    test('should use session ID fallback for goals with only special characters', () => {
+      const specialCharsOnly = '@#$%^&*()!';
+      const brief = generateBrief(specialCharsOnly, testSessionId);
+
+      // Empty after slugification, should use fallback
+      expect(brief).toBe('session-abc12345');
     });
 
     test('should lowercase the goal text', () => {
       const mixedCaseGoal = 'Add USER Authentication System';
-      const result = generateBranchName(mixedCaseGoal);
+      const brief = generateBrief(mixedCaseGoal, testSessionId);
 
-      // Extract brief part
-      const match = result.match(/^ultrawork\/\d{4}-\d{2}-\d{2}-(.+)$/);
-      expect(match).toBeTruthy();
-
-      const brief = match[1];
       // Should be all lowercase
       expect(brief).toBe(brief.toLowerCase());
       expect(brief).toContain('user');
       expect(brief).not.toContain('USER');
+    });
+  });
+
+  describe('containsNonAscii()', () => {
+    const { containsNonAscii } = require(SCRIPT_PATH);
+
+    test('should return false for ASCII-only text', () => {
+      expect(containsNonAscii('Hello World')).toBe(false);
+      expect(containsNonAscii('implement-auth-123')).toBe(false);
+      expect(containsNonAscii('@#$%^&*()')).toBe(false);
+    });
+
+    test('should return true for Korean text', () => {
+      expect(containsNonAscii('사용자 인증')).toBe(true);
+      expect(containsNonAscii('Hello 세계')).toBe(true);
+    });
+
+    test('should return true for other non-ASCII text', () => {
+      expect(containsNonAscii('日本語')).toBe(true); // Japanese
+      expect(containsNonAscii('中文')).toBe(true); // Chinese
+      expect(containsNonAscii('Ümlauts')).toBe(true); // German
+      expect(containsNonAscii('Привет')).toBe(true); // Russian
     });
   });
 });
