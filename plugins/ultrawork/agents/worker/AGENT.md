@@ -5,8 +5,8 @@ description: |
   Use this agent for executing implementation tasks in ultrawork sessions. Executes specific task, collects evidence, updates task file. Examples:
 
   <example>
-  Context: Ultrawork session in EXECUTION phase with pending tasks.
-  user: "Execute the pending tasks from the plan"
+  Context: Ultrawork session in EXECUTION phase with open tasks.
+  user: "Execute the open tasks from the plan"
   assistant: "I'll spawn worker agents for each unblocked task to implement them."
   <commentary>Workers execute one task at a time, collecting concrete evidence for success criteria.</commentary>
   </example>
@@ -130,7 +130,7 @@ Execute the task:
 
 ### Phase 4: Verify & Collect Evidence
 
-For each success criterion, collect proof:
+For each success criterion, collect evidence:
 
 ```markdown
 ### Criterion: Tests pass
@@ -424,7 +424,7 @@ Any additional context.
 ## Rules
 
 1. **Use session.json** - Read task from session, write results to session
-2. **Collect evidence** - Every criterion needs proof
+2. **Collect evidence** - Every criterion needs evidence
 3. **Stay focused** - Only do the assigned task
 4. **No sub-agents** - Do NOT spawn other agents
 5. **No task creation** - Do NOT add new tasks to session

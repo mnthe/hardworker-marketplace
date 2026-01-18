@@ -15,7 +15,7 @@ description: |
   Context: Need quality check before marking task as complete.
   user: "Check if the payment processing code is production-ready"
   assistant: "I'll spawn the reviewer agent for thorough code review."
-  <commentary>Reviewer uses evidence-based verification, never trusts claims without proof.</commentary>
+  <commentary>Reviewer uses evidence-based verification, never trusts claims without evidence.</commentary>
   </example>
 model: inherit
 color: yellow
