@@ -1,6 +1,6 @@
 {
   "name": "knowledge-extraction",
-  "version": "0.6.5",
+  "version": "0.7.0",
   "description": "Collect insights from Claude sessions and extract them into reusable components (Skills, Commands, Agents, CLAUDE.md, Rules Files).",
   "author": {
     "name": "mnthe"

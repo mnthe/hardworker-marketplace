@@ -11,7 +11,7 @@ Key features:
 - Session isolation with separate storage per session
 - Context preservation (user question + surrounding text saved with insight)
 - Duplicate prevention via state tracking and content hashing
-- Threshold-based reminders for extraction when insight count reaches configured threshold
+- Automatic notification when new insights are extracted (via systemMessage)
 - Integration with ★ Insight format for consistent markup
 
 ## File Structure
@@ -47,7 +47,7 @@ All hook scripts use Bun runtime and read JSON input from stdin.
 
 | Script | Purpose | Key Parameters |
 |--------|---------|----------------|
-| **auto-extract-insight.js** | Hook for automatic insight extraction from transcript. Parses ★ Insight markers, saves to insights.md with context, tracks state to prevent duplicates, recommends extraction when threshold reached (Stop hook only). | Reads from stdin: `session_id`, `transcript_path`, `hook_event_name`, `stop_hook_active` |
+| **auto-extract-insight.js** | Hook for automatic insight extraction from transcript. Parses ★ Insight markers, saves to insights.md with context, tracks state to prevent duplicates, notifies user when new insights extracted (Stop hook only). | Reads from stdin: `session_id`, `transcript_path`, `hook_event_name`, `stop_hook_active` |
 
 ### Shared Libraries
 
@@ -59,15 +59,15 @@ All hook scripts use Bun runtime and read JSON input from stdin.
 
 | Hook          | File                     | Trigger       | Purpose                                                    |
 | ------------- | ------------------------ | ------------- | ---------------------------------------------------------- |
-| Stop          | auto-extract-insight.js  | Session stop  | Extracts insights from transcript + recommends extraction  |
-| SubagentStop  | auto-extract-insight.js  | Agent stop    | Extracts insights from subagent transcript (no recommend)  |
+| Stop          | auto-extract-insight.js  | Session stop  | Extracts insights from transcript + notifies user          |
+| SubagentStop  | auto-extract-insight.js  | Agent stop    | Extracts insights from subagent transcript (no notify)     |
 
 **Hook behavior:**
 - Parses Claude's transcript for `★ Insight` markers
 - Automatically extracts and saves to `~/.claude/knowledge-extraction/{session-id}/insights.md`
 - Includes context: user question + text before insight
 - State tracking prevents duplicate processing
-- Stop hook shows recommendation only when NEW insights added AND threshold reached (hash-based change detection)
+- Stop hook shows notification via systemMessage when NEW insights are extracted
 
 ## Agent Inventory
 
@@ -100,7 +100,6 @@ All hook scripts use Bun runtime and read JSON input from stdin.
 
 ```
 ~/.claude/knowledge-extraction/
-├── config.local.md              # Settings (threshold, auto_recommend)
 └── {session-id}/
     ├── state.json               # Processing state (lastProcessedUuid, lastInsightsHash)
     └── insights.md              # Collected insights with context
@@ -111,7 +110,7 @@ All hook scripts use Bun runtime and read JSON input from stdin.
 - Each session has its own directory
 - `state.json` tracks last processed transcript message and insights hash (prevents duplicates)
 - `insights.md` contains extracted insights with context
-- Hash-based change detection prevents repeated recommendations for unchanged content
+- Hash-based change detection prevents repeated notifications for unchanged content
 - Directories deleted after successful extraction via `/insights extract`
 
 ## State Formats
@@ -150,21 +149,8 @@ All hook scripts use Bun runtime and read JSON input from stdin.
 ```
 
 - `lastProcessedUuid`: Tracks last processed transcript message to prevent re-processing
-- `lastInsightsHash`: Content hash of insights.md for change detection (only recommends extraction when content actually changes)
+- `lastInsightsHash`: Content hash of insights.md for change detection (only notifies when content actually changes)
 
-### Configuration Format
-
-**File**: `~/.claude/knowledge-extraction/config.local.md`
-
-```yaml
----
-threshold: 5
-auto_recommend: true
----
-```
-
-- **threshold**: Number of insights before recommending extraction (default: 5)
-- **auto_recommend**: Whether to show extraction recommendations (default: true)
 
 ## Development Rules
 
@@ -191,13 +177,8 @@ if (stop_hook_active) {
   process.exit(0);
 }
 
-// Hook output (for Stop hook)
-const output = {
-  hookSpecificOutput: {
-    hookEventName: "Stop",
-    additionalContext: "Message to display to user"
-  }
-};
+// Hook output (for Stop hook - notify user)
+const output = { systemMessage: "Message to display to user" };
 console.log(JSON.stringify(output));
 ```
 
@@ -236,7 +217,7 @@ Scripts run directly with Bun. No compilation needed.
 - **Session Isolation**: Each Claude session stores insights separately
 - **Context Preservation**: User question + surrounding text saved with insight
 - **Duplicate Prevention**: State tracking + content hashing prevents duplicates
-- **Threshold Reminders**: Automatic prompts when insight count reaches threshold
+- **Automatic Notification**: systemMessage notifies when new insights extracted
 - **Standards Compliance**: Extracted content follows CLAUDE.md and Rules File writing guidelines
 
 ## Extraction Targets
@@ -292,7 +273,7 @@ Before proposing extraction, checks for duplicates:
 2. Hook parses transcript after response completes
 3. Extracts content between markers
 4. Saves to session file with context
-5. Recommends extraction when threshold reached
+5. Notifies user via systemMessage when new insights extracted
 
 ## Insight Collection Workflow
 
@@ -303,7 +284,7 @@ Before proposing extraction, checks for duplicates:
 5. **Context Capture**: Saves user question + text before insight for context
 6. **Storage**: Appends to `{session-id}/insights.md`
 7. **State Update**: Saves last processed uuid to `state.json`
-8. **Threshold Check**: (Stop only) Recommends extraction if count >= threshold
+8. **Notification**: (Stop only) Shows systemMessage if new insights were extracted
 
 ## Development Status
 
@@ -311,7 +292,7 @@ Before proposing extraction, checks for duplicates:
 - Automatic insight extraction via hooks
 - Context capture (user question + preceding text)
 - Session-based storage with state tracking
-- Threshold-based recommendations
+- Automatic notifications via systemMessage
 - `/insights` command suite
 
 **Components:**

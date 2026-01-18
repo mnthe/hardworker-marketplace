@@ -6,7 +6,7 @@
  * - Pattern matching (★ Insight markers)
  * - Hash-based deduplication logic
  * - State tracking (lastProcessedUuid)
- * - Threshold logic
+ * - Insight counting
  * - Context extraction (3 lines before insight)
  */
 
@@ -22,7 +22,6 @@ const os = require('os');
 const INSIGHT_START_PATTERN = /★\s*Insight\s*─+/;
 const INSIGHT_END_PATTERN = /─{10,}/;
 const CONTEXT_LINES = 3;
-const DEFAULT_THRESHOLD = 5;
 
 // ============================================================================
 // Test Utilities
@@ -527,14 +526,10 @@ describe('State Tracking', () => {
 });
 
 // ============================================================================
-// Threshold Logic Tests
+// Insight Counting Tests
 // ============================================================================
 
-describe('Threshold Logic', () => {
-  test('should use default threshold when config missing', () => {
-    expect(DEFAULT_THRESHOLD).toBe(5);
-  });
-
+describe('Insight Counting', () => {
   test('should count insights correctly in markdown', () => {
     const content = `
 ## 2026-01-17T10:00:00.000Z
@@ -558,7 +553,7 @@ Insight 3
     expect(count).toBe(0);
   });
 
-  test('should not count markdown headers that are not insight timestamps', () => {
+  test('should count all ## headers including section headers', () => {
     const content = `
 # Title
 ## Section
@@ -567,20 +562,8 @@ Insight 3
 Insight
 `;
     const count = countInsights(content);
-    // Should only count lines starting with "## " (all of them in this case: 3)
-    expect(count).toBeGreaterThan(0);
-  });
-
-  test('should trigger recommendation when count >= threshold', () => {
-    const count = 5;
-    const threshold = 5;
-    expect(count >= threshold).toBe(true);
-  });
-
-  test('should not trigger recommendation when count < threshold', () => {
-    const count = 4;
-    const threshold = 5;
-    expect(count >= threshold).toBe(false);
+    // Counts all lines starting with "## "
+    expect(count).toBe(2); // "## Section" and "## 2026-01-17..."
   });
 });
 
@@ -679,7 +662,7 @@ First insight
     expect(hash1).not.toBe(hash2);
   });
 
-  test('should not recommend extraction if hash unchanged', () => {
+  test('should not notify if hash unchanged', () => {
     const content = 'Same content';
     const hash1 = hashContent(content);
     const hash2 = hashContent(content);

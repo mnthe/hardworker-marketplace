@@ -19,7 +19,6 @@ const { readStdin } = require('../lib/hook-utils.js');
 // ============================================================================
 
 const BASE_DIR = path.join(os.homedir(), '.claude/knowledge-extraction');
-const DEFAULT_THRESHOLD = 5;
 const CONTEXT_LINES = 3; // Lines before insight for context
 
 // Insight pattern: ★ Insight ─────
@@ -91,45 +90,6 @@ function getFileHash(filePath) {
   }
 }
 
-function getThreshold() {
-  const configPath = path.join(BASE_DIR, 'config.local.md');
-  if (!fs.existsSync(configPath)) {
-    return DEFAULT_THRESHOLD;
-  }
-  try {
-    const content = fs.readFileSync(configPath, 'utf-8');
-    const match = content.match(/^---\n([\s\S]*?)\n---/);
-    if (match) {
-      const thresholdMatch = match[1].match(/threshold:\s*(\d+)/);
-      if (thresholdMatch) {
-        return parseInt(thresholdMatch[1], 10);
-      }
-    }
-    return DEFAULT_THRESHOLD;
-  } catch {
-    return DEFAULT_THRESHOLD;
-  }
-}
-
-function isAutoRecommendEnabled() {
-  const configPath = path.join(BASE_DIR, 'config.local.md');
-  if (!fs.existsSync(configPath)) {
-    return true;
-  }
-  try {
-    const content = fs.readFileSync(configPath, 'utf-8');
-    const match = content.match(/^---\n([\s\S]*?)\n---/);
-    if (match) {
-      const autoMatch = match[1].match(/auto_recommend:\s*(true|false)/);
-      if (autoMatch) {
-        return autoMatch[1] === 'true';
-      }
-    }
-    return true;
-  } catch {
-    return true;
-  }
-}
 
 // ============================================================================
 // Transcript Parsing
@@ -402,26 +362,13 @@ async function main() {
       lastInsightsHash: hashAfter
     });
 
-    // For Stop hook: recommend only if insights actually changed AND threshold reached
-    if (hookEventName === 'Stop' && isAutoRecommendEnabled() && insightsChanged) {
+    // For Stop hook: notify if new insights were extracted
+    if (hookEventName === 'Stop' && insightsChanged && newCount > 0) {
       const insightCount = countInsights(insightsFile);
-      const threshold = getThreshold();
+      const message = `📝 ${newCount} new insight(s) extracted (total: ${insightCount}). Run '/insights extract' to convert to reusable components.`;
 
-      if (insightCount >= threshold) {
-        const message = [
-          `📝 ${newCount} new insight(s) extracted! Total: ${insightCount} (threshold: ${threshold}).`,
-          "Consider running '/insights extract' to convert them into reusable components.",
-          "Or continue your current work if you prefer to extract later."
-        ].join('\n');
-
-        const output = {
-          hookSpecificOutput: {
-            hookEventName: "Stop",
-            additionalContext: message
-          }
-        };
-        console.log(JSON.stringify(output));
-      }
+      const output = { systemMessage: message };
+      console.log(JSON.stringify(output));
     }
 
     process.exit(0);
