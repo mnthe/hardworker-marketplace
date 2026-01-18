@@ -582,7 +582,7 @@ $WORKING_DIR/
 | `--skip-verify`      | Skip verification phase                                  |
 | `--plan-only`        | Stop after planning, don't execute                       |
 | `--worktree`         | Create isolated git worktree for development             |
-| `--branch NAME`      | Custom branch name (default: ultrawork/{goal-slug}-date) |
+| `--branch NAME`      | Custom branch name (default: ultrawork/{date}-{brief})   |
 
 ---
 
