@@ -31,6 +31,30 @@ Test-Driven Development (TDD) workflow for tasks marked with `approach: "tdd"`.
 2. **Focus**: TDD cycle targets specific behavior
 3. **Separation**: Task implementation vs system verification
 
+### Using test_scope from Task
+
+When task has `test_scope` field, use it for scoped execution:
+
+```bash
+# Read test_scope from task
+TEST_SCOPE=$(bun "{SCRIPTS_PATH}/task-get.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} --field test_scope)
+
+# Run scoped test
+npm test -- {test_scope}
+```
+
+**Example task.json:**
+```json
+{
+  "id": "3",
+  "subject": "Add input validation",
+  "approach": "tdd",
+  "test_scope": "tests/validation.test.ts"
+}
+```
+
+If `test_scope` is not set, use the test file path you created.
+
 ---
 
 ## TDD Phase 1: RED - Write Failing Test
