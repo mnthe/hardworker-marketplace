@@ -10,6 +10,15 @@
             "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/session-start-hook.js"
           }
         ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/compact-recovery-hook.js"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
