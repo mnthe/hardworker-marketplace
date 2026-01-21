@@ -8,7 +8,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { getSessionFile } = require('../lib/session-utils.js');
+const { getSessionDir, getSessionFile } = require('../lib/session-utils.js');
 const { readStdin, createSessionStart, runHook } = require('../lib/hook-utils.js');
 
 /**
@@ -21,6 +21,84 @@ const { readStdin, createSessionStart, runHook } = require('../lib/hook-utils.js
  * @typedef {Object} HookInput
  * @property {string} [session_id]
  */
+
+/**
+ * @typedef {Object} TaskSummary
+ * @property {string} id
+ * @property {string} subject
+ * @property {string} status
+ * @property {string[]} blocked_by
+ */
+
+/**
+ * Read tasks from session directory
+ * @param {string} sessionId - Session ID
+ * @returns {TaskSummary[]} Array of task summaries
+ */
+function readTasks(sessionId) {
+  const sessionDir = getSessionDir(sessionId);
+  const tasksDir = path.join(sessionDir, 'tasks');
+
+  if (!fs.existsSync(tasksDir)) {
+    return [];
+  }
+
+  try {
+    const files = fs.readdirSync(tasksDir).filter(f => f.endsWith('.json'));
+    const tasks = [];
+
+    for (const file of files) {
+      try {
+        const taskPath = path.join(tasksDir, file);
+        const taskData = JSON.parse(fs.readFileSync(taskPath, 'utf-8'));
+        tasks.push({
+          id: taskData.id,
+          subject: taskData.subject,
+          status: taskData.status,
+          blocked_by: taskData.blocked_by || []
+        });
+      } catch {
+        // Skip invalid task files
+      }
+    }
+
+    return tasks;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Build task list summary
+ * @param {TaskSummary[]} tasks - Array of tasks
+ * @returns {string} Task list markdown
+ */
+function buildTaskList(tasks) {
+  if (tasks.length === 0) {
+    return 'No tasks created yet.';
+  }
+
+  const statusEmoji = {
+    'open': '⬚',
+    'in_progress': '▶',
+    'resolved': '✓',
+    'blocked': '⊘'
+  };
+
+  const lines = ['| ID | Status | Subject |', '|----|--------|---------|'];
+  for (const task of tasks) {
+    const emoji = statusEmoji[task.status] || '?';
+    const blockedInfo = task.blocked_by.length > 0 ? ` (blocked by: ${task.blocked_by.join(', ')})` : '';
+    lines.push(`| ${task.id} | ${emoji} ${task.status} | ${task.subject}${blockedInfo} |`);
+  }
+
+  const resolved = tasks.filter(t => t.status === 'resolved').length;
+  const total = tasks.length;
+  lines.push('');
+  lines.push(`Progress: ${resolved}/${total} tasks resolved`);
+
+  return lines.join('\n');
+}
 
 /**
  * Build delegation rules table
@@ -115,16 +193,19 @@ Wait for all explorers to complete before planning.`;
 /**
  * Build recovery message
  * @param {string} sessionId - Session ID
+ * @param {string} goal - Session goal
  * @param {Phase} phase - Current phase
  * @param {ExplorationStage} explorationStage - Exploration stage
  * @param {string} scriptsPath - Scripts directory path
  * @param {string} workingDir - Working directory path
+ * @param {TaskSummary[]} tasks - Task list
  * @returns {string} Recovery message
  */
-function buildRecoveryMessage(sessionId, phase, explorationStage, scriptsPath, workingDir) {
+function buildRecoveryMessage(sessionId, goal, phase, explorationStage, scriptsPath, workingDir, tasks) {
   const delegationRules = buildDelegationRules();
   const contextVars = buildContextVarsTemplate(sessionId, scriptsPath, workingDir);
   const phaseInstructions = buildPhaseInstructions(phase, explorationStage, sessionId, scriptsPath);
+  const taskList = buildTaskList(tasks);
 
   return `<ultrawork-recovery>
 ╔═══════════════════════════════════════════════════════════╗
@@ -132,8 +213,15 @@ function buildRecoveryMessage(sessionId, phase, explorationStage, scriptsPath, w
 ╚═══════════════════════════════════════════════════════════╝
 
 Session ID: ${sessionId}
+Goal: ${goal}
 Phase: ${phase}
 Exploration Stage: ${explorationStage}
+
+───────────────────────────────────────────────────────────
+TASK STATUS
+───────────────────────────────────────────────────────────
+
+${taskList}
 
 ───────────────────────────────────────────────────────────
 CRITICAL: DELEGATION RULES (MANDATORY)
@@ -188,8 +276,7 @@ async function main() {
   // No session_id - no injection needed
   if (!sessionId) {
     console.log(JSON.stringify(createSessionStart()));
-    process.exit(0);
-    return;
+    return process.exit(0);
   }
 
   // Get session file
@@ -198,8 +285,7 @@ async function main() {
   // Session doesn't exist - no injection needed
   if (!fs.existsSync(sessionFile)) {
     console.log(JSON.stringify(createSessionStart()));
-    process.exit(0);
-    return;
+    return process.exit(0);
   }
 
   // Parse session state
@@ -209,12 +295,12 @@ async function main() {
 
   const phase = session.phase || 'unknown';
   const explorationStage = session.exploration_stage || 'not_started';
+  const goal = session.goal || 'No goal set';
 
   // Terminal states - no injection needed
   if (phase === 'COMPLETE' || phase === 'CANCELLED' || phase === 'FAILED') {
     console.log(JSON.stringify(createSessionStart()));
-    process.exit(0);
-    return;
+    return process.exit(0);
   }
 
   // Get scripts path from environment (set by Claude Code when running hook)
@@ -222,13 +308,18 @@ async function main() {
   const scriptsPath = pluginRoot ? path.join(pluginRoot, 'src', 'scripts') : '${CLAUDE_PLUGIN_ROOT}/src/scripts';
   const workingDir = session.working_dir || process.cwd();
 
+  // Read tasks
+  const tasks = readTasks(sessionId);
+
   // Build recovery message
   const recoveryMessage = buildRecoveryMessage(
     sessionId,
+    goal,
     phase,
     explorationStage,
     scriptsPath,
-    workingDir
+    workingDir,
+    tasks
   );
 
   // Output with system message
