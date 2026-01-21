@@ -14,6 +14,25 @@ Test-Driven Development (TDD) workflow for tasks marked with `approach: "tdd"`.
 
 ---
 
+## Scoped vs Full Test Execution
+
+**During TDD phases (RED/GREEN/REFACTOR):**
+- Run **scoped tests** only (specific test file or pattern)
+- Fast feedback loop for the feature being developed
+- Full test suite is deferred to VERIFY task
+
+**During VERIFICATION phase:**
+- Verifier runs **full test suite** (`npm test` without scope)
+- Ensures no regressions across entire codebase
+- PASS/FAIL determination based on complete test coverage
+
+**Why scoped execution?**
+1. **Speed**: Test only what changed, not entire suite
+2. **Focus**: TDD cycle targets specific behavior
+3. **Separation**: Task implementation vs system verification
+
+---
+
 ## TDD Phase 1: RED - Write Failing Test
 
 1. **Create test file FIRST** (before any implementation code)
@@ -25,18 +44,19 @@ Test-Driven Development (TDD) workflow for tasks marked with `approach: "tdd"`.
 bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "TDD-RED: Created test file tests/validateUser.test.ts"
 
-# Run test - MUST FAIL
+# Run SCOPED test - MUST FAIL
 npm test -- tests/validateUser.test.ts
 
 # Record failure (expected)
 bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
-  --add-evidence "TDD-RED: Test fails as expected (exit code 1)"
+  --add-evidence "TDD-RED: npm test -- tests/validateUser.test.ts (exit code 1)"
 ```
 
 **Evidence Required:**
 - Test file path created
-- Test execution output showing failure
+- Scoped test execution output showing failure
 - Exit code 1 (expected)
+- Evidence includes full test command with scope
 
 ---
 
@@ -51,30 +71,35 @@ bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID
 bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "TDD-GREEN: Implemented src/validateUser.ts"
 
-# Run test - MUST PASS
+# Run SCOPED test - MUST PASS
 npm test -- tests/validateUser.test.ts
 
 # Record success
 bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
-  --add-evidence "TDD-GREEN: Test passes (exit code 0)"
+  --add-evidence "TDD-GREEN: npm test -- tests/validateUser.test.ts (exit code 0)"
 ```
 
 **Evidence Required:**
 - Implementation file path
-- Test execution output showing pass
+- Scoped test execution output showing pass
 - Exit code 0
+- Evidence includes full test command with scope
 
 ---
 
 ## TDD Phase 3: REFACTOR (Optional)
 
 1. Improve code quality (naming, structure, performance)
-2. Run tests again to ensure they still pass
+2. Run scoped tests again to ensure they still pass
 3. Record any refactoring done
 
 ```bash
+# Run SCOPED test after refactoring
+npm test -- tests/validateUser.test.ts
+
+# Record refactoring
 bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
-  --add-evidence "TDD-REFACTOR: Renamed variables for clarity, tests still pass"
+  --add-evidence "TDD-REFACTOR: Renamed variables, npm test -- tests/validateUser.test.ts (exit code 0)"
 ```
 
 ---
@@ -85,16 +110,22 @@ A complete TDD task MUST have this evidence sequence:
 
 ```
 1. TDD-RED: Test file created
-2. TDD-RED: Test execution failed (exit code 1)
+2. TDD-RED: Scoped test execution failed (exit code 1, includes test scope)
 3. TDD-GREEN: Implementation created
-4. TDD-GREEN: Test execution passed (exit code 0)
-5. (Optional) TDD-REFACTOR: Improvements made, tests still pass
+4. TDD-GREEN: Scoped test execution passed (exit code 0, includes test scope)
+5. (Optional) TDD-REFACTOR: Improvements made, scoped tests still pass
 ```
+
+**Evidence format MUST include:**
+- Full test command with scope (e.g., `npm test -- tests/feature.test.ts`)
+- Exit code in parentheses
+- Phase prefix (TDD-RED, TDD-GREEN, TDD-REFACTOR)
 
 **Verification will FAIL if:**
 - Implementation evidence appears before TDD-RED evidence
 - Missing TDD-RED or TDD-GREEN evidence
 - Test never failed (suggests code-first, not test-first)
+- Evidence missing test scope or exit code
 
 ---
 
@@ -148,10 +179,12 @@ bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID
 {
   "evidence": [
     "TDD-RED: Created test file tests/auth.test.ts",
-    "TDD-RED: Test fails as expected (exit code 1)",
+    "TDD-RED: npm test -- tests/auth.test.ts (exit code 1)",
     "TDD-GREEN: Implemented src/auth.ts",
-    "TDD-GREEN: Test passes (exit code 0)",
-    "TDD-REFACTOR: Extracted helper function, tests still pass"
+    "TDD-GREEN: npm test -- tests/auth.test.ts (exit code 0)",
+    "TDD-REFACTOR: Extracted helper, npm test -- tests/auth.test.ts (exit code 0)"
   ]
 }
 ```
+
+**Note**: Full test suite (`npm test` without scope) is run only during VERIFICATION phase by the verifier agent.
