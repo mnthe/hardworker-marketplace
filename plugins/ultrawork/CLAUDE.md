@@ -140,6 +140,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | Hook File | Event | Purpose | Behavior |
 |-----------|-------|---------|----------|
 | **session-start-hook.js** | SessionStart | Cleanup old sessions, provide session ID | Deletes sessions >7 days old in terminal states (COMPLETE/CANCELLED/FAILED) |
+| **compact-recovery-hook.js** | SessionStart (compact) | Inject procedural knowledge after compaction | Reads session.json and tasks/*.json, generates recovery message for active sessions with delegation rules, context variables, task status, and phase instructions |
 | **session-context-hook.js** | UserPromptSubmit | Inject session variables into context | Adds SESSION_ID and CLAUDE_PLUGIN_ROOT to agent prompts |
 | **agent-lifecycle-tracking.js** | PreToolUse | Track agent execution for evidence | Records which agents are active (for subagent tracking) |
 | **post-tool-use-evidence.js** | PostToolUse | Collect evidence from tool usage | Records command execution (Bash), file operations (Write/Edit), test results |
