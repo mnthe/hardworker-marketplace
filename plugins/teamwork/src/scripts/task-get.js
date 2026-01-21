@@ -25,8 +25,46 @@ const ARG_SPEC = {
   '--project': { key: 'project', aliases: ['-p'], required: true },
   '--team': { key: 'team', aliases: ['-T'], required: true },
   '--id': { key: 'id', aliases: ['-i', '--task', '--task-id'], required: true },
+  '--field': { key: 'field', aliases: ['-f'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
+
+// ============================================================================
+// Field Extraction
+// ============================================================================
+
+/**
+ * Extract nested field from object using dot notation
+ * Example: "status" or "evidence[0].type"
+ * @param {any} obj - Object to query
+ * @param {string} fieldPath - Dot-separated field path
+ * @returns {any} Field value or undefined
+ */
+function getNestedField(obj, fieldPath) {
+  const parts = fieldPath.split('.');
+  let current = obj;
+
+  for (const part of parts) {
+    // Handle array access: field[0]
+    const match = part.match(/^(.+)\[(\d+)\]$/);
+    if (match) {
+      const [, fieldName, index] = match;
+      current = current[fieldName];
+      if (!current || !Array.isArray(current)) {
+        return undefined;
+      }
+      current = current[parseInt(index, 10)];
+    } else {
+      current = current[part];
+    }
+
+    if (current === undefined) {
+      return undefined;
+    }
+  }
+
+  return current;
+}
 
 // ============================================================================
 // Task Retrieval
@@ -45,9 +83,30 @@ function getTask(args) {
     process.exit(1);
   }
 
-  // Read and output task JSON
+  // Read and parse task JSON
   const content = fs.readFileSync(taskFile, 'utf-8');
-  console.log(content);
+  const task = JSON.parse(content);
+
+  // Output result
+  if (args.field) {
+    // Extract specific field
+    const value = getNestedField(task, args.field);
+
+    if (value === undefined) {
+      console.error(`Error: Field '${args.field}' not found in task`);
+      process.exit(1);
+    }
+
+    // Output field value
+    if (typeof value === 'string') {
+      console.log(value);
+    } else {
+      console.log(JSON.stringify(value, null, 2));
+    }
+  } else {
+    // Output entire task
+    console.log(JSON.stringify(task, null, 2));
+  }
 }
 
 // ============================================================================
@@ -62,7 +121,7 @@ function main() {
   try {
     // Check for help flag first
     if (process.argv.includes('--help') || process.argv.includes('-h')) {
-      console.log(generateHelp('task-get.js', ARG_SPEC, 'Retrieve and output a single task by ID'));
+      console.log(generateHelp('task-get.js', ARG_SPEC, 'Retrieve and output a single task by ID or extract specific field with dot notation'));
       process.exit(0);
     }
 
