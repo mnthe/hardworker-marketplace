@@ -200,7 +200,7 @@ Example:
 ```markdown
 ### Session State Format
 
-**File**: `~/.claude/plugin-name/sessions/{SESSION_ID}/session.json`
+**File**: `~/.claude/plugin-name/sessions/${CLAUDE_SESSION_ID}/session.json`
 
 \`\`\`json
 {
@@ -241,7 +241,7 @@ SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
 
 Call scripts like:
 ```bash
-bun "$SCRIPTS/task-update.js" --session-id ${SESSION_ID}
+bun "$SCRIPTS/task-update.js" --session-id $${CLAUDE_SESSION_ID}
 ```
 ```
 
@@ -259,7 +259,7 @@ bun "$SCRIPTS/task-update.js" --session-id ${SESSION_ID}
 SCRIPTS_PATH is provided in the prompt when this agent is spawned. Use it directly:
 
 ```bash
-bun "$SCRIPTS_PATH/task-update.js" --session-id {SESSION_ID} --id 1 --status resolved
+bun "$SCRIPTS_PATH/task-update.js" --session-id ${CLAUDE_SESSION_ID} --id 1 --status resolved
 ```
 
 Do NOT try to define SCRIPTS_PATH yourself - it's already provided as prompt text.
@@ -408,7 +408,7 @@ When updating state format in CLAUDE.md:
 ```markdown
 ### Task File Format
 
-**File**: `~/.claude/ultrawork/sessions/{SESSION_ID}/tasks/{TASK_ID}.json`
+**File**: `~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}/tasks/{TASK_ID}.json`
 
 \`\`\`json
 {
