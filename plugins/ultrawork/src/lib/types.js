@@ -94,6 +94,7 @@
  * @property {string} [resolved_at]
  * @property {TaskApproach} [approach] - 'tdd' requires test-first evidence
  * @property {string} [test_file] - Expected test file path (for TDD tasks)
+ * @property {string} [test_scope] - Test scope (e.g., unit, integration, e2e)
  */
 
 // ============================================================================

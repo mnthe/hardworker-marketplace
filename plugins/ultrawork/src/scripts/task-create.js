@@ -32,6 +32,7 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  * @property {string} [blockedBy]
  * @property {TaskApproach} [approach]
  * @property {string} [testFile]
+ * @property {string} [testScope]
  * @property {boolean} [help]
  */
 
@@ -43,8 +44,9 @@ const ARG_SPEC = {
   '--complexity': { key: 'complexity', aliases: ['-c'], default: 'standard' },
   '--criteria': { key: 'criteria', aliases: ['-C'] },
   '--blocked-by': { key: 'blockedBy', aliases: ['-b'] },
-  '--approach': { key: 'approach', aliases: ['-a'] },
+  '--approach': { key: 'approach', aliases: ['-a'], default: 'tdd' },
   '--test-file': { key: 'testFile', aliases: ['-t'] },
+  '--test-scope': { key: 'testScope', aliases: ['-T', '--scope'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
@@ -166,6 +168,9 @@ function createTask(args) {
   }
   if (args.testFile) {
     task.test_file = args.testFile;
+  }
+  if (args.testScope) {
+    task.test_scope = args.testScope;
   }
 
   // Write task JSON
