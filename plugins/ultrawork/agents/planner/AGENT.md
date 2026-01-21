@@ -61,21 +61,60 @@ Options:
 
 ---
 
-## Intent Classification (First Step)
+## Planning Tier Detection (First Step)
 
-Classify the work intent to adjust your approach:
+**Read planning_tier from session.json:**
 
-| Intent | Signal | Planning Focus |
-|--------|--------|----------------|
-| **Trivial** | Quick fix, small change | Minimal tasks, fast turnaround |
-| **Refactoring** | "refactor", "restructure" | Safety focus: test coverage, rollback |
-| **Build from Scratch** | New feature, greenfield | Discovery focus: explore patterns |
-| **Mid-sized Task** | Scoped feature | Boundary focus: clear deliverables |
-| **Complex/Architecture** | System-wide, multi-component | Phased approach: dependencies |
+```bash
+PLANNING_TIER=$(bun "{SCRIPTS_PATH}/session-get.js" --session ${CLAUDE_SESSION_ID} --field planning_tier)
+```
+
+**Planning Tiers:**
+
+| Tier | When | Approach |
+|------|------|----------|
+| **NO_PLANNING** | Trivial changes (typo fix, add log, rename) | Skip exploration, create single task immediately |
+| **PLANNING** | Standard features (CRUD, tests, scoped changes) | Read exploration context, decompose into tasks |
+| **HIERARCHICAL_PLANNING** | Complex system-wide changes (refactor, architecture, migrate) | Multi-phase approach, design phases, dependency analysis |
+
+**Choose workflow based on tier:**
 
 ---
 
-## Process
+## Workflow: NO_PLANNING Tier
+
+**For trivial changes that don't require exploration or design:**
+
+### Step 1: Read Goal
+```bash
+GOAL=$(bun "{SCRIPTS_PATH}/session-get.js" --session ${CLAUDE_SESSION_ID} --field goal)
+```
+
+### Step 2: Create Single Task
+```bash
+bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
+  --id "1" \
+  --subject "Brief title from goal" \
+  --description "What to do based on goal" \
+  --complexity standard \
+  --criteria "criterion1|criterion2"
+```
+
+### Step 3: Update Phase
+```bash
+bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
+```
+
+**Skip:**
+- Exploration context reading
+- Design document writing
+- Verify task (trivial changes don't need verification)
+
+---
+
+## Workflow: PLANNING Tier (Standard)
+
+**For standard features with moderate complexity:**
 
 ### Phase 1: Read Context
 
@@ -211,6 +250,94 @@ bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
 
 ---
 
+## Workflow: HIERARCHICAL_PLANNING Tier
+
+**For complex system-wide changes requiring multi-phase approach:**
+
+### Phase 1: Read Context (Same as PLANNING)
+
+```bash
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
+
+# Read goal and exploration context
+bun "{SCRIPTS_PATH}/session-get.js" --session ${CLAUDE_SESSION_ID} --field goal
+bun "{SCRIPTS_PATH}/context-get.js" --session ${CLAUDE_SESSION_ID} --summary
+```
+
+### Phase 2: Identify Major Phases
+
+Break the work into logical phases (e.g., "Preparation", "Migration", "Validation"):
+
+**Example phases:**
+1. **Preparation**: Setup infrastructure, add tests
+2. **Core Refactor**: Change architecture
+3. **Integration**: Update dependents
+4. **Verification**: Comprehensive testing
+
+### Phase 3: Write Comprehensive Design
+
+```bash
+WORKING_DIR=$(bun "{SCRIPTS_PATH}/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir)
+mkdir -p "$WORKING_DIR/docs/plans"
+```
+
+Design document must include:
+- **Phases**: Logical grouping of work
+- **Dependencies**: Cross-phase dependencies
+- **Rollback Strategy**: How to undo each phase
+- **Risk Analysis**: What could go wrong
+- **Testing Strategy**: How to verify each phase
+
+### Phase 4: Create Phase Tasks
+
+Create tasks grouped by phase with clear phase boundaries:
+
+```bash
+# Phase 1: Preparation
+bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
+  --id "1-prep-tests" \
+  --subject "[Phase 1] Add comprehensive test coverage" \
+  --complexity complex \
+  --criteria "100% coverage on affected modules"
+
+# Phase 2: Core work (blocked by Phase 1)
+bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
+  --id "2-refactor-core" \
+  --subject "[Phase 2] Refactor core architecture" \
+  --blocked-by "1-prep-tests" \
+  --complexity complex \
+  --criteria "New architecture implemented|All tests pass"
+
+# Phase 3: Integration (blocked by Phase 2)
+bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
+  --id "3-update-deps" \
+  --subject "[Phase 3] Update dependent modules" \
+  --blocked-by "2-refactor-core" \
+  --complexity standard \
+  --criteria "All dependents updated|No breaking changes"
+```
+
+### Phase 5: Add Checkpoint Tasks
+
+Insert checkpoint/verification tasks between phases:
+
+```bash
+bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
+  --id "checkpoint-1" \
+  --subject "[CHECKPOINT] Verify Phase 1 complete" \
+  --blocked-by "1-prep-tests" \
+  --complexity standard \
+  --criteria "Tests pass|Coverage verified"
+```
+
+### Phase 6: Update Session Phase
+
+```bash
+bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
+```
+
+---
+
 ## Task Creation Requirements
 
 | Field | Required | Rules |
@@ -277,12 +404,14 @@ Phase: EXECUTION
 
 ## Rules
 
-1. **Classify intent first** - Adjust approach based on work type
-2. **Read context first** - Explorers already gathered information
-3. **Auto-decide** - No user interaction available
-4. **Document rationale** - Explain why each decision was made
-5. **Every task needs criteria** - Testable success conditions
-6. **Include complexity** - standard or complex
-7. **Include verify task** - Always add [VERIFY] task at end
-8. **Maximize parallelism** - Minimize unnecessary dependencies
-9. **Be specific** - Vague tasks get vague results
+1. **Check planning_tier first** - Read from session.json to determine workflow
+2. **NO_PLANNING**: Skip exploration, create single task, no design doc
+3. **PLANNING**: Read context, decompose into tasks, write design
+4. **HIERARCHICAL_PLANNING**: Multi-phase approach with checkpoints
+5. **Auto-decide** - No user interaction available
+6. **Document rationale** - Explain why each decision was made
+7. **Every task needs criteria** - Testable success conditions
+8. **Include complexity** - standard or complex
+9. **Verify task**: Skip for NO_PLANNING, include for others
+10. **Maximize parallelism** - Minimize unnecessary dependencies
+11. **Be specific** - Vague tasks get vague results

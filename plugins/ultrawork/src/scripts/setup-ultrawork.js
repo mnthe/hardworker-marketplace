@@ -349,6 +349,58 @@ function setupWorktree(branchName, originalDir) {
 }
 
 // ============================================================================
+// Planning Tier Detection
+// ============================================================================
+
+/**
+ * Detect planning complexity tier based on goal text
+ * @param {string} goal - Goal description
+ * @returns {'NO_PLANNING'|'PLANNING'|'HIERARCHICAL_PLANNING'} Planning tier
+ */
+function detectPlanningTier(goal) {
+  const lowerGoal = goal.toLowerCase();
+
+  // NO_PLANNING: Trivial changes that don't need planning
+  const trivialPatterns = [
+    /\bfix\s+(typo|spelling)/i,
+    /\badd\s+(log|logging)/i,
+    /\bupdate\s+comment/i,
+    /\brename\s+variable/i,
+    /\bformat\s+code/i,
+    /\bdelete\s+unused/i,
+    /\bremove\s+comment/i,
+  ];
+
+  for (const pattern of trivialPatterns) {
+    if (pattern.test(goal)) {
+      return 'NO_PLANNING';
+    }
+  }
+
+  // HIERARCHICAL_PLANNING: Complex system-wide changes
+  const complexPatterns = [
+    /\brefactor/i,
+    /\barchitecture/i,
+    /\bsystem-wide/i,
+    /\bredesign/i,
+    /\bmigrate/i,
+    /\brewrite/i,
+    /\bscaffold/i,
+    /\bmulti-layer/i,
+    /\bend-to-end/i,
+  ];
+
+  for (const pattern of complexPatterns) {
+    if (pattern.test(goal)) {
+      return 'HIERARCHICAL_PLANNING';
+    }
+  }
+
+  // Default: PLANNING (standard task decomposition)
+  return 'PLANNING';
+}
+
+// ============================================================================
 // Session Creation Logic
 // ============================================================================
 
@@ -402,6 +454,9 @@ function createSession(args) {
   // Generate goal_brief for naming (handles non-ASCII goals like Korean)
   const goalBrief = generateBrief(goal, sessionId);
 
+  // Detect planning tier based on goal complexity
+  const planningTier = detectPlanningTier(goal);
+
   // Setup worktree if requested
   let workingDir = originalDir;
   let worktreeInfo = null;
@@ -423,6 +478,7 @@ function createSession(args) {
     original_dir: worktreeInfo ? originalDir : null,
     goal: goal,
     goal_brief: goalBrief,
+    planning_tier: planningTier,
     started_at: timestamp,
     updated_at: timestamp,
     phase: 'PLANNING',
@@ -509,6 +565,7 @@ function createSession(args) {
  Working Dir: ${workingDir}
  Goal: ${goal}
  Phase: PLANNING
+ Planning Tier: ${planningTier}
  Started: ${timestamp}
 
 ───────────────────────────────────────────────────────────
@@ -612,7 +669,7 @@ async function main() {
 
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { generateBranchName, generateBrief, containsNonAscii };
+  module.exports = { generateBranchName, generateBrief, containsNonAscii, detectPlanningTier };
 }
 
 // Only run main if this is the main module (not imported for testing)
