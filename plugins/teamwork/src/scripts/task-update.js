@@ -9,6 +9,7 @@ const fs = require('fs');
 const { acquireLock, releaseLock } = require('../lib/file-lock.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
 const { getTaskFile } = require('../lib/project-utils.js');
+const { scanForBlockedPatterns, shouldBlockCompletion } = require('../lib/blocked-patterns.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -128,12 +129,52 @@ async function main() {
           process.exit(1);
         }
 
-        task.status = args.status;
-
-        // Set completed_at when marking as resolved
+        // Check for blocked patterns before allowing status=resolved
         if (args.status === 'resolved') {
+          // Collect all evidence text for scanning
+          const evidenceTexts = [];
+          for (const evidence of task.evidence) {
+            if (typeof evidence === 'string') {
+              // String evidence (backward compatibility)
+              evidenceTexts.push(evidence);
+            } else if (typeof evidence === 'object' && evidence !== null) {
+              // Structured evidence - scan relevant fields
+              if (evidence.output) evidenceTexts.push(evidence.output);
+              if (evidence.description) evidenceTexts.push(evidence.description);
+              if (evidence.command) evidenceTexts.push(evidence.command);
+            }
+          }
+
+          // Scan all evidence for blocked patterns
+          const allMatches = [];
+          for (const text of evidenceTexts) {
+            const matches = scanForBlockedPatterns(text);
+            allMatches.push(...matches);
+          }
+
+          // Block completion if error-severity patterns found
+          if (shouldBlockCompletion(allMatches)) {
+            const errorMatches = allMatches.filter(m => m.severity === 'error');
+            console.error('Error: Cannot resolve task - blocked patterns detected in evidence:');
+            for (const match of errorMatches) {
+              console.error(`  - "${match.match}": ${match.message}`);
+            }
+            process.exit(1);
+          }
+
+          // Warn about warning-severity patterns but allow completion
+          const warningMatches = allMatches.filter(m => m.severity === 'warning');
+          if (warningMatches.length > 0) {
+            console.error('Warning: Potentially problematic patterns in evidence:');
+            for (const match of warningMatches) {
+              console.error(`  - "${match.match}": ${match.message}`);
+            }
+          }
+
           task.completed_at = new Date().toISOString();
         }
+
+        task.status = args.status;
       }
 
       // Add evidence if provided
