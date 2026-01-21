@@ -199,6 +199,40 @@ Use when no plan documents provided, or as sub-decomposition within Strategy A.
 | `review`   | Code review, refactoring                   |
 | `general`  | Miscellaneous, cross-cutting               |
 
+**Domain Assignment:**
+
+Domains organize tasks by execution priority and capability groups. Use `getDomainForRole()` from domain-config.js to automatically assign domains based on role:
+
+```javascript
+// Domain-config.js mapping (reference only, use script in practice)
+const { getDomainForRole } = require('./src/lib/domain-config.js');
+
+getDomainForRole('security');  // → 'security'
+getDomainForRole('backend');   // → 'core'
+getDomainForRole('frontend');  // → 'integration'
+getDomainForRole('test');      // → 'quality'
+getDomainForRole('devops');    // → 'integration' (also 'deployment')
+getDomainForRole('docs');      // → 'deployment'
+getDomainForRole('review');    // → 'quality' (also 'performance')
+```
+
+**Domain Execution Priority:**
+
+| Domain | Priority | Roles | Typical Tasks |
+| ------ | -------- | ----- | ------------- |
+| `security` | 1 (highest) | security | Authentication, authorization, encryption |
+| `core` | 2 | backend, orchestrator | API, database, business logic |
+| `integration` | 3 | frontend, devops | UI, components, CI/CD, infrastructure |
+| `quality` | 4 | test, review | Testing, code review, refactoring |
+| `performance` | 5 | review | Optimization, profiling |
+| `deployment` | 6 | devops, docs | Release, documentation, deployment |
+
+**When assigning domains:**
+- Domain field is **optional** but recommended for large projects
+- If omitted, tasks execute based on wave calculation only
+- Domain priority influences wave grouping (higher priority → earlier waves)
+- Multiple roles can map to same domain (enables parallel execution)
+
 **Complexity Assignment (for dynamic model selection):**
 
 Workers use different models based on task complexity:
@@ -232,14 +266,16 @@ bun "$SCRIPTS_PATH/project-create.js" --project {PROJECT} --team {SUB_TEAM} \
 
 **Step 4b: Create task files**
 
-For EACH task:
+For EACH task, use `getDomainForRole()` to assign domain based on role:
 
 ```bash
+# Backend task → core domain
 bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "1" \
   --title "Clear, actionable title" \
   --description "Specific deliverable with context" \
   --role backend \
+  --domain core \
   --complexity standard \
   --blocked-by ""
 ```
@@ -247,10 +283,12 @@ bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
 With dependencies and higher complexity:
 
 ```bash
+# Backend task with auth → still core domain (security role would be 'security' domain)
 bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "3" \
   --title "Build API endpoints with authentication" \
   --role backend \
+  --domain core \
   --complexity complex \
   --blocked-by "1,2"
 ```
@@ -258,13 +296,29 @@ bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
 Simple task example:
 
 ```bash
+# Docs task → deployment domain
 bun "$SCRIPTS_PATH/task-create.js" --project {PROJECT} --team {SUB_TEAM} \
   --id "5" \
   --title "Update README with new API docs" \
   --role docs \
+  --domain deployment \
   --complexity simple \
   --blocked-by "3"
 ```
+
+**Domain assignment workflow:**
+
+1. Determine task role based on work type (backend, frontend, test, etc.)
+2. Use role-to-domain mapping to get domain:
+   - `security` → security domain
+   - `backend` → core domain
+   - `frontend` → integration domain
+   - `test` → quality domain
+   - `devops` → integration domain (primary) or deployment domain (for releases)
+   - `docs` → deployment domain
+   - `review` → quality domain (primary) or performance domain (for optimization)
+3. Include `--domain {domain}` flag in task-create.js call
+4. Domain priority influences wave calculation (higher priority tasks scheduled earlier)
 
 ### Step 5: Set Dependencies and Calculate Waves
 
