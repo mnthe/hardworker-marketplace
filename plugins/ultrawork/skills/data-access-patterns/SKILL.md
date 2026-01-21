@@ -8,6 +8,20 @@ description: |
 
 # Data Access Patterns
 
+## IMPORTANT: Placeholder Notation
+
+This document uses placeholder syntax to indicate values that must be substituted from your agent prompt:
+
+- `{SCRIPTS_PATH}` - Replace with the actual SCRIPTS_PATH value from your prompt
+- `{CLAUDE_SESSION_ID}` - Replace with the actual session ID from your prompt
+
+**These are NOT bash environment variables.** They are text placeholders documenting what values you should use.
+
+**Example:**
+- Documentation shows: `bun "{SCRIPTS_PATH}/task-get.js" --session {CLAUDE_SESSION_ID}`
+- Your prompt provides: `SCRIPTS_PATH: /Users/name/.claude/plugins/.../scripts` and `CLAUDE_SESSION_ID: abc-123`
+- You should execute: `bun "/Users/name/.claude/plugins/.../scripts/task-get.js" --session abc-123`
+
 ## Core Rule: JSON via Scripts, Markdown via Read
 
 **Always use scripts for JSON data. Never use Read tool directly on JSON files.**
@@ -41,7 +55,7 @@ Every brace, quote, comma, and key name consumes tokens. For large session files
 
 **Script output with `--field` flag**:
 ```bash
-bun "$SCRIPTS_PATH/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase
+bun "{SCRIPTS_PATH}/session-get.js" --session {CLAUDE_SESSION_ID} --field phase
 # Output: PLANNING
 ```
 
@@ -53,13 +67,13 @@ Scripts support precise data extraction:
 
 ```bash
 # Single field
-bun "$SCRIPTS_PATH/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase
+bun "{SCRIPTS_PATH}/session-get.js" --session {CLAUDE_SESSION_ID} --field phase
 
 # Nested field (dot notation)
-bun "$SCRIPTS_PATH/session-field.js" --session ${CLAUDE_SESSION_ID} --field options.auto_mode
+bun "{SCRIPTS_PATH}/session-field.js" --session {CLAUDE_SESSION_ID} --field options.auto_mode
 
 # AI-friendly summary
-bun "$SCRIPTS_PATH/context-get.js" --session ${CLAUDE_SESSION_ID} --summary
+bun "{SCRIPTS_PATH}/context-get.js" --session {CLAUDE_SESSION_ID} --summary
 ```
 
 **Benefits**:
@@ -73,11 +87,11 @@ Scripts provide consistent validation:
 
 ```bash
 # Missing session
-bun "$SCRIPTS_PATH/session-get.js" --session invalid-id
+bun "{SCRIPTS_PATH}/session-get.js" --session invalid-id
 # Error: Session not found: invalid-id
 
 # Missing field
-bun "$SCRIPTS_PATH/task-get.js" --session ${CLAUDE_SESSION_ID} --id 999
+bun "{SCRIPTS_PATH}/task-get.js" --session {CLAUDE_SESSION_ID} --id 999
 # Error: Task not found: 999
 ```
 
@@ -103,10 +117,10 @@ Scripts generate AI-friendly formats:
 
 ```bash
 # Task summary (markdown, not JSON)
-bun "$SCRIPTS_PATH/task-summary.js" --session ${CLAUDE_SESSION_ID} --task 1
+bun "{SCRIPTS_PATH}/task-summary.js" --session {CLAUDE_SESSION_ID} --task 1
 
 # Evidence index (structured for comprehension)
-bun "$SCRIPTS_PATH/evidence-summary.js" --session ${CLAUDE_SESSION_ID}
+bun "{SCRIPTS_PATH}/evidence-summary.js" --session {CLAUDE_SESSION_ID}
 ```
 
 These formats optimize for AI understanding, not data transfer.
@@ -117,7 +131,7 @@ These formats optimize for AI understanding, not data transfer.
 
 ```bash
 # Get phase to determine allowed operations
-PHASE=$(bun "$SCRIPTS_PATH/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase)
+PHASE=$(bun "{SCRIPTS_PATH}/session-get.js" --session {CLAUDE_SESSION_ID} --field phase)
 
 if [ "$PHASE" = "PLANNING" ]; then
   echo "Design phase: no code edits allowed"
@@ -128,7 +142,7 @@ fi
 
 ```bash
 # Get tasks needing work
-bun "$SCRIPTS_PATH/task-list.js" --session ${CLAUDE_SESSION_ID} \
+bun "{SCRIPTS_PATH}/task-list.js" --session {CLAUDE_SESSION_ID} \
   --status open \
   --format json
 ```
@@ -137,21 +151,21 @@ bun "$SCRIPTS_PATH/task-list.js" --session ${CLAUDE_SESSION_ID} \
 
 ```bash
 # Get full task data
-bun "$SCRIPTS_PATH/task-get.js" --session ${CLAUDE_SESSION_ID} --id 1
+bun "{SCRIPTS_PATH}/task-get.js" --session {CLAUDE_SESSION_ID} --id 1
 
 # Get specific field
-bun "$SCRIPTS_PATH/task-get.js" --session ${CLAUDE_SESSION_ID} --id 1 --field status
+bun "{SCRIPTS_PATH}/task-get.js" --session {CLAUDE_SESSION_ID} --id 1 --field status
 ```
 
 ### Pattern 4: Update Task with Evidence
 
 ```bash
 # Add evidence to task
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id 1 \
+bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id 1 \
   --add-evidence "npm test: 15/15 passed, exit 0"
 
 # Mark task complete
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id 1 \
+bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id 1 \
   --status resolved \
   --add-evidence "All criteria met"
 ```
@@ -160,17 +174,17 @@ bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id 1 \
 
 ```bash
 # Get AI-friendly context summary
-bun "$SCRIPTS_PATH/context-get.js" --session ${CLAUDE_SESSION_ID} --summary
+bun "{SCRIPTS_PATH}/context-get.js" --session {CLAUDE_SESSION_ID} --summary
 
 # Get specific field
-bun "$SCRIPTS_PATH/context-get.js" --session ${CLAUDE_SESSION_ID} --field key_files
+bun "{SCRIPTS_PATH}/context-get.js" --session {CLAUDE_SESSION_ID} --field key_files
 ```
 
 ### Pattern 6: Read Exploration Details (Markdown)
 
 ```bash
 # Markdown files can be read directly
-SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
+SESSION_DIR=~/.claude/ultrawork/sessions/{CLAUDE_SESSION_ID}
 ```
 
 Then use Read tool:
@@ -183,7 +197,7 @@ Read("$SESSION_DIR/docs/plans/design.md")
 
 ```bash
 # Session directory (use direct path, not a script)
-SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
+SESSION_DIR=~/.claude/ultrawork/sessions/{CLAUDE_SESSION_ID}
 
 # Then access files directly
 ls "$SESSION_DIR/tasks/"
@@ -194,16 +208,16 @@ cat "$SESSION_DIR/exploration/overview.md"
 
 ```bash
 # Get recent test results
-bun "$SCRIPTS_PATH/evidence-query.js" --session ${CLAUDE_SESSION_ID} \
+bun "{SCRIPTS_PATH}/evidence-query.js" --session {CLAUDE_SESSION_ID} \
   --type test_result \
   --last 5
 
 # Search evidence
-bun "$SCRIPTS_PATH/evidence-query.js" --session ${CLAUDE_SESSION_ID} \
+bun "{SCRIPTS_PATH}/evidence-query.js" --session {CLAUDE_SESSION_ID} \
   --search "npm test"
 
 # Get evidence for specific task
-bun "$SCRIPTS_PATH/evidence-query.js" --session ${CLAUDE_SESSION_ID} \
+bun "{SCRIPTS_PATH}/evidence-query.js" --session {CLAUDE_SESSION_ID} \
   --task 1
 ```
 
@@ -213,7 +227,7 @@ bun "$SCRIPTS_PATH/evidence-query.js" --session ${CLAUDE_SESSION_ID} \
 
 ```bash
 # WRONG: Wastes tokens, requires manual parsing
-Read("~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}/session.json")
+Read("~/.claude/ultrawork/sessions/{CLAUDE_SESSION_ID}/session.json")
 ```
 
 ### ❌ Manual JSON Parsing
@@ -230,14 +244,14 @@ cat session.json | grep '"phase"' | cut -d'"' -f4
 cat ~/.claude/ultrawork/sessions/abc-123/tasks/1.json
 ```
 
-Use scripts with `${CLAUDE_SESSION_ID}` instead.
+Use scripts with `{CLAUDE_SESSION_ID}` instead.
 
 ## Quick Reference
 
 | Need | Script | Example |
 |------|--------|---------|
 | Session phase | `session-get.js` | `--field phase` |
-| Session directory | Direct path | `SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}` |
+| Session directory | Direct path | `SESSION_DIR=~/.claude/ultrawork/sessions/{CLAUDE_SESSION_ID}` |
 | Task details | `task-get.js` | `--id 1` |
 | Task status | `task-get.js` | `--id 1 --field status` |
 | Open tasks | `task-list.js` | `--status open` |
