@@ -1,25 +1,29 @@
 {
   "description": "Knowledge Extraction plugin hooks for automatic insight extraction and recommendations",
-  "hooks": [
-    {
-      "matcher": { "event": "Stop" },
-      "hooks": [
-        {
-          "type": "command",
-          "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/auto-extract-insight.js",
-          "timeout": 10000
-        }
-      ]
-    },
-    {
-      "matcher": { "event": "SubagentStop" },
-      "hooks": [
-        {
-          "type": "command",
-          "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/auto-extract-insight.js",
-          "timeout": 10000
-        }
-      ]
-    }
-  ]
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/auto-extract-insight.js",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/auto-extract-insight.js",
+            "timeout": 10000
+          }
+        ]
+      }
+    ]
+  }
 }
