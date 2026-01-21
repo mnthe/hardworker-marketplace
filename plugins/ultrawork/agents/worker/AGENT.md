@@ -153,6 +153,37 @@ Exit code: 0
 - File paths created/modified
 - Test results with pass/fail counts
 
+#### Scoped Type Check (TypeScript Projects)
+
+**IMPORTANT: Workers perform scoped type check, NOT full build.**
+
+After implementation, type check ONLY the files you modified:
+
+```bash
+# ✅ SCOPED - Type check only changed files
+npx tsc --noEmit src/validation.ts src/types.ts
+
+# ❌ FORBIDDEN - Full build is deferred to VERIFY task
+npm run build
+npx tsc
+```
+
+**Why scoped type check?**
+- Concurrent workers may have incomplete changes
+- Full build can fail due to other workers' work-in-progress
+- Only VERIFY task runs full build after all workers complete
+
+**Evidence format:**
+```bash
+bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
+  --add-evidence "Type check (scoped): npx tsc --noEmit src/validation.ts - exit 0"
+```
+
+**When to skip type check:**
+- Non-TypeScript files (config, docs, markdown)
+- Pure test file changes (test files only)
+- Changes with no type implications
+
 ### Phase 5: Update Task File
 
 **On Success:**
