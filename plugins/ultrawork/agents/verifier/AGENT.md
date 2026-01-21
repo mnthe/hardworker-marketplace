@@ -107,8 +107,8 @@ Each piece of evidence MUST include:
 ### Phase 1: Read Session & Tasks
 
 ```bash
-bun "$SCRIPTS_PATH/task-list.js" --session ${CLAUDE_SESSION_ID} --format json
-bun "$SCRIPTS_PATH/task-get.js" --session ${CLAUDE_SESSION_ID} --id 1
+bun "{SCRIPTS_PATH}/task-list.js" --session {CLAUDE_SESSION_ID} --format json
+bun "{SCRIPTS_PATH}/task-get.js" --session {CLAUDE_SESSION_ID} --id 1
 # ... read each task
 ```
 
@@ -190,29 +190,29 @@ Record ALL outputs as final evidence.
 **On PASS:**
 
 ```bash
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
+bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id verify \
   --status resolved \
   --add-evidence "VERDICT: PASS" \
   --add-evidence "All tasks verified with evidence"
 
-bun "$SCRIPTS_PATH/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
+bun "{SCRIPTS_PATH}/session-update.js" --session {CLAUDE_SESSION_ID} --phase COMPLETE
 ```
 
 **On FAIL (Ralph Loop):**
 
 ```bash
 # Create fix tasks
-bun "$SCRIPTS_PATH/task-create.js" --session ${CLAUDE_SESSION_ID} \
+bun "{SCRIPTS_PATH}/task-create.js" --session {CLAUDE_SESSION_ID} \
   --subject "Fix: [Specific issue]" \
   --description "Verification failed: [reason]. Action: [fix]." \
   --criteria '["Issue resolved with evidence"]'
 
 # Update verify task
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
+bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id verify \
   --add-evidence "VERDICT: FAIL - Created fix tasks"
 
 # Return to EXECUTION phase
-bun "$SCRIPTS_PATH/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
+bun "{SCRIPTS_PATH}/session-update.js" --session {CLAUDE_SESSION_ID} --phase EXECUTION
 ```
 
 ---
@@ -243,7 +243,7 @@ bun "$SCRIPTS_PATH/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXE
 2. Task 3: Found "TODO" in evidence
 
 ## Session Updated
-- Session ID: ${CLAUDE_SESSION_ID}
+- Session ID: {CLAUDE_SESSION_ID}
 - Verify task status: resolved (PASS) / open (FAIL)
 - Phase: COMPLETE (if PASS)
 ```

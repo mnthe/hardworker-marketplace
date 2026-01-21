@@ -69,7 +69,7 @@ SUCCESS CRITERIA:
 ### Phase 1: Read Task
 
 ```bash
-bun "$SCRIPTS_PATH/task-get.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID}
+bun "{SCRIPTS_PATH}/task-get.js" --session {CLAUDE_SESSION_ID} --id {TASK_ID}
 ```
 
 Check the `approach` field:
@@ -79,7 +79,7 @@ Check the `approach` field:
 ### Phase 2: Mark In Progress
 
 ```bash
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
+bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "Starting implementation at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
 
@@ -113,7 +113,7 @@ Exit code: 0
 **On Success:**
 
 ```bash
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
+bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id {TASK_ID} \
   --status resolved \
   --add-evidence "Created src/models/User.ts" \
   --add-evidence "npm test: 15/15 passed, exit 0"
@@ -122,7 +122,7 @@ bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID}
 **On Failure:**
 
 ```bash
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
+bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "FAILED: npm test exited with code 1" \
   --add-evidence "Error: Cannot find module './db'"
 ```
@@ -146,7 +146,7 @@ git add *         # Glob expansion - dangerous
 git add path/to/file1.ts path/to/file2.ts && git commit -m "$(cat <<'EOF'
 <type>(<scope>): <short description>
 
-[ultrawork] Session: ${CLAUDE_SESSION_ID} | Task: {TASK_ID}
+[ultrawork] Session: {CLAUDE_SESSION_ID} | Task: {TASK_ID}
 
 {TASK_SUBJECT}
 
@@ -188,7 +188,7 @@ EOF
 - **Record commit in evidence**:
 
 ```bash
-bun "$SCRIPTS_PATH/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
+bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "Committed: $(git rev-parse --short HEAD)"
 ```
 
@@ -219,7 +219,7 @@ Brief description of what was done.
 - Exit code: {code}
 
 ## Session Updated
-- Session ID: ${CLAUDE_SESSION_ID}
+- Session ID: {CLAUDE_SESSION_ID}
 - Task ID: {TASK_ID}
 - Status: resolved / open (if failed)
 
