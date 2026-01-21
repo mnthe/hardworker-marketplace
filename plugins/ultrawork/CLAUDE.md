@@ -5,12 +5,14 @@ Verification-first development plugin with evidence-based task completion.
 ## Plugin Description
 
 Ultrawork enforces a strict workflow cycle:
+
 1. **PLANNING**: Explore codebase, decompose work into tasks with success criteria
 2. **EXECUTION**: Workers implement tasks, collecting concrete evidence
 3. **VERIFICATION**: Verifier audits evidence, runs tests, makes PASS/FAIL determination
 4. **COMPLETE**: All criteria met with verified evidence
 
 Key features:
+
 - Session isolation with state tracking
 - Multi-agent orchestration (explorer, planner, worker, verifier, reviewer)
 - Gate enforcement (blocks code edits during PLANNING phase)
@@ -79,40 +81,41 @@ plugins/ultrawork/
 
 All scripts use Bun runtime with flag-based parameters.
 
-| Script | Purpose | Key Parameters |
-|--------|---------|----------------|
-| **setup-ultrawork.js** | Initialize session directory, create session.json | `--session <ID>` `--goal "..."` `--max-workers N` `--auto` |
-| **session-get.js** | Read session data or extract specific field | `--session <ID>` `--field phase` `--file` |
-| **session-update.js** | Update session phase, plan approval, exploration stage | `--session <ID>` `--phase EXECUTION` `--plan-approved` `--exploration-stage complete` |
-| **scope-set.js** | Set scope expansion data in context.json | `--session <ID>` `--data '<JSON>'` |
-| **task-create.js** | Create task JSON file with validation | `--session <ID>` `--id "1"` `--subject "..."` `--criteria "c1\|c2"` `--complexity standard\|complex` `--approach tdd` |
-| **task-get.js** | Read task details or extract specific field | `--session <ID>` `--task-id "1"` `--field status` (aliases: --task, --id) |
-| **task-list.js** | List tasks with filtering | `--session <ID>` `--status open\|resolved` `--format json\|table` |
-| **task-update.js** | Update task status and add evidence | `--session <ID>` `--task-id "1"` `--status resolved` `--add-evidence "..."` (aliases: --task, --id) |
-| **context-init.js** | Initialize context.json with expected explorers | `--session <ID>` `--expected "overview,exp-1"` |
-| **context-add.js** | Add explorer summary to context.json | `--session <ID>` `--explorer-id "exp-1"` `--summary "..."` `--key-files "f1,f2"` |
-| **context-get.js** | Read context.json data with field extraction | `--session <ID>` `--field explorers` `--summary` `--file` |
-| **ultrawork-status.js** | Display session status dashboard | `--session <ID>` `--all` |
-| **ultrawork-clean.js** | Clean current session or batch cleanup | `--session <ID>` (single) or `--all` `--completed` `--older-than N` (batch) |
-| **ultrawork-evidence.js** | View collected evidence log | `--session <ID>` |
-| **session-field.js** | Optimized single field extraction with dot notation support | `--session <ID>` `--field phase` `--field options.auto_mode` `--json` |
-| **task-summary.js** | Generate AI-friendly task markdown | `--session <ID>` `--task <ID>` `--save` |
-| **evidence-summary.js** | Generate AI-friendly evidence index | `--session <ID>` `--save` `--format md\|json` |
-| **evidence-query.js** | Query evidence with filters | `--session <ID>` `--type test_result` `--last 5` `--search "npm"` `--task 1` |
+| Script                    | Purpose                                                     | Key Parameters                                                                                                        |
+| ------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **setup-ultrawork.js**    | Initialize session directory, create session.json           | `--session <ID>` `--goal "..."` `--max-workers N` `--auto`                                                            |
+| **session-get.js**        | Read session data or extract specific field                 | `--session <ID>` `--field phase` `--file`                                                                             |
+| **session-update.js**     | Update session phase, plan approval, exploration stage      | `--session <ID>` `--phase EXECUTION` `--plan-approved` `--exploration-stage complete`                                 |
+| **scope-set.js**          | Set scope expansion data in context.json                    | `--session <ID>` `--data '<JSON>'`                                                                                    |
+| **task-create.js**        | Create task JSON file with validation                       | `--session <ID>` `--id "1"` `--subject "..."` `--criteria "c1\|c2"` `--complexity standard\|complex` `--approach tdd` |
+| **task-get.js**           | Read task details or extract specific field                 | `--session <ID>` `--task-id "1"` `--field status` (aliases: --task, --id)                                             |
+| **task-list.js**          | List tasks with filtering                                   | `--session <ID>` `--status open\|resolved` `--format json\|table`                                                     |
+| **task-update.js**        | Update task status and add evidence                         | `--session <ID>` `--task-id "1"` `--status resolved` `--add-evidence "..."` (aliases: --task, --id)                   |
+| **context-init.js**       | Initialize context.json with expected explorers             | `--session <ID>` `--expected "overview,exp-1"`                                                                        |
+| **context-add.js**        | Add explorer summary to context.json                        | `--session <ID>` `--explorer-id "exp-1"` `--summary "..."` `--key-files "f1,f2"`                                      |
+| **context-get.js**        | Read context.json data with field extraction                | `--session <ID>` `--field explorers` `--summary` `--file`                                                             |
+| **ultrawork-status.js**   | Display session status dashboard                            | `--session <ID>` `--all`                                                                                              |
+| **ultrawork-clean.js**    | Clean current session or batch cleanup                      | `--session <ID>` (single) or `--all` `--completed` `--older-than N` (batch)                                           |
+| **ultrawork-evidence.js** | View collected evidence log                                 | `--session <ID>`                                                                                                      |
+| **session-field.js**      | Optimized single field extraction with dot notation support | `--session <ID>` `--field phase` `--field options.auto_mode` `--json`                                                 |
+| **task-summary.js**       | Generate AI-friendly task markdown                          | `--session <ID>` `--task <ID>` `--save`                                                                               |
+| **evidence-summary.js**   | Generate AI-friendly evidence index                         | `--session <ID>` `--save` `--format md\|json`                                                                         |
+| **evidence-query.js**     | Query evidence with filters                                 | `--session <ID>` `--type test_result` `--last 5` `--search "npm"` `--task 1`                                          |
 
 ## Data Access Guide
 
 **Always use scripts for JSON data. Never use Read tool directly on JSON files.**
 
-| Data | Script | When to Use Read |
-|------|--------|------------------|
-| session.json | `session-get.js` | Never |
-| context.json | `context-get.js` | Never |
-| tasks/*.json | `task-get.js`, `task-list.js` | Never |
-| exploration/*.md | - | Always (Markdown OK) |
-| docs/plans/*.md | - | Always (Markdown OK) |
+| Data              | Script                        | When to Use Read     |
+| ----------------- | ----------------------------- | -------------------- |
+| session.json      | `session-get.js`              | Never                |
+| context.json      | `context-get.js`              | Never                |
+| tasks/\*.json     | `task-get.js`, `task-list.js` | Never                |
+| exploration/\*.md | -                             | Always (Markdown OK) |
+| docs/plans/\*.md  | -                             | Always (Markdown OK) |
 
 **Why scripts over direct Read?**
+
 1. **Token efficiency**: JSON wastes tokens on structure (`{`, `"key":`, etc.)
 2. **Field extraction**: Scripts return only needed data (`--field status`)
 3. **AI-friendly output**: `--summary` generates markdown for better comprehension
@@ -137,29 +140,29 @@ Read("$SESSION_DIR/exploration/overview.md")  # OK
 
 All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
-| Hook File | Event | Purpose | Behavior |
-|-----------|-------|---------|----------|
-| **session-start-hook.js** | SessionStart | Cleanup old sessions, provide session ID | Deletes sessions >7 days old in terminal states (COMPLETE/CANCELLED/FAILED) |
-| **compact-recovery-hook.js** | SessionStart (compact) | Inject procedural knowledge after compaction | Reads session.json and tasks/*.json, generates recovery message for active sessions with delegation rules, context variables, task status, and phase instructions |
-| **session-context-hook.js** | UserPromptSubmit | Inject session variables into context | Adds SESSION_ID and CLAUDE_PLUGIN_ROOT to agent prompts |
-| **agent-lifecycle-tracking.js** | PreToolUse | Track agent execution for evidence | Records which agents are active (for subagent tracking) |
-| **post-tool-use-evidence.js** | PostToolUse | Collect evidence from tool usage | Records command execution (Bash), file operations (Write/Edit), test results |
-| **gate-enforcement.js** | PreToolUse (Edit/Write) | Enforce phase restrictions and TDD order | Blocks code edits during PLANNING; blocks implementation before tests in TDD tasks |
-| **gate-status-notification.js** | PostToolUse (Task) | Notify about gate enforcement status | Displays session phase and gate rules after Task tool usage |
-| **subagent-stop-tracking.js** | SubagentStop | Track subagent completion | Records when explorer/worker/verifier agents complete |
-| **stop-hook.js** | Stop | Cleanup on session end | Removes temporary state on Claude Code exit |
-| **keyword-detector.js** | UserPromptSubmit | Detect ultrawork keywords and transform prompts | Transforms "ultrawork X", "ulw X", "uw X" to /ultrawork commands; supports --auto and --plan-only modes |
+| Hook File                       | Event                   | Purpose                                         | Behavior                                                                                                                                                           |
+| ------------------------------- | ----------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **session-start-hook.js**       | SessionStart            | Cleanup old sessions, provide session ID        | Deletes sessions >7 days old in terminal states (COMPLETE/CANCELLED/FAILED)                                                                                        |
+| **compact-recovery-hook.js**    | SessionStart (compact)  | Inject procedural knowledge after compaction    | Reads session.json and tasks/\*.json, generates recovery message for active sessions with delegation rules, context variables, task status, and phase instructions |
+| **session-context-hook.js**     | UserPromptSubmit        | Inject session variables into context           | Adds SESSION_ID and CLAUDE_PLUGIN_ROOT to agent prompts                                                                                                            |
+| **agent-lifecycle-tracking.js** | PreToolUse              | Track agent execution for evidence              | Records which agents are active (for subagent tracking)                                                                                                            |
+| **post-tool-use-evidence.js**   | PostToolUse             | Collect evidence from tool usage                | Records command execution (Bash), file operations (Write/Edit), test results                                                                                       |
+| **gate-enforcement.js**         | PreToolUse (Edit/Write) | Enforce phase restrictions and TDD order        | Blocks code edits during PLANNING; blocks implementation before tests in TDD tasks                                                                                 |
+| **gate-status-notification.js** | PostToolUse (Task)      | Notify about gate enforcement status            | Displays session phase and gate rules after Task tool usage                                                                                                        |
+| **subagent-stop-tracking.js**   | SubagentStop            | Track subagent completion                       | Records when explorer/worker/verifier agents complete                                                                                                              |
+| **stop-hook.js**                | Stop                    | Cleanup on session end                          | Removes temporary state on Claude Code exit                                                                                                                        |
+| **keyword-detector.js**         | UserPromptSubmit        | Detect ultrawork keywords and transform prompts | Transforms "ultrawork X", "ulw X", "uw X" to /ultrawork commands; supports --auto and --plan-only modes                                                            |
 
 ## Agent Inventory
 
-| Agent | Model | Role | Key Responsibilities |
-|-------|-------|------|---------------------|
-| **explorer** | haiku | Codebase discovery | Fast exploration, write findings to `exploration/*.md`, update `context.json` with summary |
-| **planner** | inherit | Task decomposition | Read explorer context, make design decisions (auto mode), create task graph, write design doc to `docs/plans/` |
-| **worker** | inherit | Task implementation | Execute ONE task, collect evidence, update task file. Supports standard and TDD approaches |
-| **verifier** | inherit | Quality gatekeeper | Audit evidence, scan for blocked patterns, run final tests, PASS/FAIL determination, trigger Ralph loop on fail |
-| **reviewer** | inherit | Code review | Deep verification, read actual code, check edge cases, detect security issues, provide specific feedback |
-| **scope-analyzer** | haiku | Dependency detection | Analyze cross-layer deps, output to context.json scopeExpansion |
+| Agent              | Model   | Role                 | Key Responsibilities                                                                                            |
+| ------------------ | ------- | -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **explorer**       | haiku   | Codebase discovery   | Fast exploration, write findings to `exploration/*.md`, update `context.json` with summary                      |
+| **planner**        | inherit | Task decomposition   | Read explorer context, make design decisions (auto mode), create task graph, write design doc to `docs/plans/`  |
+| **worker**         | inherit | Task implementation  | Execute ONE task, collect evidence, update task file. Supports standard and TDD approaches                      |
+| **verifier**       | inherit | Quality gatekeeper   | Audit evidence, scan for blocked patterns, run final tests, PASS/FAIL determination, trigger Ralph loop on fail |
+| **reviewer**       | inherit | Code review          | Deep verification, read actual code, check edge cases, detect security issues, provide specific feedback        |
+| **scope-analyzer** | haiku   | Dependency detection | Analyze cross-layer deps, output to context.json scopeExpansion                                                 |
 
 ## State Management
 
@@ -216,6 +219,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 ```
 
 **With worktree enabled** (`/ultrawork "goal" --worktree`):
+
 ```json
 {
   "version": "6.1",
@@ -319,14 +323,8 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
       "summary": "Found NextAuth.js setup in app/api/auth/[...nextauth]/route.ts"
     }
   ],
-  "key_files": [
-    "app/api/auth/[...nextauth]/route.ts",
-    "src/lib/auth.ts"
-  ],
-  "patterns": [
-    "NextAuth.js",
-    "JWT tokens"
-  ],
+  "key_files": ["app/api/auth/[...nextauth]/route.ts", "src/lib/auth.ts"],
+  "patterns": ["NextAuth.js", "JWT tokens"],
   "constraints": []
 }
 ```
@@ -336,6 +334,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 ### Overview
 
 Scope Analyzer detects when user's request requires work beyond explicit scope:
+
 - FE request → BE API needed
 - BE request → FE update needed
 - Any change → Codegen required
@@ -376,22 +375,23 @@ Scope Analyzer detects when user's request requires work beyond explicit scope:
 
 ### Dependency Types
 
-| Type | Icon | Meaning | Auto Mode |
-|------|------|---------|-----------|
-| blocking | 🔴 | Cannot proceed without | Always include |
-| recommended | 🟡 | Should include | Always include |
-| optional | 🟢 | Nice to have | Skip |
+| Type        | Icon | Meaning                | Auto Mode      |
+| ----------- | ---- | ---------------------- | -------------- |
+| blocking    | 🔴    | Cannot proceed without | Always include |
+| recommended | 🟡    | Should include         | Always include |
+| optional    | 🟢    | Nice to have           | Skip           |
 
 ### Mode Behavior
 
-| Mode | Behavior |
-|------|----------|
+| Mode        | Behavior                                                  |
+| ----------- | --------------------------------------------------------- |
 | Interactive | Display analysis, ask user preference (all/blocking/skip) |
-| Auto | Conservative inclusion (blocking + recommended) |
+| Auto        | Conservative inclusion (blocking + recommended)           |
 
 ### Task Ordering
 
 When scope expansion suggests multiple layers:
+
 1. Database first (schema must exist)
 2. Backend second (API must exist for FE)
 3. Codegen third (regenerate after BE)
@@ -437,7 +437,7 @@ Claude Code expands `${CLAUDE_PLUGIN_ROOT}` in command/hook files at load time, 
 1. **Commands** pass `SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts` to agents in the prompt
 2. **Agents** use `{SCRIPTS_PATH}` in bash commands:
    ```bash
-   bun "{SCRIPTS_PATH}/task-update.js" --session {SESSION_ID} --task-id 1 --status resolved
+   bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --task-id 1 --status resolved
    ```
 
 #### DO NOT
@@ -457,13 +457,13 @@ bun "{SCRIPTS_PATH}/task-update.js" ...
 
 ### Agent Workflow Rules
 
-| Agent | Spawned By | Input | Output | State Changes |
-|-------|------------|-------|--------|---------------|
-| **explorer** | Orchestrator | SESSION_ID, SEARCH_HINT | exploration/*.md, context.json | Updates context.json |
-| **planner** | Orchestrator | SESSION_ID, goal | tasks/*.json, docs/plans/*.md | session.phase → EXECUTION |
-| **worker** | Orchestrator | SESSION_ID, TASK_ID | Updated task.json | task.status → resolved |
-| **verifier** | Orchestrator | SESSION_ID | Updated verify task, session.json | session.phase → COMPLETE or EXECUTION |
-| **reviewer** | Worker/Orchestrator | TASK_ID, files | Review JSON | No state change |
+| Agent        | Spawned By          | Input                   | Output                            | State Changes                         |
+| ------------ | ------------------- | ----------------------- | --------------------------------- | ------------------------------------- |
+| **explorer** | Orchestrator        | SESSION_ID, SEARCH_HINT | exploration/\*.md, context.json   | Updates context.json                  |
+| **planner**  | Orchestrator        | SESSION_ID, goal        | tasks/_.json, docs/plans/_.md     | session.phase → EXECUTION             |
+| **worker**   | Orchestrator        | SESSION_ID, TASK_ID     | Updated task.json                 | task.status → resolved                |
+| **verifier** | Orchestrator        | SESSION_ID              | Updated verify task, session.json | session.phase → COMPLETE or EXECUTION |
+| **reviewer** | Worker/Orchestrator | TASK_ID, files          | Review JSON                       | No state change                       |
 
 ### Phase Transition Rules
 
@@ -488,14 +488,17 @@ VERIFICATION → EXECUTION (failure - Ralph Loop)
 ### Gate Enforcement Rules
 
 **PLANNING Phase**:
+
 - Allow: `design.md`, `session.json`, `context.json`, `exploration/*.md`, `docs/plans/*.md`
 - Block: All other file edits (Edit/Write tools)
 
 **EXECUTION Phase (TDD tasks)**:
-- Allow: Test files first (*.test.*, *.spec.*, __tests__/*)
+
+- Allow: Test files first (_.test._, _.spec._, **tests**/\*)
 - Block: Implementation files before TDD-RED evidence
 
 **Evidence Required for TDD**:
+
 1. TDD-RED: Test file created, test executed, exit code 1
 2. TDD-GREEN: Implementation created, test executed, exit code 0
 3. TDD-REFACTOR: (Optional) Improvements made, tests still pass
@@ -503,6 +506,7 @@ VERIFICATION → EXECUTION (failure - Ralph Loop)
 ### Blocked Patterns
 
 Verifier scans all evidence for these patterns. If found → instant FAIL:
+
 - "should work"
 - "probably works"
 - "basic implementation"
@@ -519,25 +523,34 @@ Verifier scans all evidence for these patterns. If found → instant FAIL:
 ```json
 {
   "hooks": {
-    "SessionStart": [{
-      "matcher": "*",
-      "hooks": [{
-        "type": "command",
-        "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/session-start-hook.js"
-      }]
-    }],
-    "PreToolUse": [{
-      "matcher": "Edit|Write",
-      "hooks": [{
-        "type": "command",
-        "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/gate-enforcement.js"
-      }]
-    }]
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/session-start-hook.js"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/gate-enforcement.js"
+          }
+        ]
+      }
+    ]
   }
 }
 ```
 
 **Why explicit `bun`?**
+
 - Shebang (`#!/usr/bin/env bun`) doesn't work on Windows
 - Explicit runtime ensures cross-platform execution
 - All hooks should follow this pattern
@@ -545,56 +558,68 @@ Verifier scans all evidence for these patterns. If found → instant FAIL:
 ## Session Lifecycle
 
 ### 1. Session Start
+
 ```bash
 /ultrawork "implement user authentication"
 ```
+
 - Hook: session-start-hook.js (cleanup old sessions)
 - Script: setup-ultrawork.js (create session directory)
 - Creates: session.json, context.json, exploration/, tasks/
 
 ### 2. Exploration Phase
+
 ```bash
 # Orchestrator spawns explorers
 explorer -> overview exploration
 explorer -> targeted exploration (if needed)
 ```
+
 - Agents: explorer (haiku model)
-- Output: exploration/overview.md, exploration/exp-*.md
+- Output: exploration/overview.md, exploration/exp-\*.md
 - Updates: context.json with summary
 
 ### 3. Planning Phase
+
 ```bash
 # Orchestrator spawns planner
 planner -> read context -> design tasks
 ```
+
 - Agent: planner (inherit model)
-- Output: tasks/*.json, docs/plans/design.md
+- Output: tasks/\*.json, docs/plans/design.md
 - Updates: session.phase → EXECUTION
 
 ### 4. Execution Phase
+
 ```bash
 # Orchestrator spawns workers
 worker -> execute task 1
 worker -> execute task 2 (parallel if unblocked)
 ```
+
 - Agent: worker (inherit model)
 - Hooks: gate-enforcement.js (block if TDD violation)
 - Hooks: post-tool-use-evidence.js (collect evidence)
 - Updates: task.status → resolved
 
 ### 5. Verification Phase
+
 ```bash
 # Orchestrator spawns verifier
 verifier -> audit evidence -> run tests -> PASS/FAIL
 ```
+
 - Agent: verifier (inherit model)
 - Output: Updated verify task, session.json
 - Updates: session.phase → COMPLETE (PASS) or EXECUTION (FAIL)
 
 ### 6. Session Complete
+
 ```bash
 /ultrawork-status --session {ID}
 ```
+
 - Display: Final dashboard with all evidence
 - State: session.phase = COMPLETE
 
@@ -650,12 +675,12 @@ When adding new scripts or modifying existing ones:
 
 ### Updating Tests on Plugin Changes
 
-| Change Type | Test Action |
-|-------------|-------------|
-| New parameter | Add test for parameter handling and validation |
-| New output field | Update schema validation tests |
-| Bug fix | Add regression test to prevent reoccurrence |
-| New script | Create new test file with full coverage |
+| Change Type      | Test Action                                    |
+| ---------------- | ---------------------------------------------- |
+| New parameter    | Add test for parameter handling and validation |
+| New output field | Update schema validation tests                 |
+| Bug fix          | Add regression test to prevent reoccurrence    |
+| New script       | Create new test file with full coverage        |
 
 ### Test Requirements
 
@@ -679,14 +704,20 @@ When adding new scripts or modifying existing ones:
 
 ```javascript
 // 1. Set env BEFORE importing session-utils
-const { TEST_BASE_DIR, createMockSession, runScript } = require('./test-utils.js');
+const {
+  TEST_BASE_DIR,
+  createMockSession,
+  runScript,
+} = require("./test-utils.js");
 process.env.ULTRAWORK_TEST_BASE_DIR = TEST_BASE_DIR;
 
 // 2. Now import session-utils (will use test path)
-const { readSession } = require('../../plugins/ultrawork/src/lib/session-utils.js');
+const {
+  readSession,
+} = require("../../plugins/ultrawork/src/lib/session-utils.js");
 
 // 3. Use test utilities for mock sessions
-const session = createMockSession('test-session');
+const session = createMockSession("test-session");
 
 // 4. Clean up in afterAll
 afterAll(() => {
@@ -697,19 +728,19 @@ afterAll(() => {
 
 #### Safety Mechanisms
 
-| Mechanism | Purpose |
-|-----------|---------|
-| `ULTRAWORK_TEST_BASE_DIR` | Redirects all paths to tmpdir |
-| `validateSafeDelete()` | Throws error if deleting outside test dir |
-| `bunfig.toml` preload | Auto-sets env for all tests |
-| `test-isolation.test.js` | Verifies isolation is working |
+| Mechanism                 | Purpose                                   |
+| ------------------------- | ----------------------------------------- |
+| `ULTRAWORK_TEST_BASE_DIR` | Redirects all paths to tmpdir             |
+| `validateSafeDelete()`    | Throws error if deleting outside test dir |
+| `bunfig.toml` preload     | Auto-sets env for all tests               |
+| `test-isolation.test.js`  | Verifies isolation is working             |
 
 #### DO NOT
 
 ```javascript
 // WRONG: Imports session-utils before setting env
-const { getSessionDir } = require('../lib/session-utils.js');
-process.env.ULTRAWORK_TEST_BASE_DIR = TEST_BASE_DIR;  // Too late!
+const { getSessionDir } = require("../lib/session-utils.js");
+process.env.ULTRAWORK_TEST_BASE_DIR = TEST_BASE_DIR; // Too late!
 ```
 
 #### If Tests Delete Real Data
@@ -721,11 +752,13 @@ process.env.ULTRAWORK_TEST_BASE_DIR = TEST_BASE_DIR;  // Too late!
 ## Usage Examples
 
 ### Create Session
+
 ```bash
 bun src/scripts/setup-ultrawork.js --session abc-123 --goal "Add user auth"
 ```
 
 ### Get Session Info
+
 ```bash
 bun src/scripts/session-get.js --session abc-123
 bun src/scripts/session-get.js --session abc-123 --field phase
@@ -735,6 +768,7 @@ SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 ```
 
 ### Create Task
+
 ```bash
 bun src/scripts/task-create.js --session abc-123 \
   --id "1" \
@@ -745,6 +779,7 @@ bun src/scripts/task-create.js --session abc-123 \
 ```
 
 ### Update Task
+
 ```bash
 # Primary parameter: --task-id (aliases: --task, --id also accepted)
 bun src/scripts/task-update.js --session abc-123 --task-id "1" \
@@ -753,21 +788,25 @@ bun src/scripts/task-update.js --session abc-123 --task-id "1" \
 ```
 
 ### List Tasks
+
 ```bash
 bun src/scripts/task-list.js --session abc-123 --format json
 ```
 
 ### Update Session Phase
+
 ```bash
 bun src/scripts/session-update.js --session abc-123 --phase EXECUTION
 ```
 
 ### View Status
+
 ```bash
 bun src/scripts/ultrawork-status.js --session abc-123
 ```
 
 ### Clean Sessions
+
 ```bash
 # Clean current session (for fresh /ultrawork start)
 bun src/scripts/ultrawork-clean.js --session ${CLAUDE_SESSION_ID}
