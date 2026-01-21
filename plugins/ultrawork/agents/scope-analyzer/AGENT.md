@@ -138,7 +138,7 @@ Apply these rules to classify dependencies.
 ```bash
 # SCRIPTS_PATH value comes from your prompt input (substitute the actual path)
 
-bun "$SCRIPTS_PATH/scope-set.js" --session ${CLAUDE_SESSION_ID} --data '{
+bun "{SCRIPTS_PATH}/scope-set.js" --session {CLAUDE_SESSION_ID} --data '{
   "originalRequest": "Add PPT options to Feed form",
   "detectedLayers": ["frontend", "backend", "database", "codegen"],
   "dependencies": [
