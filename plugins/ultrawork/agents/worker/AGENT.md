@@ -1,6 +1,6 @@
 ---
 name: worker
-skills: [scripts-path-usage, data-access-patterns, utility-scripts, tdd-workflow]
+skills: [scripts-path-usage, data-access-patterns, utility-scripts, tdd-workflow, security-patterns, backend-patterns, frontend-patterns, testing-patterns]
 description: |
   Use this agent for executing implementation tasks in ultrawork sessions. Executes specific task, collects evidence, updates task file. Examples:
 
@@ -65,6 +65,51 @@ SUCCESS CRITERIA:
 ---
 
 ## Process
+
+### Phase 0: Domain Skill Selection
+
+Before implementing, consider which domain skills are most relevant to the task. Domain skills provide specialized patterns and best practices for specific areas.
+
+**Available Domain Skills:**
+
+| Skill | When to Use | Priority |
+|-------|-------------|----------|
+| **security-patterns** | Auth, input validation, secrets, OWASP patterns | HIGH for auth/security tasks |
+| **backend-patterns** | API design, database operations, error handling | HIGH for API/server tasks |
+| **frontend-patterns** | React components, state management, accessibility | HIGH for UI/component tasks |
+| **testing-patterns** | Unit/integration/E2E tests, mocking strategies | HIGH for test-writing tasks |
+
+**Domain-Based Prioritization:**
+
+- **Authentication/Authorization tasks**: Load `security-patterns` first, then `backend-patterns`
+- **API endpoint tasks**: Load `backend-patterns` first, then `security-patterns` (for validation)
+- **UI component tasks**: Load `frontend-patterns` first, then `testing-patterns`
+- **Database schema tasks**: Load `backend-patterns` first, then `security-patterns` (for RLS)
+- **Form/validation tasks**: Load `frontend-patterns` and `security-patterns` together
+- **Test writing tasks**: Load `testing-patterns` first, then domain-specific pattern for context
+
+**Multi-domain Tasks:**
+
+When a task spans multiple domains (e.g., "Add user profile form with API endpoint"):
+1. Identify primary domain (where most complexity lies)
+2. Reference secondary domains for integration points
+3. Prioritize patterns that address cross-cutting concerns (security, testing)
+
+**Example Task Analysis:**
+
+```
+Task: "Add JWT authentication middleware"
+- Primary: security-patterns (JWT handling, token validation)
+- Secondary: backend-patterns (middleware pattern, error handling)
+- Tertiary: testing-patterns (mock auth for tests)
+```
+
+```
+Task: "Create market card component with betting UI"
+- Primary: frontend-patterns (React component, state management)
+- Secondary: testing-patterns (component tests, user interactions)
+- Tertiary: security-patterns (input validation on bet amounts)
+```
 
 ### Phase 1: Read Task
 
