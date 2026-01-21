@@ -18,6 +18,7 @@ const { getTasksDir, listTaskIds, readTask } = require('../lib/project-utils.js'
  * @typedef {import('../lib/types.js').Task} Task
  * @typedef {import('../lib/types.js').TaskStatus} TaskStatus
  * @typedef {import('../lib/types.js').Role} Role
+ * @typedef {import('../lib/types.js').Domain} Domain
  */
 
 /**
@@ -26,6 +27,7 @@ const { getTasksDir, listTaskIds, readTask } = require('../lib/project-utils.js'
  * @property {string} [team]
  * @property {TaskStatus} [status]
  * @property {Role} [role]
+ * @property {Domain} [domain]
  * @property {string} [wave]
  * @property {boolean} [available]
  * @property {'json'|'table'} [format]
@@ -36,6 +38,7 @@ const ARG_SPEC = {
   '--team': { key: 'team', aliases: ['-t'], required: true },
   '--status': { key: 'status', aliases: ['-s'] },
   '--role': { key: 'role', aliases: ['-r'] },
+  '--domain': { key: 'domain' },
   '--wave': { key: 'wave', aliases: ['-w'] },
   '--available': { key: 'available', aliases: ['-a'], flag: true },
   '--format': { key: 'format', aliases: ['-f'], default: 'table' },
@@ -98,6 +101,11 @@ function matchesFilters(task, args) {
 
   // Role filter
   if (args.role && task.role !== args.role) {
+    return false;
+  }
+
+  // Domain filter
+  if (args.domain && task.domain !== args.domain) {
     return false;
   }
 

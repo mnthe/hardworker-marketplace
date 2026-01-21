@@ -27,6 +27,11 @@
  */
 
 /**
+ * Task domain classification for task organization and filtering
+ * @typedef {'security' | 'core' | 'integration' | 'quality' | 'performance' | 'deployment'} Domain
+ */
+
+/**
  * Task definition for teamwork project
  * @typedef {Object} Task
  * @property {string} id - Unique task identifier
@@ -34,6 +39,7 @@
  * @property {string} description - Detailed task description
  * @property {Role} role - Required worker role for this task
  * @property {Complexity} [complexity] - Task complexity for model selection (default: 'standard')
+ * @property {Domain} [domain] - Task domain classification (optional)
  * @property {TaskStatus} status - Current task status
  * @property {number} [version] - Task version number (defaults to 0 for backward compatibility)
  * @property {string} created_at - ISO8601 timestamp

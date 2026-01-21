@@ -21,6 +21,7 @@ const {
  * @typedef {import('../lib/types.js').Task} Task
  * @typedef {import('../lib/types.js').Role} Role
  * @typedef {import('../lib/types.js').Complexity} Complexity
+ * @typedef {import('../lib/types.js').Domain} Domain
  */
 
 /**
@@ -32,6 +33,7 @@ const {
  * @property {string} [description]
  * @property {Role} [role]
  * @property {Complexity} [complexity]
+ * @property {Domain} [domain]
  * @property {string} [wave]
  */
 
@@ -43,6 +45,7 @@ const ARG_SPEC = {
   '--description': { key: 'description', aliases: ['-d'] },
   '--role': { key: 'role', aliases: ['-r'], default: 'worker' },
   '--complexity': { key: 'complexity', aliases: ['-c'], default: 'standard' },
+  '--domain': { key: 'domain' },
   '--wave': { key: 'wave', aliases: ['-w'] },
   '--blocked-by': { key: 'blocked_by', aliases: ['-b'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
@@ -88,6 +91,13 @@ function createTask(args) {
     process.exit(1);
   }
 
+  // Validate domain (optional)
+  const validDomains = ['security', 'core', 'integration', 'quality', 'performance', 'deployment'];
+  if (args.domain && !validDomains.includes(args.domain)) {
+    console.error(`Error: Invalid domain "${args.domain}". Must be: ${validDomains.join(', ')}`);
+    process.exit(1);
+  }
+
   /** @type {Task} */
   const task = {
     id: args.id,
@@ -107,6 +117,11 @@ function createTask(args) {
   // Add wave field if provided
   if (args.wave) {
     task.wave = args.wave;
+  }
+
+  // Add domain field if provided
+  if (args.domain) {
+    task.domain = args.domain;
   }
 
   // Write task JSON
