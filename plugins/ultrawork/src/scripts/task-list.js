@@ -30,8 +30,46 @@ const ARG_SPEC = {
   '--session': { key: 'session', aliases: ['-s'], required: true },
   '--status': { key: 'status', aliases: ['-S'] },
   '--format': { key: 'format', aliases: ['-f'], default: 'table' },
+  '--field': { key: 'field' },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
+
+// ============================================================================
+// Field Extraction
+// ============================================================================
+
+/**
+ * Extract nested field from object using dot notation
+ * Example: "status" or "evidence[0].type"
+ * @param {any} obj - Object to query
+ * @param {string} fieldPath - Dot-separated field path
+ * @returns {any} Field value or undefined
+ */
+function getNestedField(obj, fieldPath) {
+  const parts = fieldPath.split('.');
+  let current = obj;
+
+  for (const part of parts) {
+    // Handle array access: field[0]
+    const match = part.match(/^(.+)\[(\d+)\]$/);
+    if (match) {
+      const [, fieldName, index] = match;
+      current = current[fieldName];
+      if (!current || !Array.isArray(current)) {
+        return undefined;
+      }
+      current = current[parseInt(index, 10)];
+    } else {
+      current = current[part];
+    }
+
+    if (current === undefined) {
+      return undefined;
+    }
+  }
+
+  return current;
+}
 
 // ============================================================================
 // Task Collection
@@ -161,7 +199,27 @@ function main() {
     const tasks = collectTasks(tasksDir, args.status);
 
     // Output in requested format
-    if (args.format === 'json') {
+    if (args.field) {
+      // Extract specific field from each task
+      const values = tasks.map(task => {
+        const value = getNestedField(task, args.field);
+        return value !== undefined ? value : null;
+      });
+
+      // Output in requested format
+      if (args.format === 'json') {
+        console.log(JSON.stringify(values, null, 2));
+      } else {
+        // Table format: one value per line
+        for (const value of values) {
+          if (typeof value === 'string') {
+            console.log(value);
+          } else {
+            console.log(JSON.stringify(value));
+          }
+        }
+      }
+    } else if (args.format === 'json') {
       outputJson(tasks);
     } else {
       outputTable(tasks);

@@ -166,14 +166,14 @@ AVAILABLE_TASKS=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" \
 Parse first task's role field:
 
 ```bash
-DETECTED_ROLE=$(echo "$AVAILABLE_TASKS" | bun -e "
-  const tasks = JSON.parse(require('fs').readFileSync(0, 'utf-8'));
-  if (tasks.length > 0 && tasks[0].role) {
-    console.log(tasks[0].role);
-  } else {
-    console.log('worker');
-  }
-")
+DETECTED_ROLE=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" \
+  --project {PROJECT} \
+  --team {SUB_TEAM} \
+  --available \
+  --field role | head -1)
+
+# Default to 'worker' if no role found
+DETECTED_ROLE=${DETECTED_ROLE:-worker}
 ```
 
 **Variable values:**
@@ -187,14 +187,14 @@ Skip this step. Use user-specified role directly.
 **Read the first available task's complexity field:**
 
 ```bash
-TASK_COMPLEXITY=$(echo "$AVAILABLE_TASKS" | bun -e "
-  const tasks = JSON.parse(require('fs').readFileSync(0, 'utf-8'));
-  if (tasks.length > 0 && tasks[0].complexity) {
-    console.log(tasks[0].complexity);
-  } else {
-    console.log('standard');
-  }
-")
+TASK_COMPLEXITY=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" \
+  --project {PROJECT} \
+  --team {SUB_TEAM} \
+  --available \
+  --field complexity | head -1)
+
+# Default to 'standard' if no complexity found
+TASK_COMPLEXITY=${TASK_COMPLEXITY:-standard}
 ```
 
 **Variable values:**
