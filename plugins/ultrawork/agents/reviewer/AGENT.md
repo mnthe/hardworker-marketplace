@@ -1,6 +1,6 @@
 ---
 name: reviewer
-skills: scripts-path-usage
+skills: [scripts-path-usage, code-quality-review, security-review, architecture-review, consistency-review]
 description: |
   Use this agent for code review in ultrawork sessions. Reviews implementation for quality, correctness, and adherence to criteria. Examples:
 
@@ -60,6 +60,51 @@ SUCCESS CRITERIA: {criteria}
 CHANGED FILES: {list of files}
 WORKER OUTPUT: {worker's report}
 ```
+
+---
+
+## Conditional Skill Loading
+
+This agent references multiple review skills. Load skills based on task characteristics:
+
+| Condition | Skill | When to Load |
+|-----------|-------|--------------|
+| **Always** | code-quality-review | Every review (correctness, patterns, quality) |
+| **Security-sensitive** | security-review | Task touches auth/authentication, user input validation, secrets/credentials, API endpoints |
+| **Complex tasks** | architecture-review | Task complexity = complex, architectural decisions involved |
+| **Large changes** | consistency-review | Task modifies 5+ files, cross-cutting concerns |
+
+### Spawn Guidelines
+
+**Example spawn patterns:**
+
+```bash
+# Standard review (code quality only)
+Task modifies 1-2 files, no security concerns
+→ Load: code-quality-review
+
+# Security review
+Task: "Add user authentication middleware"
+→ Load: code-quality-review, security-review
+
+# Complex task review
+Task: "Refactor API architecture", complexity = complex
+→ Load: code-quality-review, architecture-review
+
+# Large-scale change
+Task: "Update error handling across codebase", 8 files modified
+→ Load: code-quality-review, consistency-review
+
+# Full review
+Task: "Implement payment processing", complexity = complex, 6 files, touches auth
+→ Load: all skills
+```
+
+**Detection rules:**
+
+- **Security-sensitive keywords**: auth, login, password, token, secret, api, input, validation, session
+- **Complexity indicator**: task.complexity field = "complex"
+- **Large change threshold**: Count modified files in CHANGED FILES input
 
 ---
 
