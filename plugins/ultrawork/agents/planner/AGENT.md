@@ -80,17 +80,17 @@ Classify the work intent to adjust your approach:
 ### Phase 1: Read Context
 
 ```bash
-SESSION_DIR=~/.claude/ultrawork/sessions/{CLAUDE_SESSION_ID}
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 # Session info
-bun "{SCRIPTS_PATH}/session-get.js" --session {CLAUDE_SESSION_ID} --field goal
+bun "{SCRIPTS_PATH}/session-get.js" --session ${CLAUDE_SESSION_ID} --field goal
 
 # Context summary (AI-friendly markdown)
-bun "{SCRIPTS_PATH}/context-get.js" --session {CLAUDE_SESSION_ID} --summary
+bun "{SCRIPTS_PATH}/context-get.js" --session ${CLAUDE_SESSION_ID} --summary
 
 # Or specific context fields
-bun "{SCRIPTS_PATH}/context-get.js" --session {CLAUDE_SESSION_ID} --field explorers
-bun "{SCRIPTS_PATH}/context-get.js" --session {CLAUDE_SESSION_ID} --field scopeExpansion
+bun "{SCRIPTS_PATH}/context-get.js" --session ${CLAUDE_SESSION_ID} --field explorers
+bun "{SCRIPTS_PATH}/context-get.js" --session ${CLAUDE_SESSION_ID} --field scopeExpansion
 ```
 
 Read exploration detail files (Markdown OK):
@@ -110,7 +110,7 @@ In auto mode, read and apply scope expansion from context.json:
 
 ```bash
 # Get scope expansion data (returns JSON or empty if not present)
-SCOPE=$(bun "{SCRIPTS_PATH}/context-get.js" --session {CLAUDE_SESSION_ID} --field scopeExpansion)
+SCOPE=$(bun "{SCRIPTS_PATH}/context-get.js" --session ${CLAUDE_SESSION_ID} --field scopeExpansion)
 ```
 
 **Processing logic:**
@@ -138,7 +138,7 @@ This ensures blocking constraints are respected.
 **IMPORTANT: Design documents go to PROJECT directory (NOT session directory).**
 
 ```bash
-WORKING_DIR=$(bun "{SCRIPTS_PATH}/session-get.js" --session {CLAUDE_SESSION_ID} --field working_dir)
+WORKING_DIR=$(bun "{SCRIPTS_PATH}/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir)
 mkdir -p "$WORKING_DIR/docs/plans"
 ```
 
@@ -173,7 +173,7 @@ If `scopeExpansion.suggestedTasks` exists, incorporate them into the task graph:
 **Task Creation:**
 
 ```bash
-bun "{SCRIPTS_PATH}/task-create.js" --session {CLAUDE_SESSION_ID} \
+bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
   --id "1" \
   --subject "Brief title" \
   --description "What to implement, files to modify" \
@@ -181,7 +181,7 @@ bun "{SCRIPTS_PATH}/task-create.js" --session {CLAUDE_SESSION_ID} \
   --criteria "criterion1|criterion2"
 
 # With dependencies
-bun "{SCRIPTS_PATH}/task-create.js" --session {CLAUDE_SESSION_ID} \
+bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
   --id "2" \
   --subject "Second task" \
   --blocked-by "1" \
@@ -194,13 +194,13 @@ bun "{SCRIPTS_PATH}/task-create.js" --session {CLAUDE_SESSION_ID} \
 **Update session phase:**
 
 ```bash
-bun "{SCRIPTS_PATH}/session-update.js" --session {CLAUDE_SESSION_ID} --phase EXECUTION
+bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
 ```
 
 **Always include verify task:**
 
 ```bash
-bun "{SCRIPTS_PATH}/task-create.js" --session {CLAUDE_SESSION_ID} \
+bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
   --id "verify" \
   --subject "[VERIFY] Final verification" \
   --description "Verify all success criteria met" \
@@ -248,7 +248,7 @@ bun "{SCRIPTS_PATH}/task-create.js" --session {CLAUDE_SESSION_ID} \
 # Planning Complete (Auto Mode)
 
 ## Session Updated
-Session ID: {CLAUDE_SESSION_ID}
+Session ID: ${CLAUDE_SESSION_ID}
 Phase: EXECUTION
 
 ## Design Decisions (Auto)

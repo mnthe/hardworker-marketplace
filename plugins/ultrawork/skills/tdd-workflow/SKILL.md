@@ -22,14 +22,14 @@ Test-Driven Development (TDD) workflow for tasks marked with `approach: "tdd"`.
 
 ```bash
 # Record test creation
-bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id {TASK_ID} \
+bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "TDD-RED: Created test file tests/validateUser.test.ts"
 
 # Run test - MUST FAIL
 npm test -- tests/validateUser.test.ts
 
 # Record failure (expected)
-bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id {TASK_ID} \
+bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "TDD-RED: Test fails as expected (exit code 1)"
 ```
 
@@ -48,14 +48,14 @@ bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id {TASK_ID}
 
 ```bash
 # Record implementation
-bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id {TASK_ID} \
+bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "TDD-GREEN: Implemented src/validateUser.ts"
 
 # Run test - MUST PASS
 npm test -- tests/validateUser.test.ts
 
 # Record success
-bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id {TASK_ID} \
+bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "TDD-GREEN: Test passes (exit code 0)"
 ```
 
@@ -73,7 +73,7 @@ bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id {TASK_ID}
 3. Record any refactoring done
 
 ```bash
-bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id {TASK_ID} \
+bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "TDD-REFACTOR: Renamed variables for clarity, tests still pass"
 ```
 
@@ -125,7 +125,7 @@ Current file: src/validateUser.ts (non-test file)
 After all phases complete:
 
 ```bash
-bun "{SCRIPTS_PATH}/task-update.js" --session {CLAUDE_SESSION_ID} --id {TASK_ID} \
+bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --status resolved \
   --add-evidence "TDD complete: RED→GREEN→REFACTOR cycle finished"
 ```

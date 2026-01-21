@@ -20,7 +20,7 @@ Use this path to call Bun scripts.
 
 ## ⚠️ WARNING: Placeholder vs Bash Variable Syntax
 
-**CRITICAL: `{SCRIPTS_PATH}` and `{CLAUDE_SESSION_ID}` are TEXT PLACEHOLDERS, not bash environment variables!**
+**CRITICAL: `{SCRIPTS_PATH}` and `${CLAUDE_SESSION_ID}` are TEXT PLACEHOLDERS, not bash environment variables!**
 
 These placeholders appear in this documentation to show WHERE to substitute values. You MUST replace them with actual values from your prompt before running commands.
 
@@ -44,7 +44,7 @@ bun "/Users/mnthe/.claude/plugins/cache/hardworker-marketplace/ultrawork/0.26.1/
 ❌ **WRONG - Don't use placeholder syntax in actual commands:**
 ```bash
 # This will NOT work - {SCRIPTS_PATH} is not a bash variable!
-bun "{SCRIPTS_PATH}/session-get.js" --session {CLAUDE_SESSION_ID}
+bun "{SCRIPTS_PATH}/session-get.js" --session ${CLAUDE_SESSION_ID}
 ```
 
 ❌ **WRONG - These are not shell environment variables:**
@@ -73,6 +73,6 @@ echo $CLAUDE_SESSION_ID      # Empty or undefined
 
 | Data | Access Method |
 |------|---------------|
-| session.json | `bun "{SCRIPTS_PATH}/session-get.js" --session ${CLAUDE_SESSION_ID}` |
-| tasks/*.json | `bun "{SCRIPTS_PATH}/task-get.js" --session ${CLAUDE_SESSION_ID} --id 1` |
-| exploration/*.md | `Read("~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}/exploration/overview.md")` |
+| session.json | `bun "{SCRIPTS_PATH}/session-get.js" --session $${CLAUDE_SESSION_ID}` |
+| tasks/*.json | `bun "{SCRIPTS_PATH}/task-get.js" --session $${CLAUDE_SESSION_ID} --id 1` |
+| exploration/*.md | `Read("~/.claude/ultrawork/sessions/$${CLAUDE_SESSION_ID}/exploration/overview.md")` |

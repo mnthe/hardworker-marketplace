@@ -73,13 +73,13 @@ CONTEXT: {summary from overview, optional}
 
 | Path | Location | Purpose |
 |------|----------|---------|
-| `$SESSION_DIR` | `~/.claude/ultrawork/sessions/{CLAUDE_SESSION_ID}/` | Session metadata (exploration, context, tasks) |
+| `$SESSION_DIR` | `~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}/` | Session metadata (exploration, context, tasks) |
 | `$WORKING_DIR` | Project directory (from session.working_dir) | Project deliverables (code, docs) |
 
 **Exploration files MUST go to SESSION_DIR:**
 
 ```bash
-SESSION_DIR=~/.claude/ultrawork/sessions/{CLAUDE_SESSION_ID}
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 # ✅ CORRECT: Write to session directory
 Write(file_path="$SESSION_DIR/exploration/{EXPLORER_ID}.md")
@@ -119,7 +119,7 @@ Examples:
 ### Phase 1: Read Session
 
 ```bash
-bun "{SCRIPTS_PATH}/session-get.js" --session {CLAUDE_SESSION_ID}
+bun "{SCRIPTS_PATH}/session-get.js" --session ${CLAUDE_SESSION_ID}
 ```
 
 ### Phase 2: Explore
@@ -151,7 +151,7 @@ Read(file_path="src/index.ts")
 
 ```bash
 # First, get session directory
-SESSION_DIR=~/.claude/ultrawork/sessions/{CLAUDE_SESSION_ID}
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 ```
 
 **Overview Template:**
@@ -195,7 +195,7 @@ SESSION_DIR=~/.claude/ultrawork/sessions/{CLAUDE_SESSION_ID}
 ### Phase 4: Update Context Summary
 
 ```bash
-bun "{SCRIPTS_PATH}/context-add.js" --session {CLAUDE_SESSION_ID} \
+bun "{SCRIPTS_PATH}/context-add.js" --session ${CLAUDE_SESSION_ID} \
   --explorer-id "{EXPLORER_ID}" \
   --hint "{SEARCH_HINT}" \
   --file "exploration/{EXPLORER_ID}.md" \

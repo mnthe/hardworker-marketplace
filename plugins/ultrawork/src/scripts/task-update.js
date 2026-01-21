@@ -11,6 +11,7 @@ const path = require('path');
 const { getSessionDir, resolveSessionId } = require('../lib/session-utils.js');
 const { acquireLock, releaseLock } = require('../lib/file-lock.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
+const { scanForBlockedPatterns, shouldBlockCompletion } = require('../lib/blocked-patterns.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -82,17 +83,60 @@ async function main() {
       /** @type {Task} */
       const task = JSON.parse(content);
 
-      // Update status if provided
-      if (args.status) {
-        task.status = args.status;
-      }
-
-      // Add evidence if provided
+      // Add evidence BEFORE status check (so new evidence is included in pattern scan)
       if (args.addEvidence) {
         // Match bash behavior: add as string to evidence array
         // Note: This matches the bash implementation even though the type
         // definition suggests evidence should be TaskEvidence objects
         task.evidence.push(args.addEvidence);
+      }
+
+      // Update status if provided
+      if (args.status) {
+        // Check for blocked patterns before allowing status=resolved
+        if (args.status === 'resolved') {
+          // Collect all evidence text for scanning
+          const evidenceTexts = [];
+          for (const evidence of task.evidence) {
+            if (typeof evidence === 'string') {
+              // String evidence (backward compatibility)
+              evidenceTexts.push(evidence);
+            } else if (typeof evidence === 'object' && evidence !== null) {
+              // Structured evidence - scan relevant fields
+              if (evidence.output) evidenceTexts.push(evidence.output);
+              if (evidence.description) evidenceTexts.push(evidence.description);
+              if (evidence.command) evidenceTexts.push(evidence.command);
+            }
+          }
+
+          // Scan all evidence for blocked patterns
+          const allMatches = [];
+          for (const text of evidenceTexts) {
+            const matches = scanForBlockedPatterns(text);
+            allMatches.push(...matches);
+          }
+
+          // Block completion if error-severity patterns found
+          if (shouldBlockCompletion(allMatches)) {
+            const errorMatches = allMatches.filter(m => m.severity === 'error');
+            console.error('Error: Cannot resolve task - blocked patterns detected in evidence:');
+            for (const match of errorMatches) {
+              console.error(`  - "${match.match}": ${match.message}`);
+            }
+            process.exit(1);
+          }
+
+          // Warn about warning-severity patterns but allow completion
+          const warningMatches = allMatches.filter(m => m.severity === 'warning');
+          if (warningMatches.length > 0) {
+            console.error('Warning: Potentially problematic patterns in evidence:');
+            for (const match of warningMatches) {
+              console.error(`  - "${match.match}": ${match.message}`);
+            }
+          }
+        }
+
+        task.status = args.status;
       }
 
       // Update timestamp

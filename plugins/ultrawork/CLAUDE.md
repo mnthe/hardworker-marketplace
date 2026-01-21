@@ -126,8 +126,8 @@ All scripts use Bun runtime with flag-based parameters.
 Read("$SESSION_DIR/context.json")  # Returns full JSON with all structure
 
 # GOOD: Script returns only what's needed
-bun "$SCRIPTS/context-get.js" --session {CLAUDE_SESSION_ID} --summary     # AI-friendly markdown
-bun "$SCRIPTS/context-get.js" --session {CLAUDE_SESSION_ID} --field key_files  # Just the array
+bun "$SCRIPTS/context-get.js" --session ${CLAUDE_SESSION_ID} --summary     # AI-friendly markdown
+bun "$SCRIPTS/context-get.js" --session ${CLAUDE_SESSION_ID} --field key_files  # Just the array
 
 # Markdown files are OK to read directly
 Read("$SESSION_DIR/exploration/overview.md")  # OK
@@ -165,7 +165,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 ### Directory Structure
 
 ```
-~/.claude/ultrawork/sessions/{CLAUDE_SESSION_ID}/
+~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}/
 ├── session.json           # Session state (minimal metadata)
 ├── context.json           # Exploration summary (lightweight index)
 ├── evidence/              # Evidence files (NEW: separated from session.json)
@@ -184,7 +184,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 ### Session State Format
 
-**File**: `~/.claude/ultrawork/sessions/{CLAUDE_SESSION_ID}/session.json`
+**File**: `~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}/session.json`
 
 ```json
 {
@@ -235,7 +235,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 ### Task State Format
 
-**File**: `~/.claude/ultrawork/sessions/{CLAUDE_SESSION_ID}/tasks/{TASK_ID}.json`
+**File**: `~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}/tasks/{TASK_ID}.json`
 
 ```json
 {
@@ -297,7 +297,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 ### Context State Format
 
-**File**: `~/.claude/ultrawork/sessions/{CLAUDE_SESSION_ID}/context.json`
+**File**: `~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}/context.json`
 
 ```json
 {
@@ -730,7 +730,7 @@ bun src/scripts/session-get.js --session abc-123
 bun src/scripts/session-get.js --session abc-123 --field phase
 
 # Session directory (use direct path instead of script)
-SESSION_DIR=~/.claude/ultrawork/sessions/{CLAUDE_SESSION_ID}
+SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 ```
 
 ### Create Task
@@ -769,7 +769,7 @@ bun src/scripts/ultrawork-status.js --session abc-123
 ### Clean Sessions
 ```bash
 # Clean current session (for fresh /ultrawork start)
-bun src/scripts/ultrawork-clean.js --session {CLAUDE_SESSION_ID}
+bun src/scripts/ultrawork-clean.js --session ${CLAUDE_SESSION_ID}
 
 # Batch: Delete sessions older than N days in terminal states
 bun src/scripts/ultrawork-clean.js --older-than 30
