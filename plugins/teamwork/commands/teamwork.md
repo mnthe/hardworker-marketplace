@@ -1,7 +1,7 @@
 ---
 name: teamwork
 description: "Start a teamwork project with multi-session collaboration support"
-argument-hint: "[--project NAME] [--team NAME] [--plans FILE1,FILE2,...] <goal> | --help"
+argument-hint: '"<goal>" [--workers N|role:count,...] [--worktree] [--plans file] [--project NAME] [--team NAME]'
 allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-teamwork.js:*)", "Task", "TaskOutput", "Read", "Edit", "AskUserQuestion", "mcp__plugin_serena_serena__activate_project"]
 ---
 
@@ -52,7 +52,39 @@ Parse the output to get:
 - Goal
 - Plans option (if provided)
 
-## Step 2: Load Plan Documents (if --plans provided)
+## Step 2: Parse Options
+
+Parse the command-line options:
+
+```javascript
+const options = {
+  workers: parseWorkersOption($ARGUMENTS),  // "5", "backend:2,frontend:1", "0", or null (default)
+  worktree: hasWorktreeFlag($ARGUMENTS),    // boolean
+  plans: parsePlansOption($ARGUMENTS)       // file list or null
+}
+```
+
+**Default behavior (no --workers):**
+- Orchestrator determines unique roles from tasks
+- Spawns one worker per unique role
+
+**--workers N:**
+- Spawns N generic workers (no role specialization)
+
+**--workers role:count,...:**
+- Spawns specified count for each role
+- Example: `--workers backend:2,frontend:1` → 2 backend + 1 frontend workers
+
+**--workers 0:**
+- Manual mode (no auto-spawning)
+- Users start workers manually via `/teamwork-worker`
+
+**--worktree:**
+- Enables git worktree isolation
+- Each worker operates in separate worktree branch
+- Prevents file conflicts during parallel execution
+
+## Step 3: Load Plan Documents (if --plans provided)
 
 **If `--plans` option was provided:**
 
@@ -73,7 +105,7 @@ cat {plan_file_2}
 - Acceptance criteria
 - Architecture decisions
 
-## Step 3: Spawn Orchestrator
+## Step 4: Spawn Orchestrator
 
 <CRITICAL>
 **SPAWN THE ORCHESTRATOR AGENT NOW.**
@@ -103,6 +135,8 @@ The orchestrator handles the full project lifecycle:
 
   Options:
   - plans: {comma_separated_plan_files or "none"}
+  - workers: {workers_option or "auto"}
+  - worktree: {true or false}
   - monitor_interval: 10
   - max_iterations: 1000
   ```
@@ -111,7 +145,7 @@ Wait for orchestrator to complete using TaskOutput.
 
 **Note:** The orchestrator runs a monitoring loop and handles both planning and execution phases. If no plans are provided, it will decompose the goal into tasks directly.
 
-## Step 4: Display Results
+## Step 5: Display Results
 
 Read the project.json and task files:
 
@@ -146,6 +180,43 @@ Display summary:
 
 ---
 
+## Options
+
+### --workers
+
+Worker 수와 배치 방식을 지정합니다.
+
+- **(기본)**: task의 unique role 수만큼 자동 spawn
+- **숫자**: generic worker N개
+- **role:count**: 특정 role별 worker 수 지정
+- **0**: 수동 모드 (spawn 안 함)
+
+**예시:**
+```bash
+# 기본: role 기반 자동 spawn
+/teamwork "build API"
+
+# 숫자: generic worker 5개
+/teamwork "build API" --workers 5
+
+# role:count 형식: backend 2개, frontend 1개
+/teamwork "build API" --workers backend:2,frontend:1
+
+# 수동 모드: spawn 안 함 (기존 동작)
+/teamwork "build API" --workers 0
+```
+
+### --worktree
+
+Git worktree 격리를 활성화합니다. 각 worker가 별도 worktree에서 작업하여 파일 충돌을 방지합니다.
+
+**예시:**
+```bash
+/teamwork "build API" --worktree
+```
+
+---
+
 ## Options Reference
 
 | Option | Description |
@@ -153,6 +224,8 @@ Display summary:
 | `--project NAME` | Override project name (default: git repo name) |
 | `--team NAME` | Override sub-team name (default: branch name) |
 | `--plans FILE1,FILE2,...` | Load plan documents for orchestrator to create wave-based execution (optional) |
+| `--workers N\|role:count,...` | Worker spawning mode (default: auto-detect from roles) |
+| `--worktree` | Enable git worktree isolation for parallel execution |
 
 ---
 
