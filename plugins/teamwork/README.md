@@ -116,7 +116,7 @@ claude --plugin-dir /path/to/teamwork
 
 | Command            | Description                                             | Options                                                                   |
 | ------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `/teamwork <goal>` | Start coordination session, create task breakdown       | `--project NAME`, `--team NAME`, `--plans FILE...` (v2)                   |
+| `/teamwork <goal>` | Start coordination session, create task breakdown       | `--project NAME`, `--team NAME`, `--plans FILE...` (v2), `--workers N\|auto\|role:N` (swarm), `--worktree` (swarm) |
 | `/teamwork-status` | View dashboard with progress metrics and active workers | `--project NAME`, `--team NAME`, `--verbose`                              |
 | `/teamwork-worker` | Claim and complete one task (one-shot mode)             | `--loop`, `--role ROLE`, `--strict` (v2), `--project NAME`, `--team NAME` |
 | `/teamwork-verify` | Trigger manual verification (v2)                        | `--wave N`, `--final`, `--project NAME`, `--team NAME`                    |

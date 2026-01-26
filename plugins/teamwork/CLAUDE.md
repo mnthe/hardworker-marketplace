@@ -92,6 +92,13 @@ All scripts use Bun runtime with flag-based parameters. All task/project scripts
 | **wave-status.js** | Query wave progress | `--project <name>` `--team <name>` `--format json\|table` |
 | **loop-state.js** | Manage worker loop state | `--get` `--start --project <name> --team <name> --role <role>` `--clear` |
 | **worker-setup.js** | Setup worker session context | `--project <name>` `--team <name>` `--role <role>` |
+| **swarm-spawn.js** | Spawn workers in tmux panes | `--project <name>` `--team <name>` `--role <role>` or `--roles <role1,role2>` `--count <n>` `--worktree` `--source-dir <path>` |
+| **swarm-status.js** | Query swarm status | `--project <name>` `--team <name>` `--format json\|table` |
+| **swarm-stop.js** | Stop worker or swarm | `--project <name>` `--team <name>` `--worker <id>` or `--all` |
+| **swarm-merge.js** | Merge worktrees on wave completion | `--project <name>` `--team <name>` `--wave <n>` `--source-dir <path>` |
+| **swarm-sync.js** | Sync worktree with main | `--project <name>` `--team <name>` `--worker-id <id>` `--source-dir <path>` |
+| **worktree-create.js** | Create git worktree for worker | `--project <name>` `--team <name>` `--worker-id <id>` `--source-dir <path>` |
+| **worktree-remove.js** | Remove git worktree | `--project <name>` `--team <name>` `--worker-id <id>` `--source-dir <path>` |
 
 ## Hook Inventory
 
@@ -109,6 +116,7 @@ Skills provide reusable capabilities for agents. Each skill documents when to us
 |-------|---------|----------|
 | **worker-workflow** | Core task execution workflow (Phase 1-5) for all worker agents | Injected into role-specific agents via `skills` frontmatter field. Provides find task, claim, implement, evidence, and status update phases. |
 | **teamwork-clean** | Reset project execution state while preserving metadata | Recovering from failed orchestration, starting fresh with same goal, cleaning up after testing |
+| **swarm-workflow** | Swarm orchestration workflow for automatic worker spawning and coordination | Orchestrator uses this for spawn decisions, monitoring loop, merge/sync operations with tmux and git worktrees |
 
 ## Agent Inventory
 
@@ -450,6 +458,254 @@ When no tasks available:
 [23:36:15] No available tasks (role: backend). Waiting 30s...
 [23:36:45] Found task 3: "Implement items.schema.ts"
 ```
+
+## Swarm (Automatic Worker Spawning)
+
+Teamwork supports automatic worker spawning via tmux with optional git worktree isolation.
+
+### Overview
+
+Swarm enables the orchestrator to automatically spawn workers in tmux panes, eliminating the need for manual terminal management. Each worker can optionally work in an isolated git worktree to prevent merge conflicts.
+
+**Key features:**
+- Automatic worker spawning in tmux panes
+- Role-based or generic worker allocation
+- Optional git worktree isolation per worker
+- Wave-based merge strategy
+- Worker health monitoring and auto-restart
+
+### Quick Start
+
+```bash
+# Start project with automatic worker spawning (default: role-based)
+/teamwork "build REST API" --workers auto
+
+# Specify number of generic workers
+/teamwork "build REST API" --workers 5
+
+# Specify workers by role
+/teamwork "build REST API" --workers backend:2,frontend:1,test:1
+
+# Enable worktree isolation
+/teamwork "build REST API" --workers auto --worktree
+
+# Manual mode (traditional)
+/teamwork "build REST API" --workers 0
+```
+
+### Swarm Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--workers auto` | (default) | Spawn workers based on unique task roles |
+| `--workers N` | - | Spawn N generic workers |
+| `--workers role:N,...` | - | Spawn specific workers by role |
+| `--workers 0` | - | Disable automatic spawning (manual mode) |
+| `--worktree` | false | Enable git worktree isolation per worker |
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    /teamwork "goal"                          │
+│                           │                                  │
+│              ┌────────────▼────────────┐                     │
+│              │      Orchestrator       │                     │
+│              │  - Task creation        │                     │
+│              │  - Wave calculation     │                     │
+│              │  - Spawn decision       │                     │
+│              └────────────┬────────────┘                     │
+│                           │                                  │
+│              ┌────────────▼────────────┐                     │
+│              │   swarm-spawn.js        │                     │
+│              │  - tmux session         │                     │
+│              │  - pane splitting       │                     │
+│              │  - worker startup       │                     │
+│              └────────────┬────────────┘                     │
+│                           │                                  │
+│    ┌──────────────────────┼──────────────────────┐          │
+│    ▼                      ▼                      ▼          │
+│ ┌──────┐              ┌──────┐              ┌──────┐        │
+│ │Worker│              │Worker│              │Worker│        │
+│ │ (BE) │              │ (FE) │              │(Test)│        │
+│ └──┬───┘              └──┬───┘              └──┬───┘        │
+│    │                     │                     │             │
+│    ▼                     ▼                     ▼             │
+│ worktree/w1          worktree/w2          worktree/w3       │
+│ (when --worktree enabled)                                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Swarm Commands
+
+**Spawn Workers:**
+```bash
+# Spawn backend worker
+bun "$SCRIPTS_PATH/swarm-spawn.js" \
+  --project my-app \
+  --team master \
+  --role backend \
+  --count 1
+
+# Spawn multiple roles
+bun "$SCRIPTS_PATH/swarm-spawn.js" \
+  --project my-app \
+  --team master \
+  --roles backend,frontend,test \
+  --count 1 \
+  --worktree \
+  --source-dir /path/to/project
+```
+
+**Check Swarm Status:**
+```bash
+bun "$SCRIPTS_PATH/swarm-status.js" \
+  --project my-app \
+  --team master \
+  --format json
+```
+
+**Stop Workers:**
+```bash
+# Stop specific worker
+bun "$SCRIPTS_PATH/swarm-stop.js" \
+  --project my-app \
+  --team master \
+  --worker w1
+
+# Stop all workers
+bun "$SCRIPTS_PATH/swarm-stop.js" \
+  --project my-app \
+  --team master \
+  --all
+```
+
+**Merge Worktrees (Wave Completion):**
+```bash
+bun "$SCRIPTS_PATH/swarm-merge.js" \
+  --project my-app \
+  --team master \
+  --wave 1 \
+  --source-dir /path/to/project
+```
+
+**Sync Worktree with Main:**
+```bash
+bun "$SCRIPTS_PATH/swarm-sync.js" \
+  --project my-app \
+  --team master \
+  --worker-id w1 \
+  --source-dir /path/to/project
+```
+
+### Worktree Management
+
+**Create Worktree:**
+```bash
+bun "$SCRIPTS_PATH/worktree-create.js" \
+  --project my-app \
+  --team master \
+  --worker-id w1 \
+  --source-dir /path/to/project
+```
+
+**Remove Worktree:**
+```bash
+bun "$SCRIPTS_PATH/worktree-remove.js" \
+  --project my-app \
+  --team master \
+  --worker-id w1 \
+  --source-dir /path/to/project
+```
+
+### tmux Layout
+
+Workers are spawned in a single tmux session with split panes:
+
+```
+┌─────────────────────────────────────────────────────┐
+│ teamwork-{project}                                   │
+├─────────────────────┬───────────────────────────────┤
+│ [0] backend-w1      │ [1] frontend-w2               │
+│ Task #3 in progress │ Task #5 in progress           │
+├─────────────────────┼───────────────────────────────┤
+│ [2] test-w3         │ [3] (available)               │
+│ Waiting for task... │                               │
+└─────────────────────┴───────────────────────────────┘
+```
+
+### Worktree Isolation
+
+When `--worktree` is enabled:
+
+1. **Creation**: Each worker gets a dedicated git worktree on branch `worker-{id}`
+2. **Execution**: Workers commit changes to their isolated worktree
+3. **Wave Completion**: Orchestrator merges all worktrees to main sequentially
+4. **Conflict Handling**: Merge conflicts trigger fix tasks
+5. **Cleanup**: Worktrees removed when worker stops
+
+### State Management
+
+Swarm state is stored under the project directory:
+
+```
+~/.claude/teamwork/{project}/{team}/
+├── project.json
+├── tasks/
+├── waves.json
+├── swarm/                  # Swarm state
+│   ├── swarm.json          # Overall swarm status
+│   └── workers/
+│       ├── w1.json         # Worker 1 state
+│       └── w2.json         # Worker 2 state
+└── worktrees/              # Worktree directories
+    ├── w1/                 # git worktree (branch: worker-w1)
+    └── w2/
+```
+
+**swarm.json format:**
+```json
+{
+  "session": "teamwork-my-app",
+  "status": "running",
+  "created_at": "2026-01-26T10:00:00Z",
+  "workers": ["w1", "w2", "w3"],
+  "current_wave": 1,
+  "paused": false,
+  "use_worktree": true,
+  "source_dir": "/Users/me/my-app"
+}
+```
+
+**workers/{id}.json format:**
+```json
+{
+  "id": "w1",
+  "role": "backend",
+  "pane": 1,
+  "worktree": "~/.claude/teamwork/my-app/master/worktrees/w1",
+  "branch": "worker-w1",
+  "status": "working",
+  "current_task": "3",
+  "tasks_completed": ["1"],
+  "last_heartbeat": "2026-01-26T10:05:00Z"
+}
+```
+
+### Error Handling
+
+| Scenario | Detection | Response |
+|----------|-----------|----------|
+| Worker crash | pane_dead=1, no heartbeat | Auto-restart worker |
+| Task stuck | fresh-start-interval exceeded | Release task, restart worker |
+| tmux session lost | session check fails | Recreate entire swarm |
+| Merge conflict | swarm-merge.js error | Create fix task, pause wave |
+
+### Requirements
+
+- **tmux**: Must be installed and in PATH
+- **Git repository**: Required for worktree feature
+- **Same machine**: Orchestrator and workers must run on same host
 
 ## Fresh Start Mechanism (v2)
 
