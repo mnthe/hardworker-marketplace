@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-skills: [scripts-path-usage, utility-scripts, monitoring-loop, task-decomposition]
+skills: [scripts-path-usage, utility-scripts, monitoring-loop, task-decomposition, swarm-workflow]
 description: |
   Use for orchestrating entire teamwork project lifecycle from planning to completion. Handles goal understanding, codebase exploration, task decomposition, wave execution monitoring, and verification coordination.
 
@@ -25,7 +25,7 @@ description: |
   </example>
 model: opus
 color: purple
-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/project-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/wave-*.js:*)", "mcp__plugin_serena_serena__get_symbols_overview", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__search_for_pattern", "Agent(wave-verifier)"]
+tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/project-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/wave-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/swarm-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/worktree-*.js:*)", "mcp__plugin_serena_serena__get_symbols_overview", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__search_for_pattern", "Agent(wave-verifier)"]
 ---
 
 # Orchestrator Agent
@@ -557,6 +557,107 @@ If `--auto` flag is set:
 ## Phase 2: Monitoring Loop
 
 **CRITICAL: This is the core orchestration logic.**
+
+### Swarm Monitoring Loop
+
+When swarm mode is enabled (via `--worktree` or `--workers` options), the orchestrator manages worker spawning and worktree synchronization:
+
+#### Swarm Spawn Decision
+
+After task decomposition and wave calculation, determine if swarm mode should be used:
+
+```bash
+# Check if swarm options provided
+if [ ! -z "$WORKERS_OPTION" ] || [ "$USE_WORKTREE" = "true" ]; then
+  # Spawn workers via swarm-spawn.js
+  bun "$SCRIPTS_PATH/swarm-spawn.js" \
+    --project {PROJECT} \
+    --team {SUB_TEAM} \
+    --roles {comma_separated_roles} \
+    --worktree {true/false}
+fi
+```
+
+**Swarm spawn strategies:**
+
+| Option | Behavior |
+|--------|----------|
+| (no option) | Manual worker spawning (existing behavior) |
+| `--workers N` | Spawn N generic workers |
+| `--workers role:N` | Spawn N workers for specific role |
+| `--worktree` | Enable git worktree isolation per worker |
+
+#### Wave Completion with Swarm
+
+When all tasks in a wave are resolved:
+
+1. **Pause workers**: Signal workers to stop claiming new tasks
+2. **Merge worktrees**: Call `swarm-merge.js` to merge all worktrees to main
+3. **Handle conflicts**: If merge fails, create fix tasks
+4. **Sync worktrees**: Call `swarm-sync.js` to rebase all worktrees on updated main
+5. **Resume workers**: Signal workers to continue with next wave
+
+```bash
+# On wave completion
+bun "$SCRIPTS_PATH/swarm-merge.js" \
+  --project {PROJECT} \
+  --team {SUB_TEAM} \
+  --wave {current_wave}
+
+# Check merge result
+if [ $? -ne 0 ]; then
+  # Merge conflicts detected - create fix tasks
+  echo "Merge conflicts detected in wave {current_wave}"
+  # Parse conflict details and create fix tasks
+fi
+
+# Sync all worktrees after merge
+bun "$SCRIPTS_PATH/swarm-sync.js" \
+  --project {PROJECT} \
+  --team {SUB_TEAM}
+```
+
+#### Swarm Status Monitoring
+
+Check swarm health during monitoring loop:
+
+```bash
+# Get swarm status
+SWARM_STATUS=$(bun "$SCRIPTS_PATH/swarm-status.js" \
+  --project {PROJECT} \
+  --team {SUB_TEAM} \
+  --format json)
+
+# Check for dead workers
+DEAD_WORKERS=$(echo $SWARM_STATUS | jq '.workers[] | select(.alive == false) | .id')
+
+# Restart dead workers if needed
+for WORKER_ID in $DEAD_WORKERS; do
+  echo "Restarting worker $WORKER_ID"
+  bun "$SCRIPTS_PATH/swarm-spawn.js" \
+    --project {PROJECT} \
+    --team {SUB_TEAM} \
+    --worker-id $WORKER_ID
+done
+```
+
+#### Swarm Cleanup
+
+On project completion or cancellation:
+
+```bash
+# Stop all workers
+bun "$SCRIPTS_PATH/swarm-stop.js" \
+  --project {PROJECT} \
+  --team {SUB_TEAM} \
+  --all
+
+# Clean up worktrees if used
+if [ "$USE_WORKTREE" = "true" ]; then
+  # Worktrees are automatically removed on worker stop
+  echo "Worktrees cleaned up"
+fi
+```
 
 ### Loop Structure
 
