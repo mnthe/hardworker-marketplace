@@ -191,14 +191,11 @@ function mergeBranch(dir, branch) {
     return { success: true };
   }
 
-  // Check if merge conflict occurred
-  const output = result.stdout + result.stderr;
-  const isConflict = output.includes('CONFLICT') || output.includes('Automatic merge failed');
+  // Check if merge conflict occurred by looking for unmerged files
+  // This is more reliable than parsing localized git output messages
+  const conflictFiles = getConflictedFiles(dir);
 
-  if (isConflict) {
-    // Get list of conflicted files
-    const conflictFiles = getConflictedFiles(dir);
-
+  if (conflictFiles.length > 0) {
     return {
       success: false,
       conflictFiles,
@@ -206,6 +203,7 @@ function mergeBranch(dir, branch) {
     };
   }
 
+  // Non-conflict error (e.g., branch not found, other git error)
   return {
     success: false,
     error: result.stderr || result.stdout || 'Merge failed'
@@ -218,44 +216,37 @@ function mergeBranch(dir, branch) {
  * @returns {string[]} Array of conflicted file paths
  */
 function getConflictedFiles(dir) {
-  // Use git diff to find files with merge conflicts
-  // This shows files that are in conflicted state
-  const diffResult = spawnSync('git', ['diff', '--name-only', '--diff-filter=U'], {
+  // Use git ls-files --unmerged to find files with merge conflicts
+  // This directly queries the index for unmerged entries, which is more reliable
+  // than parsing git status output during merge conflicts
+  const result = spawnSync('git', ['ls-files', '--unmerged'], {
     cwd: dir,
     encoding: 'utf-8'
   });
 
-  // Also try ls-files for unmerged paths as a fallback
-  const lsFilesResult = spawnSync('git', ['ls-files', '-u'], {
-    cwd: dir,
-    encoding: 'utf-8'
-  });
-
-  let conflictedFiles = [];
-
-  // Get files from diff command
-  if (diffResult.stdout && diffResult.stdout.trim()) {
-    conflictedFiles = diffResult.stdout.trim().split('\n').filter(Boolean);
+  if (result.status !== 0 || !result.stdout) {
+    return [];
   }
 
-  // If diff didn't find anything, try parsing ls-files output
-  if (conflictedFiles.length === 0 && lsFilesResult.stdout && lsFilesResult.stdout.trim()) {
-    // ls-files -u shows lines like "100644 <hash> <stage> <path>"
-    // We want to extract unique file paths
-    const lines = lsFilesResult.stdout.trim().split('\n');
-    const uniqueFiles = new Set();
+  // Output format: <mode> <object> <stage>\t<file>
+  // Example: 100644 abc123 1	file.txt
+  // Stage 1 = common ancestor, 2 = ours, 3 = theirs
+  // Each conflicted file appears multiple times (once per stage)
+  const conflictedFiles = new Set();
+  const lines = result.stdout.trim().split('\n');
 
-    for (const line of lines) {
-      const parts = line.split('\t');
-      if (parts.length >= 2) {
-        uniqueFiles.add(parts[1].trim());
+  for (const line of lines) {
+    if (!line) continue;
+    const tabIndex = line.indexOf('\t');
+    if (tabIndex > -1) {
+      const filePath = line.substring(tabIndex + 1);
+      if (filePath) {
+        conflictedFiles.add(filePath);
       }
     }
-
-    conflictedFiles = Array.from(uniqueFiles);
   }
 
-  return conflictedFiles;
+  return [...conflictedFiles];
 }
 
 /**
