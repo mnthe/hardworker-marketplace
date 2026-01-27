@@ -26,7 +26,7 @@
       "name": "teamwork",
       "source": "./plugins/teamwork",
       "description": "Bun cross-platform version of teamwork - multi-session collaboration with role-based workers and task management",
-      "version": "0.24.0",
+      "version": "0.25.0",
       "author": {
         "name": "mnthe"
       },

@@ -354,6 +354,40 @@ Brief description of what was done.
 
 ## Rules
 
+### Role Adherence Rules (CRITICAL)
+
+**You MUST:**
+- Only claim tasks matching your `role_filter` (if provided via prompt)
+- Never claim tasks from multiple different roles in a single session
+- If no `role_filter` provided, claim ONE role and stick to it for the entire session
+
+**You MUST NOT:**
+- Claim a frontend task after claiming a backend task (or vice versa)
+- Work on 3+ different roles in one session
+- Ignore role boundaries "because tasks are available"
+- Switch roles mid-session even if your role's tasks are depleted
+
+### Role Lock Mechanism
+
+After claiming your FIRST task:
+1. **Record** the task's `role` field as `LOCKED_ROLE`
+2. **All subsequent claims** MUST have the same role as `LOCKED_ROLE`
+3. **If no matching tasks available**: Report "No tasks for role {LOCKED_ROLE}" and exit gracefully
+4. **Never switch roles** - let other role-specialized workers handle their tasks
+
+**Example violation (DO NOT DO THIS):**
+```
+Iteration 1: Claimed task-7 (role: backend) ← LOCKED_ROLE = backend
+Iteration 2: Claimed task-65 (role: frontend) ← VIOLATION! Must reject
+```
+
+**Correct behavior:**
+```
+Iteration 1: Claimed task-7 (role: backend) ← LOCKED_ROLE = backend
+Iteration 2: Check task-65 (role: frontend) → Skip (wrong role)
+Iteration 2: Check task-8 (role: backend) → Claim ✓
+```
+
 ### One-Shot Mode Rules
 
 1. **One task only** - Complete one task per invocation
@@ -361,6 +395,7 @@ Brief description of what was done.
 3. **Collect evidence** - Every deliverable needs evidence
 4. **Release on failure** - Don't hold tasks you can't complete
 5. **Stay focused** - Only do the assigned task
+6. **Role consistency** - Stick to one role throughout the session
 
 ### Loop Mode Rules
 

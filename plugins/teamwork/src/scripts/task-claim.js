@@ -39,6 +39,8 @@ const ARG_SPEC = {
   '--team': { key: 'team', aliases: ['-t'], required: true },
   '--id': { key: 'id', aliases: ['-i', '--task', '--task-id'], required: true },
   '--owner': { key: 'owner', aliases: ['-o'] },
+  '--role': { key: 'role', aliases: ['-r'] },
+  '--strict-role': { key: 'strictRole', flag: true },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
@@ -68,9 +70,18 @@ async function main() {
   const MAX_RETRIES = 3;
   const RETRY_DELAY_MS = 100;
 
+  // Role enforcement options
+  const claimOptions = {};
+  if (args.role) {
+    claimOptions.role = args.role;
+  }
+  if (args.strictRole) {
+    claimOptions.strictRole = true;
+  }
+
   // Attempt to claim with retry logic
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    const result = await claimTaskOptimistic(taskFile, owner);
+    const result = await claimTaskOptimistic(taskFile, owner, claimOptions);
 
     if (result.success) {
       // Success - output claimed task and exit
@@ -91,6 +102,10 @@ async function main() {
 
       case 'not_claimable':
         console.error(`Error: Task ${args.id} is not in a claimable status`);
+        process.exit(1);
+
+      case 'role_mismatch':
+        console.error(`Error: Task ${args.id} role mismatch - task role: ${result.task_role}, worker role: ${result.worker_role}`);
         process.exit(1);
 
       case 'version_conflict':

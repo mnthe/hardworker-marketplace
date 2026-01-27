@@ -558,6 +558,36 @@ If `--auto` flag is set:
 
 **CRITICAL: This is the core orchestration logic.**
 
+### ⚠️ Swarm vs Sub-agent Selection (CRITICAL)
+
+**You MUST choose ONE execution mode and stick to it for the entire project:**
+
+| Mode | When to Use | How to Spawn |
+|------|-------------|--------------|
+| **Swarm** (recommended) | Large projects, role separation needed | `swarm-spawn.js` in tmux panes |
+| **Sub-agent** | Single task, quick execution | `Task(subagent_type="teamwork:worker")` |
+
+**NEVER mix both modes in the same project!**
+
+| ❌ WRONG | ✅ CORRECT |
+|----------|------------|
+| Swarm workers + Task tool spawns | Swarm workers ONLY |
+| Sub-agent spawns + manual tmux workers | Sub-agent spawns ONLY |
+
+**Why mixing fails:**
+- Swarm workers: Coordinated via `swarm-status.js`, role-enforced, wave-synchronized
+- Sub-agents: No role enforcement, no swarm coordination, bypass wave sync
+- Mixing: Sub-agents claim tasks meant for swarm workers, role boundaries violated
+
+**If you used `--workers` or `--worktree` option:**
+- Do NOT spawn workers via `Task(subagent_type="teamwork:worker")`
+- Only monitor swarm workers via `swarm-status.js`
+- Let swarm workers claim tasks through their loop
+
+**If you did NOT use swarm options:**
+- You may use `Task(subagent_type="teamwork:*")` to spawn workers
+- But ensure workers respect role boundaries (use `--role` filter)
+
 ### Swarm Monitoring Loop
 
 When swarm mode is enabled (via `--worktree` or `--workers` options), the orchestrator manages worker spawning and worktree synchronization:

@@ -84,7 +84,7 @@ All scripts use Bun runtime with flag-based parameters. All task/project scripts
 | **task-create.js** | Create new task file | `--project <name>` `--team <name>` `--id <id>` `--title "..."` `--description "..."` `--role <role>` `--complexity simple\|standard\|complex` `--blocked-by "1,2"` |
 | **task-get.js** | Get single task details | `--project <name>` `--team <name>` `--id <id>` |
 | **task-list.js** | List all tasks in project | `--project <name>` `--team <name>` `--available` `--role <role>` `--format json\|table` |
-| **task-claim.js** | Atomically claim a task | `--project <name>` `--team <name>` `--id <id>` `--owner <session_id>` |
+| **task-claim.js** | Atomically claim a task | `--project <name>` `--team <name>` `--id <id>` `--owner <session_id>` `[--role <role>]` `[--strict-role]` |
 | **task-update.js** | Update task status/evidence/metadata | `--project <name>` `--team <name>` `--id <id>` `--status open\|in_progress\|resolved` `--add-evidence "..."` `--title "..."` `--description "..."` `--role <role>` `--release` |
 | **task-delete.js** | Delete a task (PLANNING phase only) | `--project <name>` `--team <name>` `--id <id>` `[--force]` |
 | **wave-calculate.js** | Calculate wave groups from task DAG | `--project <name>` `--team <name>` |
@@ -817,6 +817,41 @@ bun "$SCRIPTS_PATH/task-list.js" ...
 | `coordinator/AGENT.md` | `agents/coordinator/AGENT.md` | DEPRECATED - Use orchestrator instead |
 | `worker/AGENT.md` | `agents/worker/AGENT.md` | General purpose worker agent |
 | Role agents | `agents/{role}/AGENT.md` | Specialized worker agents (frontend, backend, etc.) |
+
+### Role Enforcement (v2.1)
+
+**Purpose**: Prevent workers from claiming tasks outside their designated role.
+
+**Script options**:
+```bash
+# Strict mode: reject claim if role mismatch
+bun task-claim.js --project X --team Y --id 1 --role backend --strict-role
+# Error: Task 1 role mismatch - task role: frontend, worker role: backend
+
+# Warning mode (default): warn but allow claim
+bun task-claim.js --project X --team Y --id 1 --role backend
+# Warning: Role mismatch - task role: frontend, worker role: backend
+```
+
+**Role enforcement behavior**:
+
+| Mode | Behavior | Use Case |
+|------|----------|----------|
+| `--role <role>` only | Warn on mismatch, allow claim | Flexible teams, cross-training |
+| `--role <role> --strict-role` | Reject claim on mismatch | Large projects, strict separation |
+| No `--role` flag | No enforcement | Backward compatibility |
+
+**Agent-level enforcement**:
+
+Worker agents have "Role Adherence Rules" in their prompt:
+1. **Role Lock Mechanism**: After first claim, lock to that role for session
+2. **No cross-role claims**: Cannot claim frontend after backend (or vice versa)
+3. **Graceful exit**: Report "No tasks for role X" instead of switching roles
+
+**Why this matters**:
+- Prevents single worker from monopolizing tasks across all roles
+- Ensures role-specialized agents handle appropriate tasks
+- Enables parallel execution with clear boundaries
 
 ### Concurrency Safety (v2)
 

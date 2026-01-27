@@ -17,8 +17,16 @@ const { withLock } = require('./file-lock.js');
 /**
  * @typedef {Object} ClaimResult
  * @property {boolean} success - Whether the claim was successful
- * @property {string} [reason] - Failure reason: 'already_claimed' | 'version_conflict'
+ * @property {string} [reason] - Failure reason: 'already_claimed' | 'version_conflict' | 'role_mismatch'
  * @property {Task} [task] - Updated task (on success)
+ * @property {string} [task_role] - Task's role (on role_mismatch)
+ * @property {string} [worker_role] - Worker's role (on role_mismatch)
+ */
+
+/**
+ * @typedef {Object} ClaimOptions
+ * @property {string} [role] - Worker's role (if provided, will be checked against task.role)
+ * @property {boolean} [strictRole] - If true, role mismatch is an error. If false, just a warning.
  */
 
 /**
@@ -35,6 +43,7 @@ const { withLock } = require('./file-lock.js');
  *
  * @param {string} taskPath - Absolute path to the task file
  * @param {string} claimerId - Unique identifier for the claimer (session ID)
+ * @param {ClaimOptions} [options] - Claim options including role enforcement
  * @returns {Promise<ClaimResult>} Result object indicating success or failure
  *
  * @example
@@ -44,8 +53,15 @@ const { withLock } = require('./file-lock.js');
  * } else {
  *   console.log('Failed to claim:', result.reason);
  * }
+ *
+ * @example
+ * // With role enforcement
+ * const result = await claimTaskOptimistic('/path/to/task.json', 'session-abc', { role: 'backend', strictRole: true });
+ * if (result.reason === 'role_mismatch') {
+ *   console.log(`Role mismatch: task is ${result.task_role}, worker is ${result.worker_role}`);
+ * }
  */
-async function claimTaskOptimistic(taskPath, claimerId) {
+async function claimTaskOptimistic(taskPath, claimerId, options = {}) {
   // Check file exists before acquiring lock
   if (!fs.existsSync(taskPath)) {
     return { success: false, reason: 'task_not_found' };
@@ -70,6 +86,25 @@ async function claimTaskOptimistic(taskPath, claimerId) {
     // Check if task is not in open status (blocked, resolved, etc.)
     if (task.status !== 'open' && task.status !== 'in_progress') {
       return { success: false, reason: 'not_claimable' };
+    }
+
+    // Role enforcement check (if worker specifies a role)
+    if (options.role && task.role) {
+      if (options.role !== task.role) {
+        // Role mismatch
+        if (options.strictRole) {
+          // Strict mode: reject claim
+          return {
+            success: false,
+            reason: 'role_mismatch',
+            task_role: task.role,
+            worker_role: options.role
+          };
+        } else {
+          // Non-strict mode: warn but allow (log to stderr)
+          console.error(`Warning: Role mismatch - task role: ${task.role}, worker role: ${options.role}`);
+        }
+      }
     }
 
     // Prepare update (version still incremented for tracking)
