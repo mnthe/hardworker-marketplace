@@ -1,11 +1,13 @@
 ---
 name: monitoring-loop
-description: Wave-based monitoring algorithm for teamwork orchestration. Handles wave completion detection, verification triggering, conflict detection, and failure recovery.
+description: Wave-based monitoring algorithm for teamwork orchestration. Uses mailbox system for instant idle notifications. Handles wave completion detection, verification triggering, conflict detection, and failure recovery.
 ---
 
 # Monitoring Loop
 
 This skill provides the complete wave monitoring algorithm for teamwork orchestrators. Use this to continuously monitor wave execution, trigger verification, and handle failures.
+
+**Key Feature**: Uses mailbox-based idle notifications for instant response to task completion, replacing time-based polling.
 
 ## When to Use This Skill
 
@@ -26,7 +28,7 @@ SUB_TEAM: {sub-team name}
 SCRIPTS_PATH: {path to scripts directory}
 
 Options:
-- monitor_interval: {seconds, default 10}
+- mailbox_timeout: {seconds, default 30}  # Mailbox poll timeout
 - max_iterations: {number, default 1000}
 ```
 
@@ -34,44 +36,57 @@ Options:
 
 ## Loop Structure
 
-The monitoring loop continuously checks wave status, triggers verification, and handles failures.
+The monitoring loop uses **mailbox polling** to react immediately to task completions instead of time-based status polling.
 
 ### Pseudocode
 
 ```javascript
-// Monitoring loop structure
-const MONITOR_INTERVAL = options.monitor_interval || 10; // seconds
+// Mailbox-based monitoring loop
+const MAILBOX_TIMEOUT = options.mailbox_timeout || 30; // seconds
 const MAX_ITERATIONS = options.max_iterations || 1000;
 let iteration = 0;
 
 while (!isProjectComplete() && iteration < MAX_ITERATIONS) {
   iteration++;
 
-  // 1. Get current wave status
+  // 1. Poll mailbox for idle notifications (blocking with timeout)
+  const messages = await pollMailbox({
+    inbox: 'orchestrator',
+    timeout: MAILBOX_TIMEOUT * 1000,  // ms
+    type: 'idle_notification'  // optional: filter by type
+  });
+
+  // 2. Process received notifications
+  for (const msg of messages) {
+    if (msg.type === 'idle_notification') {
+      const { worker_id, completed_task_id, completed_status } = msg.payload;
+      console.log(`Worker ${worker_id} completed task ${completed_task_id}`);
+    }
+    // Mark message as read
+    markMessageAsRead(msg.id);
+  }
+
+  // 3. Check wave status after processing notifications
   const waveState = getCurrentWaveStatus();
 
-  // 2. Check if wave is complete
+  // 4. Check if wave is complete
   if (isWaveComplete(waveState)) {
-    // 3. Trigger wave verification
+    // Trigger wave verification
     const verificationResult = verifyWave(waveState.current_wave);
 
-    // 4. Handle verification result
+    // Handle verification result
     if (verificationResult.verdict === 'PASS') {
-      // Mark wave as verified
       updateWaveStatus(waveState.current_wave, 'verified');
 
-      // Move to next wave
       if (hasNextWave()) {
         moveToNextWave();
         updateWaveStatus(getCurrentWave(), 'in_progress');
       } else {
-        // Last wave completed - do final verification
         performFinalVerification();
         markProjectComplete();
         break;
       }
     } else {
-      // Verification FAILED
       handleVerificationFailure(verificationResult);
     }
   }
@@ -82,16 +97,61 @@ while (!isProjectComplete() && iteration < MAX_ITERATIONS) {
     signalConflicts(conflicts);
   }
 
-  // 6. Sleep before next check
-  sleep(MONITOR_INTERVAL);
+  // Note: No explicit sleep needed - mailbox-poll.js handles timeout
 }
 ```
 
 ---
 
-## Step 1: Check Wave Status
+## Step 1: Poll Mailbox for Idle Notifications
 
-Query the current wave status to determine completion.
+**Primary method**: Poll the orchestrator's mailbox for idle notifications sent by workers.
+
+```bash
+# Poll mailbox for idle notifications (30 second timeout)
+bun "$SCRIPTS_PATH/mailbox-poll.js" \
+  --project {PROJECT} --team {SUB_TEAM} \
+  --inbox orchestrator \
+  --timeout 30
+```
+
+### Expected Notification Format
+
+```json
+{
+  "messages": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "from": "w1",
+      "to": "orchestrator",
+      "type": "idle_notification",
+      "payload": {
+        "worker_id": "w1",
+        "completed_task_id": "3",
+        "completed_status": "resolved"
+      },
+      "timestamp": "2026-01-27T10:30:00Z",
+      "read": false
+    }
+  ]
+}
+```
+
+### How Workers Send Notifications
+
+Workers automatically send idle notifications when completing tasks via `task-update.js --status resolved --worker-id {id}`:
+
+```bash
+# Worker completes task (sends idle notification automatically)
+bun "$SCRIPTS_PATH/task-update.js" \
+  --project {PROJECT} --team {SUB_TEAM} \
+  --id "3" --status resolved \
+  --worker-id "w1"  # Triggers idle_notification to orchestrator
+```
+
+### Check Wave Status After Notification
+
+After receiving notifications, verify wave completion:
 
 ```bash
 # Get current wave status
@@ -392,20 +452,44 @@ Action required:
 
 ---
 
-## Step 5: Monitor Sleep Interval
+## Step 5: Mailbox Polling (Replaces Sleep)
 
-Between monitoring iterations, sleep to avoid excessive resource usage.
+**Mailbox-based monitoring eliminates explicit sleep.** The `mailbox-poll.js` script handles waiting:
 
 ```bash
-# Sleep before next check
-sleep $MONITOR_INTERVAL
+# Poll mailbox with timeout (returns immediately if messages available)
+bun "$SCRIPTS_PATH/mailbox-poll.js" \
+  --project {PROJECT} --team {SUB_TEAM} \
+  --inbox orchestrator \
+  --timeout 30
 ```
 
-### Monitoring Output During Sleep
+### Behavior Comparison
+
+| Aspect | Old (sleep-based) | New (mailbox-based) |
+|--------|-------------------|---------------------|
+| Wait mechanism | `sleep 10` | `mailbox-poll.js --timeout 30` |
+| Response latency | Up to 10 seconds | Instant (poll interval: 500ms) |
+| Resource usage | Fixed interval | Event-driven |
+| Task completion signal | None (polling only) | `idle_notification` message |
+
+### Monitoring Output During Poll
 
 ```markdown
-[Iteration {iteration}] Wave {current_wave}: {in_progress_count} tasks in progress, {resolved_count} resolved
-Checking again in {MONITOR_INTERVAL} seconds...
+[Iteration {iteration}] Wave {current_wave}: Waiting for notifications...
+[Iteration {iteration}] Received idle_notification from w1 (completed task 3)
+[Iteration {iteration}] Wave {current_wave}: {resolved_count}/{total_count} tasks resolved
+```
+
+### Mark Messages as Read
+
+After processing notifications, mark them as read:
+
+```bash
+bun "$SCRIPTS_PATH/mailbox-read.js" \
+  --project {PROJECT} --team {SUB_TEAM} \
+  --inbox orchestrator \
+  --mark-read
 ```
 
 ---
@@ -444,6 +528,12 @@ If loop reaches max_iterations:
 
 ## Best Practices
 
+### Mailbox-Based Monitoring
+
+- Use `mailbox-poll.js` for efficient waiting instead of fixed-interval sleep
+- Workers automatically send `idle_notification` when completing tasks (via `task-update.js --worker-id`)
+- Mark messages as read after processing to avoid reprocessing
+
 ### Continuous Monitoring
 
 - Run monitoring loop continuously until project complete
@@ -470,10 +560,40 @@ If loop reaches max_iterations:
 
 ---
 
+## Mailbox Scripts Reference
+
+| Script | Purpose | Key Parameters |
+|--------|---------|----------------|
+| `mailbox-send.js` | Send message to inbox | `--from`, `--to`, `--type`, `--payload` |
+| `mailbox-read.js` | Read messages from inbox | `--inbox`, `--unread-only`, `--type`, `--mark-read` |
+| `mailbox-poll.js` | Wait for new messages | `--inbox`, `--timeout` |
+
+### Idle Notification Message Schema
+
+```json
+{
+  "type": "idle_notification",
+  "payload": {
+    "worker_id": "w1",
+    "completed_task_id": "3",
+    "completed_status": "resolved"
+  }
+}
+```
+
+Workers send this automatically when calling:
+```bash
+bun "$SCRIPTS_PATH/task-update.js" --status resolved --worker-id {worker_id}
+```
+
+---
+
 ## Notes
 
+- **Mailbox-based monitoring** replaces time-based polling for instant response
 - Monitoring loop is the core orchestration logic
 - Always verify every wave before proceeding
 - Handle failures gracefully with fix tasks
 - Never skip verification steps
 - Continuous monitoring ensures project progress
+- Workers send idle notifications automatically via task-update.js

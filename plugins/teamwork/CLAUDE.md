@@ -86,7 +86,7 @@ All scripts use Bun runtime with flag-based parameters. All task/project scripts
 | **task-get.js** | Get single task details | `--project <name>` `--team <name>` `--id <id>` |
 | **task-list.js** | List all tasks in project | `--project <name>` `--team <name>` `--available` `--role <role>` `--format json\|table` |
 | **task-claim.js** | Atomically claim a task | `--project <name>` `--team <name>` `--id <id>` `--owner <session_id>` `[--role <role>]` `[--strict-role]` |
-| **task-update.js** | Update task status/evidence/metadata | `--project <name>` `--team <name>` `--id <id>` `--status open\|in_progress\|resolved` `--add-evidence "..."` `--title "..."` `--description "..."` `--role <role>` `--release` |
+| **task-update.js** | Update task status/evidence/metadata | `--project <name>` `--team <name>` `--id <id>` `--status open\|in_progress\|resolved` `--add-evidence "..."` `--title "..."` `--description "..."` `--role <role>` `--release` `--worker-id <id>` (sends idle notification on resolve) |
 | **task-delete.js** | Delete a task (PLANNING phase only) | `--project <name>` `--team <name>` `--id <id>` `[--force]` |
 | **wave-calculate.js** | Calculate wave groups from task DAG | `--project <name>` `--team <name>` |
 | **wave-update.js** | Update wave status | `--project <name>` `--team <name>` `--wave <id>` `--status planning\|in_progress\|completed\|verified\|failed` |
@@ -100,6 +100,9 @@ All scripts use Bun runtime with flag-based parameters. All task/project scripts
 | **swarm-sync.js** | Sync worktree with main | `--project <name>` `--team <name>` `--worker-id <id>` `--source-dir <path>` |
 | **worktree-create.js** | Create git worktree for worker | `--project <name>` `--team <name>` `--worker-id <id>` `--source-dir <path>` |
 | **worktree-remove.js** | Remove git worktree | `--project <name>` `--team <name>` `--worker-id <id>` `--source-dir <path>` |
+| **mailbox-send.js** | Send message to inbox | `--project <name>` `--team <name>` `--from <sender>` `--to <recipient>` `--type text\|idle_notification\|shutdown_request\|shutdown_response` `--payload "..."` |
+| **mailbox-read.js** | Read messages from inbox | `--project <name>` `--team <name>` `--inbox <name>` `[--unread-only]` `[--type <type>]` `[--mark-read]` |
+| **mailbox-poll.js** | Wait for new messages with timeout | `--project <name>` `--team <name>` `--inbox <name>` `[--timeout <seconds>]` |
 
 ## Hook Inventory
 
@@ -160,6 +163,10 @@ Model is determined at worker spawn time by reading `task.complexity` field.
 │       │   ├── 1.json
 │       │   ├── 2.json
 │       │   └── 3.json
+│       ├── inboxes/           # Mailbox system (v2.3)
+│       │   ├── orchestrator.json  # Orchestrator inbox
+│       │   ├── w1.json            # Worker 1 inbox
+│       │   └── w2.json            # Worker 2 inbox
 │       └── verification/      # Verification results (v2)
 │           ├── wave-1.json
 │           ├── wave-2.json
@@ -322,6 +329,43 @@ Model is determined at worker spawn time by reading `task.complexity` field.
 ```
 
 **Verification status values**: `passed` | `failed`
+
+### Mailbox State Format (v2.3)
+
+**File**: `~/.claude/teamwork/{project}/{team}/inboxes/{name}.json`
+
+```json
+{
+  "messages": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "from": "w1",
+      "to": "orchestrator",
+      "type": "idle_notification",
+      "payload": {
+        "worker_id": "w1",
+        "completed_task_id": "3",
+        "completed_status": "resolved"
+      },
+      "timestamp": "2026-01-27T10:30:00Z",
+      "read": false
+    }
+  ]
+}
+```
+
+**Message types**: `text` | `idle_notification` | `shutdown_request` | `shutdown_response`
+
+**Payload schemas by type**:
+
+| Type | Payload Fields |
+|------|----------------|
+| `text` | `{ message: string }` |
+| `idle_notification` | `{ worker_id, completed_task_id?, completed_status?, failure_reason? }` |
+| `shutdown_request` | `{ request_id, reason? }` |
+| `shutdown_response` | `{ request_id, approved, decline_reason? }` |
+
+**Usage**: Workers automatically send `idle_notification` when completing tasks via `task-update.js --status resolved --worker-id <id>`.
 
 ## Architecture (v2)
 
