@@ -160,6 +160,35 @@ function getTmuxPaneStates(sessionName) {
 // ============================================================================
 
 /**
+ * Scan workers directory for all worker state files
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @returns {string[]} Array of worker IDs found in directory
+ */
+function scanWorkersDirectory(project, team) {
+  const workersDir = getWorkersDir(project, team);
+
+  if (!fs.existsSync(workersDir)) {
+    return [];
+  }
+
+  try {
+    const files = fs.readdirSync(workersDir);
+    return files
+      .filter(f => f.endsWith('.json'))
+      .map(f => f.replace('.json', ''))
+      .sort((a, b) => {
+        // Sort w1, w2, w3... numerically
+        const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+        const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+        return numA - numB;
+      });
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Collect swarm status
  * @param {string} project - Project name
  * @param {string} team - Team name
@@ -191,9 +220,13 @@ function collectSwarmStatus(project, team) {
   // Get pane states if session exists
   const paneStates = sessionExists ? getTmuxPaneStates(sessionName) : {};
 
+  // Scan workers directory for all workers (more reliable than swarm.json)
+  // This handles cases where swarm.json was overwritten by multiple spawn calls
+  const workerIds = scanWorkersDirectory(project, team);
+
   // Read worker state files
   const workers = [];
-  for (const workerId of swarmData.workers || []) {
+  for (const workerId of workerIds) {
     const workerData = readWorkerFile(project, team, workerId);
 
     if (!workerData) {

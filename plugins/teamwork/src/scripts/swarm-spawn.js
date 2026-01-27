@@ -168,26 +168,45 @@ function createSwarmDir(projectDir) {
 }
 
 /**
- * Write swarm.json state file
+ * Write swarm.json state file (merges with existing workers)
  * @param {string} swarmDir
  * @param {string} sessionName
- * @param {Array<Object>} workers
+ * @param {Array<Object>} newWorkers - New workers to add
  * @param {boolean} useWorktree
  * @param {string} sourceDir
  */
-function writeSwarmState(swarmDir, sessionName, workers, useWorktree, sourceDir) {
+function writeSwarmState(swarmDir, sessionName, newWorkers, useWorktree, sourceDir) {
+  const swarmFile = path.join(swarmDir, 'swarm.json');
+
+  // Read existing swarm.json if it exists
+  let existingWorkers = [];
+  if (fs.existsSync(swarmFile)) {
+    try {
+      const existing = JSON.parse(fs.readFileSync(swarmFile, 'utf-8'));
+      existingWorkers = existing.workers || [];
+    } catch {
+      // Ignore parse errors, start fresh
+    }
+  }
+
+  // Merge workers: existing + new (avoiding duplicates)
+  const newWorkerIds = newWorkers.map(w => w.id);
+  const mergedWorkers = [
+    ...existingWorkers.filter(id => !newWorkerIds.includes(id)),
+    ...newWorkerIds
+  ];
+
   const swarmData = {
     session: sessionName,
     status: 'running',
     created_at: new Date().toISOString(),
-    workers: workers.map(w => w.id),
+    workers: mergedWorkers,
     current_wave: null,
     paused: false,
     use_worktree: useWorktree,
     source_dir: sourceDir
   };
 
-  const swarmFile = path.join(swarmDir, 'swarm.json');
   fs.writeFileSync(swarmFile, JSON.stringify(swarmData, null, 2), 'utf-8');
 }
 
@@ -324,13 +343,10 @@ function main() {
       sendKeys(sessionName, paneName, `cd ${worktreePath}`);
     }
 
-    // Start Claude Code
-    sendKeys(sessionName, paneName, 'claude');
-
-    // Wait a bit for Claude to start (in real usage, this would be more sophisticated)
-    // For now, just send the command
+    // Start Claude Code with teamwork-worker command as initial prompt
+    // Pass the command directly to avoid timing issues between Claude startup and command input
     const workerCommand = `/teamwork-worker --project ${args.project} --team ${args.team} --role ${worker.role} --loop`;
-    sendKeys(sessionName, paneName, workerCommand);
+    sendKeys(sessionName, paneName, `claude "${workerCommand}"`);
 
     // Set pane title
     setPaneTitle(sessionName, paneName, `${worker.role}-${workerId}`);
