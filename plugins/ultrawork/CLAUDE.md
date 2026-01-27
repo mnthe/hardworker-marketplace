@@ -820,3 +820,26 @@ bun src/scripts/ultrawork-clean.js --completed
 # Batch: Delete ALL sessions (including active ones)
 bun src/scripts/ultrawork-clean.js --all
 ```
+
+## Known Limitations
+
+### Post-Compaction Delegation Compliance
+
+**Issue**: After context compaction (when the conversation gets too long), the main agent may forget to delegate tasks to sub-agents and instead execute them directly.
+
+**Why it happens**:
+1. Claude Code hooks cannot distinguish between the "orchestrator" (main agent) and "worker" (sub-agent) contexts
+2. Both share the same `session_id` and trigger the same hooks
+3. Delegation rules are instruction-based, not enforcement-based
+4. After compaction, many instructions compete for attention
+
+**Mitigation**:
+1. The `compact-recovery-hook.js` injects emphatic delegation reminders
+2. The recovery message explicitly warns about this failure mode
+3. The instructions include a "STOP" directive when about to Edit/Write directly
+
+**If you notice the agent doing work directly**:
+- Remind it: "You're the orchestrator. Use Task(subagent_type='ultrawork:worker', ...) to spawn workers."
+- The agent should recognize the pattern and correct itself
+
+**Technical limitation**: There's no way to implement hard enforcement without Claude Code providing an `agent_context` field in hook inputs that distinguishes orchestrator from worker contexts.

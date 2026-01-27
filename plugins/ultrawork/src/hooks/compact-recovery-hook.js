@@ -111,7 +111,22 @@ function buildDelegationRules() {
 | Execution   | Task(subagent_type="ultrawork:worker", ...)    |
 | Verification| Task(subagent_type="ultrawork:verifier", ...)  |
 
-⚠️ NEVER execute tasks directly - always delegate to sub-agents`;
+╔═══════════════════════════════════════════════════════════╗
+║ ⛔ CRITICAL: YOU ARE THE ORCHESTRATOR, NOT A WORKER       ║
+╠═══════════════════════════════════════════════════════════╣
+║ DO NOT use Edit/Write tools directly!                     ║
+║ DO NOT implement tasks yourself!                          ║
+║ You MUST spawn workers via Task tool for ALL code changes.║
+╚═══════════════════════════════════════════════════════════╝
+
+KNOWN FAILURE MODE (this happens after compaction):
+- You may feel tempted to "just do it quickly" instead of delegating
+- This is WRONG. Your role is COORDINATION, not IMPLEMENTATION.
+- Even if you "know how" to do the task, spawn a worker anyway.
+
+If you find yourself about to Write/Edit code directly:
+→ STOP
+→ Use Task(subagent_type="ultrawork:worker", ...) instead`;
 }
 
 /**
