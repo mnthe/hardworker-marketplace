@@ -374,23 +374,32 @@ while (!isComplete()) {
 
 ### Skill Inventory
 
-**Total skills across all plugins: 14**
+**Total skills across all plugins: 23**
 
 | Plugin | Skill | Purpose |
 |--------|-------|---------|
-| **ultrawork** (7) | `planning` | Task decomposition and design workflow |
+| **ultrawork** (15) | `planning` | Task decomposition and design workflow |
 | | `overview-exploration` | Codebase discovery patterns |
 | | `scripts-path-usage` | Quick reference for SCRIPTS_PATH usage |
 | | `data-access-patterns` | JSON vs Markdown access rules |
 | | `tdd-workflow` | Test-driven development cycle |
 | | `utility-scripts` | Comprehensive script usage guide |
 | | `ultrawork` | Core ultrawork concepts and workflow |
-| **teamwork** (6) | `scripts-path-usage` | Quick reference for SCRIPTS_PATH usage |
+| | `code-quality-review` | Code quality verification checklist |
+| | `security-patterns` | Security best practices and patterns |
+| | `security-review` | Security vulnerability detection |
+| | `backend-patterns` | API design and backend architecture |
+| | `architecture-review` | Architecture design review |
+| | `frontend-patterns` | React and frontend best practices |
+| | `consistency-review` | Code consistency and pattern adherence |
+| | `testing-patterns` | Testing patterns for unit/integration/E2E |
+| **teamwork** (7) | `scripts-path-usage` | Quick reference for SCRIPTS_PATH usage |
 | | `monitoring-loop` | Wave-based monitoring algorithm |
 | | `task-decomposition` | Breaking goals into tasks |
 | | `utility-scripts` | Comprehensive script usage guide |
 | | `worker-workflow` | Task execution workflow (Phase 1-5) |
 | | `teamwork-clean` | Project reset and recovery |
+| | `swarm-workflow` | Swarm orchestration with tmux and worktrees |
 | **knowledge-extraction** (1) | `insight-awareness` | Knowledge extraction principles |
 
 ### Cross-Plugin Skill Management

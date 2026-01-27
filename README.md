@@ -2,6 +2,92 @@
 
 Claude Code plugin marketplace focused on "hardworker" productivity patterns: verification-first development, multi-session collaboration, and evidence-based completion.
 
+## TL;DR
+
+- **ultrawork** - Strict verification-first development. Use for solo features with evidence requirements.
+- **teamwork** - Multi-session collaboration. Use for team projects with parallel workers.
+- **knowledge-extraction** - Capture and extract insights. Use for learning and documentation.
+
+**Quick Install:**
+```bash
+claude plugin marketplace add mnthe/hardworker-marketplace
+claude plugin install ultrawork@hardworker-marketplace
+```
+
+[Detailed Comparison →](#plugin-comparison) | [Architecture →](#architecture-overview)
+
+---
+
+## Prerequisites
+
+- **Claude Code CLI** (latest version with plugin support) - https://claude.ai/download
+- **Bun 1.3+** (runtime for all plugins) - https://bun.sh/
+- **Git** (version control)
+- **Platform**: Windows, MacOS, or Linux
+
+## Quick Start
+
+### Installation
+
+```bash
+# Add marketplace
+claude plugin marketplace add mnthe/hardworker-marketplace
+
+# Install verification-first development
+claude plugin install ultrawork@hardworker-marketplace
+
+# Install multi-session collaboration
+claude plugin install teamwork@hardworker-marketplace
+
+# Install knowledge extraction
+claude plugin install knowledge-extraction@hardworker-marketplace
+```
+
+### Example: ultrawork Session
+
+```bash
+# Start verification-first development session
+/ultrawork "implement user authentication with JWT"
+
+# System creates plan with tasks and success criteria
+# Worker agents execute tasks in parallel
+# Verifier checks all criteria with concrete evidence
+
+# Check status
+/ultrawork-status
+```
+
+### Example: teamwork Session
+
+```bash
+# Terminal 1: Start coordination
+/teamwork "build REST API with tests and docs"
+
+# Terminal 2: Backend worker (continuous mode)
+/teamwork-worker --role backend --loop
+
+# Terminal 3: Test worker
+/teamwork-worker --role test --loop
+
+# Check status
+/teamwork-status
+```
+
+## Which Plugin Should I Use?
+
+| Scenario | Recommendation |
+|----------|----------------|
+| Solo developer, strict verification | **ultrawork** |
+| Team collaboration, parallel work | **teamwork** |
+| Capturing code patterns and insights | **knowledge-extraction** |
+| CI/CD and automation | **ultrawork --auto** |
+| Multiple terminal sessions | **teamwork** |
+| TDD workflow enforcement | **ultrawork** |
+
+See [Detailed Scenarios](#decision-guide) below for more guidance.
+
+---
+
 ## Plugins
 
 ### ultrawork - Verification-First Development
@@ -34,20 +120,12 @@ Extract and manage knowledge from codebases for AI agent context.
 |---------|-----------|----------|---------------------|
 | **Primary Use Case** | Solo developer, strict verification | Team collaboration, parallel work | Pattern capture, documentation |
 | **Session Model** | Single session, isolated worktree | Multi-terminal, shared project | Session-based insights |
-| **Verification** | Mandatory, multi-tier (task + final) | Optional, wave-based (v2) | Not applicable |
+| **Verification** | Mandatory, multi-tier (task + final) | Optional, wave-based | Not applicable |
 | **Evidence Collection** | Automatic via hooks | Structured via workers | Insight extraction |
 | **Concurrency** | Parallel workers, single session | Multiple sessions, file locks | Single session |
-| **TDD Support** | Built-in enforcement | Manual implementation | Not applicable |
 | **Role Specialization** | No | Yes (8 roles) | No |
-| **Planning Approach** | Mandatory exploration + planning | Goal-based or plan-based | Not applicable |
-| **Retry Mechanism** | Ralph loop (execute→verify) | Fresh start mechanism | Not applicable |
-| **State Storage** | `~/.claude/ultrawork/sessions/` | `~/.claude/teamwork/{project}/` | `~/.claude/knowledge-extraction/` |
-| **Agent Count** | 6 (explorer, planner, worker, verifier, reviewer, scope-analyzer) | 11 (orchestrator, 8 role workers, 2 verifiers) | 1 (insight-extractor) |
-| **Model Selection** | Dynamic (task complexity) | Dynamic (task complexity) | Inherit |
+| **Auto Mode** | Yes (`--auto` flag) | No (interactive only) | No (hook-based) |
 | **Best For** | Feature implementation, bug fixes | Large features, team projects | Learning, documentation |
-| **Auto Mode** | Yes (--auto flag) | No (interactive only) | No (hook-based) |
-| **Multi-Terminal** | No | Yes | No |
-| **Git Integration** | Optional worktree support | Branch-based team names | No |
 
 ## Architecture Overview
 
@@ -93,9 +171,7 @@ flowchart TD
 2. **teamwork**: Goal → Orchestrator → Tasks ← Workers (multi-terminal) → Verification → Complete
 3. **knowledge-extraction**: Session → Hooks → Storage → Extract → Components
 
-## Which Plugin Should I Use?
-
-### Decision Guide
+## Decision Guide
 
 #### Scenario 1: Solo Developer, Single Feature Implementation
 
@@ -190,17 +266,21 @@ Use ultrawork auto mode when running in CI/CD pipelines with no user interaction
 
 Plugins provide reusable skills that can be referenced by agents and commands. Skills are markdown files containing documented patterns, workflows, and best practices.
 
-### ultrawork Skills (7 skills)
+### ultrawork Skills (15 skills)
 
 Core workflow skills: **planning** (task decomposition), **overview-exploration** (project discovery), **ultrawork** (session lifecycle), **tdd-workflow** (test-first enforcement).
 
 Utility skills: **scripts-path-usage** (script access), **data-access-patterns** (state reading), **utility-scripts** (common patterns).
 
+Review skills: **code-quality-review**, **architecture-review**, **security-review**, **consistency-review**.
+
+Pattern skills: **backend-patterns**, **frontend-patterns**, **security-patterns**, **testing-patterns**.
+
 **Key Pattern:** All agents use `scripts-path-usage` for correct script invocation.
 
-### teamwork Skills (6 skills)
+### teamwork Skills (7 skills)
 
-Core workflow skills: **worker-workflow** (shared 5-phase task execution), **monitoring-loop** (orchestrator patterns), **task-decomposition** (parallel planning), **teamwork-clean** (project reset).
+Core workflow skills: **worker-workflow** (shared 5-phase task execution), **monitoring-loop** (orchestrator patterns), **task-decomposition** (parallel planning), **teamwork-clean** (project reset), **swarm-workflow** (automatic worker spawning).
 
 Utility skills: **scripts-path-usage**, **utility-scripts**.
 
@@ -222,71 +302,6 @@ skills: [scripts-path-usage, data-access-patterns, worker-workflow]
 ```
 
 Skills are also available as standalone commands in Claude Code CLI (when skill has frontmatter with `command: true`).
-
-## Prerequisites
-
-- **Claude Code CLI** (latest version with plugin support) - https://claude.ai/download
-- **Bun 1.3+** (runtime for all plugins) - https://bun.sh/
-- **Git** (version control)
-- **Platform**: Windows, MacOS, or Linux
-
-## Quick Start
-
-### Installation
-
-```bash
-# Add marketplace
-claude plugin marketplace add mnthe/hardworker-marketplace
-
-# Install verification-first development
-claude plugin install ultrawork@hardworker-marketplace
-
-# Install multi-session collaboration
-claude plugin install teamwork@hardworker-marketplace
-
-# Install knowledge extraction
-claude plugin install knowledge-extraction@hardworker-marketplace
-```
-
-### Example: ultrawork Session
-
-```bash
-# Start verification-first development session
-/ultrawork "implement user authentication with JWT"
-
-# System creates plan with tasks and success criteria
-# Worker agents execute tasks in parallel
-# Verifier checks all criteria with concrete evidence
-# Auto-retry on failures (max 5 iterations)
-
-# Check status
-/ultrawork-status
-
-# View collected evidence
-/ultrawork-evidence
-
-# Cancel if needed
-/ultrawork-cancel
-```
-
-### Example: teamwork Session
-
-```bash
-# Terminal 1: Start coordination
-/teamwork "build REST API with tests and docs"
-
-# Terminal 2: Backend worker (continuous mode)
-/teamwork-worker --role backend --loop
-
-# Terminal 3: Test worker (continuous mode)
-/teamwork-worker --role test --loop
-
-# Terminal 4: Docs worker (one-shot)
-/teamwork-worker --role docs
-
-# Terminal 1: Check status
-/teamwork-status
-```
 
 ## Troubleshooting
 
