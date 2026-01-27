@@ -8,7 +8,7 @@
 const fs = require('fs');
 const { acquireLock, releaseLock } = require('../lib/file-lock.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
-const { getTaskFile } = require('../lib/project-utils.js');
+const { getTaskFile, updateSwarmWorkerOnComplete } = require('../lib/project-utils.js');
 const { scanForBlockedPatterns, shouldBlockCompletion } = require('../lib/blocked-patterns.js');
 
 // ============================================================================
@@ -227,6 +227,15 @@ async function main() {
       const tmpFile = `${taskFile}.tmp`;
       fs.writeFileSync(tmpFile, JSON.stringify(task, null, 2), 'utf-8');
       fs.renameSync(tmpFile, taskFile);
+
+      // Update swarm worker state if task was resolved
+      // This tracks tasks_completed, clears current_task, and updates last_heartbeat
+      if (args.status === 'resolved') {
+        const sessionId = owner || process.env.CLAUDE_SESSION_ID;
+        if (sessionId) {
+          updateSwarmWorkerOnComplete(args.project, args.team, sessionId, args.id);
+        }
+      }
 
       // Output success message and updated task
       console.log(`OK: Task ${args.id} updated`);

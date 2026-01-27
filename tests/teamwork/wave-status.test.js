@@ -165,4 +165,140 @@ describe('wave-status.js', () => {
     expect(result.json.waves[0].tasks).toBeTruthy();
     expect(result.json.waves[0].tasks.length).toBeGreaterThan(0);
   });
+
+  test('handles corrupted waves.json', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    // Create corrupted waves.json
+    const wavesFile = path.join(mock.projectDir, 'waves.json');
+    fs.writeFileSync(wavesFile, '{ "invalid": json }', 'utf-8');
+
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      format: 'json'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Error');
+  });
+
+  test('handles empty waves array', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    // Create waves.json with empty waves array
+    const wavesFile = path.join(mock.projectDir, 'waves.json');
+    const wavesData = {
+      version: '1.0',
+      total_waves: 0,
+      current_wave: 0,
+      waves: []
+    };
+    fs.writeFileSync(wavesFile, JSON.stringify(wavesData, null, 2), 'utf-8');
+
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      format: 'json'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.total_waves).toBe(0);
+    expect(result.json.waves).toEqual([]);
+  });
+
+  test('handles wave with no tasks', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    // Create waves.json with wave containing no tasks
+    const wavesFile = path.join(mock.projectDir, 'waves.json');
+    const wavesData = {
+      version: '1.0',
+      total_waves: 1,
+      current_wave: 1,
+      waves: [
+        {
+          id: 1,
+          status: 'planning',
+          tasks: [],
+          started_at: null,
+          completed_at: null,
+          verified_at: null
+        }
+      ]
+    };
+    fs.writeFileSync(wavesFile, JSON.stringify(wavesData, null, 2), 'utf-8');
+
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      format: 'json'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.waves[0].tasks).toEqual([]);
+    expect(result.json.waves[0].task_details).toEqual([]);
+  });
+
+  test('shows all waves completed', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    // Create task and waves
+    runScript(TASK_CREATE_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      title: 'Task 1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    runScript(TASK_CREATE_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '2',
+      title: 'Task 2',
+      'blocked-by': '1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    runScript(WAVE_CALC_PATH, {
+      project: 'test-project',
+      team: 'test-team'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    // Mark all waves as verified
+    const wavesFile = path.join(mock.projectDir, 'waves.json');
+    const wavesData = JSON.parse(fs.readFileSync(wavesFile, 'utf-8'));
+    wavesData.waves.forEach(wave => {
+      wave.status = 'verified';
+      wave.verified_at = new Date().toISOString();
+    });
+    fs.writeFileSync(wavesFile, JSON.stringify(wavesData, null, 2), 'utf-8');
+
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      format: 'json'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.summary.completed).toBe(wavesData.total_waves);
+    expect(result.json.summary.remaining).toBe(0);
+  });
 });

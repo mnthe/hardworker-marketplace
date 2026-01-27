@@ -345,7 +345,8 @@ function main() {
 
     // Start Claude Code with teamwork-worker command as initial prompt
     // Pass the command directly to avoid timing issues between Claude startup and command input
-    const workerCommand = `/teamwork-worker --project ${args.project} --team ${args.team} --role ${worker.role} --loop`;
+    // Include --worker-id so the worker can register its session ID for state tracking
+    const workerCommand = `/teamwork-worker --project ${args.project} --team ${args.team} --role ${worker.role} --worker-id ${workerId} --loop`;
     sendKeys(sessionName, paneName, `claude "${workerCommand}"`);
 
     // Set pane title

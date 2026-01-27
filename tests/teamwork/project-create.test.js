@@ -94,4 +94,29 @@ describe('project-create.js', () => {
     expect(result.json.stats.in_progress).toBe(0);
     expect(result.json.stats.resolved).toBe(0);
   });
+
+  // Edge case tests
+  test('handles empty goal', () => {
+    const result = runScript(SCRIPT_PATH, {
+      project: 'empty-goal-project',
+      team: 'empty-goal-team',
+      goal: ''
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.goal).toBe('');
+  });
+
+  test('creates project with minimal parameters', () => {
+    const result = runScript(SCRIPT_PATH, {
+      project: 'minimal',
+      team: 'm',
+      goal: 'x'
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.project).toBe('minimal');
+    expect(result.json.team).toBe('m');
+    expect(result.json.goal).toBe('x');
+  });
 });

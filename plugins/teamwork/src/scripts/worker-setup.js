@@ -12,6 +12,7 @@ const {
   getProjectDir,
   getTasksDir,
   projectExists,
+  registerSwarmWorkerSession,
 } = require('../lib/project-utils.js');
 
 // ============================================================================
@@ -41,6 +42,7 @@ const ARG_SPEC = {
   '--loop': { key: 'loop', aliases: ['-l'], flag: true },
   '--strict': { key: 'strict', flag: true },
   '--fresh-start-interval': { key: 'freshStartInterval', aliases: ['-f'] },
+  '--worker-id': { key: 'workerId', aliases: ['-w'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
@@ -168,6 +170,15 @@ function main() {
     process.exit(1);
   }
 
+  // Register session ID with swarm worker if --worker-id provided
+  // This enables swarm worker state tracking for task claims and completions
+  if (args.workerId) {
+    const sessionId = process.env.CLAUDE_SESSION_ID;
+    if (sessionId) {
+      registerSwarmWorkerSession(project, team, args.workerId, sessionId);
+    }
+  }
+
   // Count tasks
   const { total, open } = countTasks(project, team, args.role);
 
@@ -205,6 +216,7 @@ ROLE_FILTER=${args.role || ''}
 LOOP_MODE=${args.loop}
 STRICT_MODE=${strictMode}
 FRESH_START_INTERVAL=${freshStartInterval}
+WORKER_ID=${args.workerId || ''}
 OPEN_TASKS=${open}`);
 
   // Exit with error if no open tasks

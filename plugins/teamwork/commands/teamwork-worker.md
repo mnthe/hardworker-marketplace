@@ -326,6 +326,7 @@ Exit and report completion.
 | `--strict` | Enable strict evidence mode (require concrete verification for all criteria) |
 | `--fresh-start-interval N` | Reset context every N tasks (default: 10, 0 = disabled) |
 | `--poll-interval N` | Seconds to wait between polling attempts in loop mode (default: 30) |
+| `--worker-id ID` | Swarm worker ID (e.g., w1, w2). Auto-set by swarm-spawn.js. Enables worker state tracking. |
 
 ## Role Options
 

@@ -15,7 +15,7 @@
 
 const { parseArgs, generateHelp } = require('../lib/args.js');
 const { claimTaskOptimistic } = require('../lib/optimistic-lock.js');
-const { getTaskFile } = require('../lib/project-utils.js');
+const { getTaskFile, updateSwarmWorkerOnClaim } = require('../lib/project-utils.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -87,6 +87,11 @@ async function main() {
       // Success - output claimed task and exit
       console.log(`OK: Task ${args.id} claimed by ${owner}`);
       console.log(JSON.stringify(result.task, null, 2));
+
+      // Update swarm worker state if this is a swarm worker
+      // This tracks current_task, status, and last_heartbeat
+      updateSwarmWorkerOnClaim(args.project, args.team, owner, args.id);
+
       process.exit(0);
     }
 

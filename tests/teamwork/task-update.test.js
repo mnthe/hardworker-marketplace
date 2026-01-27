@@ -177,4 +177,162 @@ describe('task-update.js', () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain('not found');
   });
+
+  test('fails with invalid status value', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    runScript(TASK_CREATE_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      status: 'invalid-status'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Invalid status');
+  });
+
+  test('allows multiple evidence additions', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    runScript(TASK_CREATE_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    // Add first evidence
+    runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      'add-evidence': 'First evidence'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    // Add second evidence
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      'add-evidence': 'Second evidence'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.evidence.length).toBe(2);
+    expect(result.json.evidence).toContain('First evidence');
+    expect(result.json.evidence).toContain('Second evidence');
+  });
+
+  test('allows evidence addition to resolved task', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    runScript(TASK_CREATE_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    // Resolve task
+    runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      status: 'resolved'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    // Add evidence after resolution
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      'add-evidence': 'Post-resolution evidence'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.status).toBe('resolved');
+    expect(result.json.evidence).toContain('Post-resolution evidence');
+  });
+
+  test('handles empty string values for optional fields', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    runScript(TASK_CREATE_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      title: 'Test task',
+      description: 'Original description'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    // Update with empty description
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      description: ''
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.description).toBe('');
+  });
+
+  test('fails when releasing unclaimed task', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    runScript(TASK_CREATE_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    // Try to release unclaimed task (should succeed but have no effect)
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      release: ''
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.claimed_by).toBe(null);
+  });
 });

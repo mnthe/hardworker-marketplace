@@ -558,35 +558,32 @@ If `--auto` flag is set:
 
 **CRITICAL: This is the core orchestration logic.**
 
-### ⚠️ Swarm vs Sub-agent Selection (CRITICAL)
+### ⚠️ CRITICAL: Swarm-Only Execution Mode
 
-**You MUST choose ONE execution mode and stick to it for the entire project:**
+**You are operating in SWARM-ONLY mode. Worker sub-agents via Task tool are PROHIBITED.**
 
-| Mode | When to Use | How to Spawn |
-|------|-------------|--------------|
-| **Swarm** (recommended) | Large projects, role separation needed | `swarm-spawn.js` in tmux panes |
-| **Sub-agent** | Single task, quick execution | `Task(subagent_type="teamwork:worker")` |
+| ✅ ALLOWED | ❌ PROHIBITED |
+|------------|--------------|
+| `swarm-spawn.js` for workers | `Task(subagent_type="teamwork:worker")` |
+| `swarm-status.js` for monitoring | `Task(subagent_type="teamwork:backend")` |
+| `swarm-stop.js` for control | `Task(subagent_type="teamwork:frontend")` |
+| `Agent(wave-verifier)` for verification | Any `teamwork:*` worker via Task tool |
 
-**NEVER mix both modes in the same project!**
+**Why sub-agent spawning is prohibited:**
+- Swarm workers: Coordinated via `swarm-status.js`, role-enforced, wave-synchronized, state tracked
+- Sub-agents: No role enforcement, no swarm coordination, bypass wave sync, no state tracking
+- Result: Sub-agents claim tasks meant for swarm workers, role boundaries violated, worker state becomes stale
 
-| ❌ WRONG | ✅ CORRECT |
-|----------|------------|
-| Swarm workers + Task tool spawns | Swarm workers ONLY |
-| Sub-agent spawns + manual tmux workers | Sub-agent spawns ONLY |
+**If swarm workers are not claiming tasks:**
+1. Check swarm status: `swarm-status.js --project X --team Y`
+2. Check for dead workers: Look for `alive: false` in status
+3. Restart dead workers: `swarm-spawn.js --project X --team Y --role <role>`
+4. NEVER spawn inline sub-agents as a workaround
 
-**Why mixing fails:**
-- Swarm workers: Coordinated via `swarm-status.js`, role-enforced, wave-synchronized
-- Sub-agents: No role enforcement, no swarm coordination, bypass wave sync
-- Mixing: Sub-agents claim tasks meant for swarm workers, role boundaries violated
-
-**If you used `--workers` or `--worktree` option:**
-- Do NOT spawn workers via `Task(subagent_type="teamwork:worker")`
-- Only monitor swarm workers via `swarm-status.js`
-- Let swarm workers claim tasks through their loop
-
-**If you did NOT use swarm options:**
-- You may use `Task(subagent_type="teamwork:*")` to spawn workers
-- But ensure workers respect role boundaries (use `--role` filter)
+**Worker state tracking:**
+- Swarm workers now track: `session_id`, `current_task`, `tasks_completed`, `last_heartbeat`
+- State is updated automatically when workers claim/complete tasks
+- Use `swarm-status.js` to monitor worker activity
 
 ### Swarm Monitoring Loop
 
@@ -1236,7 +1233,16 @@ Write("{TEAMWORK_DIR}/tasks/1.json", '{"id": "1", "status": "open", ...}')
 13. **No speculation** - Never assume task completion without checking status
 
 ### General
-14. **No sub-agents** - Do NOT spawn other agents (except wave-verifier)
+14. **No worker sub-agents** - You are PROHIBITED from spawning worker agents via Task tool
+    - ❌ NEVER: `Task(subagent_type="teamwork:worker")` or any `teamwork:*` worker
+    - ❌ NEVER: `Task(subagent_type="teamwork:backend")`, `teamwork:frontend`, etc.
+    - ✅ ONLY ALLOWED: `Agent(wave-verifier)` for wave verification
+    - **Reason**: Worker spawning is handled by swarm system via `swarm-spawn.js`
+    - If swarm workers are not claiming tasks, check `swarm-status.js` instead of spawning sub-agents
+15. **Swarm-only execution** - Task execution MUST go through swarm workers
+    - Monitor swarm workers via `swarm-status.js`
+    - Restart dead workers via `swarm-spawn.js`
+    - NEVER bypass swarm by spawning inline workers
 
 ## Error Handling
 

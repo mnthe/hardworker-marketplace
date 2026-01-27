@@ -19,6 +19,7 @@ Key features:
 - Loop detection for continuous worker execution
 - Multi-terminal coordination via shared state
 - Structured evidence collection and validation
+- **Automatic swarm worker state tracking** (v2.2): Workers automatically update their state (current_task, tasks_completed, last_heartbeat) when claiming/completing tasks
 
 ## File Structure
 
@@ -91,7 +92,7 @@ All scripts use Bun runtime with flag-based parameters. All task/project scripts
 | **wave-update.js** | Update wave status | `--project <name>` `--team <name>` `--wave <id>` `--status planning\|in_progress\|completed\|verified\|failed` |
 | **wave-status.js** | Query wave progress | `--project <name>` `--team <name>` `--format json\|table` |
 | **loop-state.js** | Manage worker loop state | `--get` `--start --project <name> --team <name> --role <role>` `--clear` |
-| **worker-setup.js** | Setup worker session context | `--project <name>` `--team <name>` `--role <role>` |
+| **worker-setup.js** | Setup worker session context | `--project <name>` `--team <name>` `--role <role>` `--worker-id <id>` |
 | **swarm-spawn.js** | Spawn workers in tmux panes | `--project <name>` `--team <name>` `--role <role>` or `--roles <role1,role2>` `--count <n>` `--worktree` `--source-dir <path>` |
 | **swarm-status.js** | Query swarm status | `--project <name>` `--team <name>` `--format json\|table` |
 | **swarm-stop.js** | Stop worker or swarm | `--project <name>` `--team <name>` `--worker <id>` or `--all` |
@@ -685,12 +686,27 @@ Swarm state is stored under the project directory:
   "pane": 1,
   "worktree": "~/.claude/teamwork/my-app/master/worktrees/w1",
   "branch": "worker-w1",
+  "session_id": "abc-123-xyz",
   "status": "working",
   "current_task": "3",
   "tasks_completed": ["1"],
   "last_heartbeat": "2026-01-26T10:05:00Z"
 }
 ```
+
+**Worker state fields (v2.2):**
+| Field | Description | Updated By |
+|-------|-------------|------------|
+| `id` | Worker ID (w1, w2, etc.) | swarm-spawn.js |
+| `role` | Worker role (backend, frontend, etc.) | swarm-spawn.js |
+| `pane` | tmux pane index | swarm-spawn.js |
+| `worktree` | Git worktree path (if enabled) | swarm-spawn.js |
+| `branch` | Git branch name (if worktree enabled) | swarm-spawn.js |
+| `session_id` | CLAUDE_SESSION_ID of the worker | worker-setup.js (via --worker-id) |
+| `status` | Worker status (idle, working) | task-claim.js, task-update.js |
+| `current_task` | Currently claimed task ID | task-claim.js, task-update.js |
+| `tasks_completed` | Array of completed task IDs | task-update.js |
+| `last_heartbeat` | Last activity timestamp | task-claim.js, task-update.js |
 
 ### Error Handling
 

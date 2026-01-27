@@ -160,4 +160,77 @@ describe('task-create.js', () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain('Invalid complexity');
   });
+
+  test('handles blocked_by with non-existent task IDs', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    // Create task with blocked_by referencing non-existent tasks
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '3',
+      title: 'Dependent task',
+      'blocked-by': '999,888'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    // Should succeed (validation happens at claim time, not create time)
+    expect(result.exitCode).toBe(0);
+    expect(result.json.blocked_by).toEqual(['999', '888']);
+  });
+
+  test('creates task without optional description', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.description).toBe('Test task'); // defaults to title
+  });
+
+  test('validates domain values', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      title: 'Test task',
+      domain: 'invalid-domain'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Invalid domain');
+  });
+
+  test('creates task with valid domain', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      title: 'Security task',
+      domain: 'security'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.domain).toBe('security');
+  });
 });

@@ -271,6 +271,195 @@ function updateProjectStats(project, team) {
 }
 
 // ============================================================================
+// Swarm Worker State Management
+// ============================================================================
+
+/**
+ * Get swarm directory for a project
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @returns {string} Swarm directory path
+ */
+function getSwarmDir(project, team) {
+  return path.join(getProjectDir(project, team), 'swarm');
+}
+
+/**
+ * Get swarm workers directory
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @returns {string} Workers directory path
+ */
+function getSwarmWorkersDir(project, team) {
+  return path.join(getSwarmDir(project, team), 'workers');
+}
+
+/**
+ * Get swarm worker state file path
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @param {string} workerId - Worker ID (e.g., 'w1')
+ * @returns {string} Worker state file path
+ */
+function getSwarmWorkerFile(project, team, workerId) {
+  return path.join(getSwarmWorkersDir(project, team), `${workerId}.json`);
+}
+
+/**
+ * Read swarm worker state
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @param {string} workerId - Worker ID
+ * @returns {Object|null} Worker state or null if not found
+ */
+function readSwarmWorker(project, team, workerId) {
+  const workerFile = getSwarmWorkerFile(project, team, workerId);
+
+  if (!fs.existsSync(workerFile)) {
+    return null;
+  }
+
+  try {
+    const content = fs.readFileSync(workerFile, 'utf-8');
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Write swarm worker state atomically
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @param {string} workerId - Worker ID
+ * @param {Object} workerData - Worker state data
+ */
+function writeSwarmWorker(project, team, workerId, workerData) {
+  const workerFile = getSwarmWorkerFile(project, team, workerId);
+  const workersDir = getSwarmWorkersDir(project, team);
+
+  // Ensure workers directory exists
+  if (!fs.existsSync(workersDir)) {
+    fs.mkdirSync(workersDir, { recursive: true });
+  }
+
+  // Write atomically
+  const tmpFile = `${workerFile}.tmp`;
+  fs.writeFileSync(tmpFile, JSON.stringify(workerData, null, 2), 'utf-8');
+  fs.renameSync(tmpFile, workerFile);
+}
+
+/**
+ * Find swarm worker by session ID
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @param {string} sessionId - CLAUDE_SESSION_ID to search for
+ * @returns {{ workerId: string, data: Object }|null} Worker info or null
+ */
+function findSwarmWorkerBySessionId(project, team, sessionId) {
+  const workersDir = getSwarmWorkersDir(project, team);
+
+  if (!fs.existsSync(workersDir)) {
+    return null;
+  }
+
+  try {
+    const files = fs.readdirSync(workersDir).filter(f => f.endsWith('.json'));
+
+    for (const file of files) {
+      const workerId = file.replace('.json', '');
+      const workerData = readSwarmWorker(project, team, workerId);
+
+      if (workerData && workerData.session_id === sessionId) {
+        return { workerId, data: workerData };
+      }
+    }
+  } catch {
+    // Ignore errors
+  }
+
+  return null;
+}
+
+/**
+ * Update swarm worker state on task claim
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @param {string} sessionId - CLAUDE_SESSION_ID of the claimer
+ * @param {string} taskId - Task ID being claimed
+ */
+function updateSwarmWorkerOnClaim(project, team, sessionId, taskId) {
+  const worker = findSwarmWorkerBySessionId(project, team, sessionId);
+
+  if (!worker) {
+    return; // Not a swarm worker
+  }
+
+  const { workerId, data } = worker;
+
+  // Update worker state
+  data.status = 'working';
+  data.current_task = taskId;
+  data.last_heartbeat = new Date().toISOString();
+
+  writeSwarmWorker(project, team, workerId, data);
+}
+
+/**
+ * Update swarm worker state on task completion
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @param {string} sessionId - CLAUDE_SESSION_ID of the worker
+ * @param {string} taskId - Task ID that was resolved
+ */
+function updateSwarmWorkerOnComplete(project, team, sessionId, taskId) {
+  const worker = findSwarmWorkerBySessionId(project, team, sessionId);
+
+  if (!worker) {
+    return; // Not a swarm worker
+  }
+
+  const { workerId, data } = worker;
+
+  // Update worker state
+  data.status = 'idle';
+  data.current_task = null;
+  data.last_heartbeat = new Date().toISOString();
+
+  // Add to completed tasks if not already there
+  if (!data.tasks_completed) {
+    data.tasks_completed = [];
+  }
+  if (!data.tasks_completed.includes(taskId)) {
+    data.tasks_completed.push(taskId);
+  }
+
+  writeSwarmWorker(project, team, workerId, data);
+}
+
+/**
+ * Register session ID with swarm worker
+ * Called when a swarm worker starts with --worker-id
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @param {string} workerId - Worker ID (e.g., 'w1')
+ * @param {string} sessionId - CLAUDE_SESSION_ID
+ */
+function registerSwarmWorkerSession(project, team, workerId, sessionId) {
+  const workerData = readSwarmWorker(project, team, workerId);
+
+  if (!workerData) {
+    return; // Worker state file doesn't exist
+  }
+
+  // Update session ID
+  workerData.session_id = sessionId;
+  workerData.last_heartbeat = new Date().toISOString();
+
+  writeSwarmWorker(project, team, workerId, workerData);
+}
+
+// ============================================================================
 // Safety Functions (for tests and validation)
 // ============================================================================
 
@@ -337,6 +526,16 @@ module.exports = {
   writeProject,
   listTasks,
   updateProjectStats,
+  // Swarm worker state management
+  getSwarmDir,
+  getSwarmWorkersDir,
+  getSwarmWorkerFile,
+  readSwarmWorker,
+  writeSwarmWorker,
+  findSwarmWorkerBySessionId,
+  updateSwarmWorkerOnClaim,
+  updateSwarmWorkerOnComplete,
+  registerSwarmWorkerSession,
   // Safety functions (for tests and validation)
   isTestDirectory,
   validateSafeDelete,
