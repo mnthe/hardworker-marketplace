@@ -38,6 +38,7 @@ const { scanForBlockedPatterns, shouldBlockCompletion } = require('../lib/blocke
  * @property {string} [title]
  * @property {string} [description]
  * @property {string} [role]
+ * @property {string} [workerId]
  * @property {boolean} [help]
  */
 
@@ -62,6 +63,7 @@ const ARG_SPEC = {
   '--title': { key: 'title' },
   '--description': { key: 'description', aliases: ['-d'] },
   '--role': { key: 'role' },
+  '--worker-id': { key: 'workerId', aliases: ['-w'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
@@ -227,6 +229,22 @@ async function main() {
       const tmpFile = `${taskFile}.tmp`;
       fs.writeFileSync(tmpFile, JSON.stringify(task, null, 2), 'utf-8');
       fs.renameSync(tmpFile, taskFile);
+
+      // Send idle notification if task was resolved with worker-id
+      if (args.status === 'resolved' && args.workerId) {
+        const { sendMessage } = require('../lib/mailbox.js');
+
+        await sendMessage(args.project, args.team, {
+          from: args.workerId,
+          to: 'orchestrator',
+          type: 'idle_notification',
+          payload: {
+            worker_id: args.workerId,
+            completed_task_id: args.id,
+            completed_status: 'resolved'
+          }
+        });
+      }
 
       // Update swarm worker state if task was resolved
       // This tracks tasks_completed, clears current_task, and updates last_heartbeat

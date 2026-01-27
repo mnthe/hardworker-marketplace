@@ -7,7 +7,7 @@ const { test, expect, describe, beforeEach, afterEach } = require('bun:test');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
-const { runScript, mockProject, assertJsonSchema } = require('../test-utils.js');
+const { runScript, mockProject, assertJsonSchema, TEAMWORK_TEST_BASE_DIR } = require('../test-utils.js');
 
 const SCRIPT_PATH = path.join(__dirname, '../../plugins/teamwork/src/scripts/task-update.js');
 const TASK_CREATE_PATH = path.join(__dirname, '../../plugins/teamwork/src/scripts/task-create.js');
@@ -334,5 +334,82 @@ describe('task-update.js', () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.json.claimed_by).toBe(null);
+  });
+
+  test('sends idle notification when task resolved with worker-id', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    // Create task
+    runScript(TASK_CREATE_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    // Resolve task with worker-id
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      status: 'resolved',
+      'worker-id': 'w1'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.status).toBe('resolved');
+
+    // Verify idle notification was sent
+    const inboxPath = path.join(TEAMWORK_TEST_BASE_DIR, 'test-project', 'test-team', 'inboxes', 'orchestrator.json');
+    expect(fs.existsSync(inboxPath)).toBe(true);
+
+    const inbox = JSON.parse(fs.readFileSync(inboxPath, 'utf-8'));
+    expect(inbox.messages).toBeTruthy();
+    expect(inbox.messages.length).toBeGreaterThan(0);
+
+    const notification = inbox.messages.find(msg => msg.type === 'idle_notification');
+    expect(notification).toBeTruthy();
+    expect(notification.from).toBe('w1');
+    expect(notification.to).toBe('orchestrator');
+    expect(notification.payload.worker_id).toBe('w1');
+    expect(notification.payload.completed_task_id).toBe('1');
+    expect(notification.payload.completed_status).toBe('resolved');
+  });
+
+  test('does not send idle notification when worker-id not provided', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    // Create task
+    runScript(TASK_CREATE_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      title: 'Test task'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    // Resolve task without worker-id
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      id: '1',
+      status: 'resolved'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.status).toBe('resolved');
+
+    // Verify no inbox was created (no notification sent)
+    const inboxPath = path.join(TEAMWORK_TEST_BASE_DIR, 'test-project', 'test-team', 'inboxes', 'orchestrator.json');
+    expect(fs.existsSync(inboxPath)).toBe(false);
   });
 });
