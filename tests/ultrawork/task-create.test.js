@@ -194,12 +194,13 @@ describe('task-create.js', () => {
       expect(result.stderr).toContain('Invalid complexity');
     });
 
-    test('should fail for test-file without tdd approach', async () => {
+    test('should fail for test-file with non-tdd approach', async () => {
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
         '--id', '9',
         '--subject', 'Test file without TDD',
-        '--test-file', 'test.ts'
+        '--test-file', 'test.ts',
+        '--approach', 'standard'
       ]);
 
       expect(result.exitCode).toBe(1);

@@ -59,23 +59,23 @@ flowchart TD
     CLI --> Hooks[Lifecycle Hooks]
 
     subgraph ultrawork
-        UW_CMD[/ultrawork] --> UW_AGENTS[6 Agents]
-        UW_AGENTS --> UW_STATE[~/.claude/ultrawork/]
-        Hooks --> UW_HOOKS[Evidence/Gates]
+        UW_CMD["/ultrawork"] --> UW_AGENTS[6 Agents]
+        UW_AGENTS --> UW_STATE["~/.claude/ultrawork/"]
+        Hooks --> UW_HOOKS["Evidence/Gates"]
         UW_HOOKS --> UW_STATE
     end
 
     subgraph teamwork
-        TW_CMD[/teamwork] --> TW_AGENTS[11 Agents]
-        TW_AGENTS --> TW_STATE[~/.claude/teamwork/]
+        TW_CMD["/teamwork"] --> TW_AGENTS[11 Agents]
+        TW_AGENTS --> TW_STATE["~/.claude/teamwork/"]
         Hooks --> TW_HOOKS[Loop Detector]
         TW_HOOKS --> TW_STATE
     end
 
     subgraph knowledge-extraction
-        KE_CMD[/insights] --> KE_AGENT[Extractor]
+        KE_CMD["/insights"] --> KE_AGENT[Extractor]
         Hooks --> KE_HOOKS[Auto Extract]
-        KE_HOOKS --> KE_STATE[~/.claude/knowledge-extraction/]
+        KE_HOOKS --> KE_STATE["~/.claude/knowledge-extraction/"]
         KE_AGENT --> KE_STATE
     end
 
