@@ -126,6 +126,106 @@ Do NOT mark as resolved if failed - release for retry.
 
 ---
 
+## Mailbox Integration (Task Completion Notification)
+
+When a worker completes a task, it should notify the orchestrator so that the orchestrator can assign the next available task. Teamwork supports this through the mailbox system.
+
+### Automatic Notification (Recommended)
+
+When updating task status to `resolved` with the `--worker-id` parameter, task-update.js automatically sends an `idle_notification` to the orchestrator:
+
+```bash
+bun "$SCRIPTS_PATH/task-update.js" \
+  --project {PROJECT} \
+  --team {SUB_TEAM} \
+  --id {TASK_ID} \
+  --status resolved \
+  --worker-id {WORKER_ID} \
+  --add-evidence "Implementation complete"
+```
+
+**When to use:**
+- Working in swarm mode (automatic worker spawning)
+- Worker was spawned by orchestrator with assigned worker ID
+- Standard workflow for coordinated teams
+
+### Manual Notification (Advanced)
+
+For custom notification workflows or when automatic notification isn't available, send notifications directly using mailbox-send.js:
+
+```bash
+bun "$SCRIPTS_PATH/mailbox-send.js" \
+  --project {PROJECT} \
+  --team {SUB_TEAM} \
+  --from {WORKER_ID} \
+  --to orchestrator \
+  --type idle_notification \
+  --payload '{"worker_id":"{WORKER_ID}","completed_task_id":"{TASK_ID}","completed_status":"resolved"}'
+```
+
+**When to use:**
+- Custom orchestration logic
+- Non-standard notification payloads
+- Troubleshooting coordination issues
+
+### Orchestrator Receiving Pattern
+
+The orchestrator polls for notifications using mailbox-poll.js:
+
+```bash
+# Poll for idle notifications with 30 second timeout
+bun "$SCRIPTS_PATH/mailbox-poll.js" \
+  --project {PROJECT} \
+  --team {SUB_TEAM} \
+  --inbox orchestrator \
+  --timeout 30000 \
+  --type idle_notification
+```
+
+**Returns:**
+- Empty array `[]` if timeout expires with no messages
+- Array of message objects if notifications received:
+  ```json
+  [
+    {
+      "from": "w1",
+      "to": "orchestrator",
+      "type": "idle_notification",
+      "payload": {
+        "worker_id": "w1",
+        "completed_task_id": "3",
+        "completed_status": "resolved"
+      },
+      "timestamp": "2026-01-27T10:30:00Z",
+      "read": false
+    }
+  ]
+  ```
+
+### Notification Workflow
+
+```
+Worker completes task
+    │
+    ├─→ task-update.js --status resolved --worker-id w1
+    │       │
+    │       └─→ Sends idle_notification to orchestrator inbox
+    │
+    └─→ Worker waits for next task assignment
+            │
+            └─→ Orchestrator polls inbox
+                    │
+                    ├─→ Receives idle_notification
+                    └─→ Assigns next task to idle worker
+```
+
+**Benefits:**
+- Reduces polling overhead (orchestrator-driven task assignment)
+- Enables dynamic load balancing
+- Improves coordination in multi-worker swarms
+
+---
+
 ## Phase 6: Commit Changes
 
 **After task is marked resolved, commit ONLY the files you modified:**
