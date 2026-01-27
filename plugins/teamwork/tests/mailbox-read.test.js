@@ -313,4 +313,108 @@ describe('mailbox-read.js', () => {
       expect(output.messages[0].payload.worker_id).toBe('w3');
     });
   });
+
+  describe('--mark-read flag', () => {
+    test('marks messages as read', async () => {
+      // Setup: Create inbox with messages
+      const inboxName = 'orchestrator';
+      mailbox.createInbox(project, team, inboxName);
+
+      await mailbox.sendMessage(project, team, {
+        from: 'w1',
+        to: inboxName,
+        type: 'text',
+        payload: 'Message 1'
+      });
+
+      await mailbox.sendMessage(project, team, {
+        from: 'w2',
+        to: inboxName,
+        type: 'text',
+        payload: 'Message 2'
+      });
+
+      // Run script with --mark-read
+      const result = await runScript(
+        scriptPath,
+        ['--project', project, '--team', team, '--inbox', inboxName, '--mark-read'],
+        { TEAMWORK_TEST_BASE_DIR: testDir }
+      );
+
+      expect(result.code).toBe(0);
+
+      const output = JSON.parse(result.stdout);
+      expect(output.messages.length).toBe(2);
+
+      // Read messages again to verify they are marked as read
+      const messages = mailbox.readMessages(project, team, inboxName);
+      expect(messages[0].read).toBe(true);
+      expect(messages[1].read).toBe(true);
+    });
+
+    test('marks only filtered messages as read', async () => {
+      // Setup: Create inbox with different types
+      const inboxName = 'orchestrator';
+      mailbox.createInbox(project, team, inboxName);
+
+      await mailbox.sendMessage(project, team, {
+        from: 'w1',
+        to: inboxName,
+        type: 'text',
+        payload: 'Text message'
+      });
+
+      await mailbox.sendMessage(project, team, {
+        from: 'w2',
+        to: inboxName,
+        type: 'idle_notification',
+        payload: { worker_id: 'w2' }
+      });
+
+      // Run script with --type and --mark-read
+      const result = await runScript(
+        scriptPath,
+        [
+          '--project', project,
+          '--team', team,
+          '--inbox', inboxName,
+          '--type', 'idle_notification',
+          '--mark-read'
+        ],
+        { TEAMWORK_TEST_BASE_DIR: testDir }
+      );
+
+      expect(result.code).toBe(0);
+
+      const output = JSON.parse(result.stdout);
+      expect(output.messages.length).toBe(1);
+      expect(output.messages[0].type).toBe('idle_notification');
+
+      // Verify only idle_notification is marked as read
+      const messages = mailbox.readMessages(project, team, inboxName);
+      const textMsg = messages.find(m => m.type === 'text');
+      const idleMsg = messages.find(m => m.type === 'idle_notification');
+
+      expect(textMsg.read).toBe(false);
+      expect(idleMsg.read).toBe(true);
+    });
+
+    test('does not fail on empty inbox with --mark-read', async () => {
+      const result = await runScript(
+        scriptPath,
+        [
+          '--project', project,
+          '--team', team,
+          '--inbox', 'nonexistent',
+          '--mark-read'
+        ],
+        { TEAMWORK_TEST_BASE_DIR: testDir }
+      );
+
+      expect(result.code).toBe(0);
+
+      const output = JSON.parse(result.stdout);
+      expect(output.messages).toEqual([]);
+    });
+  });
 });
