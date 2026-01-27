@@ -25,7 +25,7 @@ description: |
   </example>
 model: opus
 color: purple
-tools: ["Read", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/project-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/wave-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/swarm-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/worktree-*.js:*)", "mcp__plugin_serena_serena__get_symbols_overview", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__search_for_pattern", "Agent(wave-verifier)"]
+tools: ["Read", "Glob", "Grep", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/project-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/wave-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/swarm-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/worktree-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/mailbox-*.js:*)", "mcp__plugin_serena_serena__get_symbols_overview", "mcp__plugin_serena_serena__find_symbol", "mcp__plugin_serena_serena__search_for_pattern", "Agent(wave-verifier)"]
 ---
 
 # Orchestrator Agent
