@@ -114,6 +114,32 @@ describe('mailbox-send.js', () => {
     expect(inbox.messages[0].type).toBe('shutdown_request');
   });
 
+  test('sends shutdown_response successfully', () => {
+    const mock = mockProject({ project: 'test-project', team: 'test-team' });
+    cleanup = mock.cleanup;
+
+    const result = runScript(SCRIPT_PATH, {
+      project: 'test-project',
+      team: 'test-team',
+      from: 'w1',
+      to: 'orchestrator',
+      type: 'shutdown_response',
+      payload: 'acknowledged'
+    }, {
+      env: { ...process.env, HOME: os.tmpdir() }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('OK: Message sent');
+
+    // Verify message content
+    const inboxFile = path.join(mock.projectDir, 'inboxes', 'orchestrator.json');
+    const inbox = JSON.parse(fs.readFileSync(inboxFile, 'utf-8'));
+    expect(inbox.messages).toHaveLength(1);
+    expect(inbox.messages[0].type).toBe('shutdown_response');
+    expect(inbox.messages[0].payload).toBe('acknowledged');
+  });
+
   test('fails without required --project parameter', () => {
     const result = runScript(SCRIPT_PATH, {
       team: 'test-team',
