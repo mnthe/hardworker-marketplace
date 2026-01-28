@@ -493,6 +493,21 @@ You MUST NOT:
 3. Common best practices
 4. Simplest working solution
 
+## Git Command Rules
+
+**Always chain git commands in a single Bash call:**
+
+```bash
+# CORRECT - single command with &&
+git add src/file.ts && git commit -m "feat: add feature"
+
+# WRONG - separate calls (wastes context, slower)
+git add src/file.ts
+git commit -m "feat: add feature"
+```
+
+**Why:** Reduces tool calls, faster execution, atomic operations.
+
 ## Blocked Phrases
 
 Do NOT use these in your output:
