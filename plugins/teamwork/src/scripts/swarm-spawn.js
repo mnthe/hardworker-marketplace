@@ -295,9 +295,6 @@ function main() {
     }
   }
 
-  // Determine session name
-  const sessionName = args.sessionName || `teamwork-${args.project}`;
-
   // Get project directory
   const projectDir = getProjectDir(args.project, args.team);
 
@@ -305,6 +302,23 @@ function main() {
   if (!fs.existsSync(projectDir)) {
     console.error(`Error: Project not found: ${args.project}/${args.team}`);
     process.exit(1);
+  }
+
+  // Determine session name - prefer existing session from swarm.json for consistency
+  let sessionName = args.sessionName;
+  if (!sessionName) {
+    const existingSwarmFile = path.join(projectDir, 'swarm', 'swarm.json');
+    if (fs.existsSync(existingSwarmFile)) {
+      try {
+        const existingSwarm = JSON.parse(fs.readFileSync(existingSwarmFile, 'utf-8'));
+        sessionName = existingSwarm.session;
+      } catch {
+        // Ignore parse errors
+      }
+    }
+  }
+  if (!sessionName) {
+    sessionName = `teamwork-${args.project}`;
   }
 
   // Create or attach to tmux session
@@ -344,10 +358,11 @@ function main() {
     }
 
     // Start Claude Code with teamwork-worker command as initial prompt
-    // Pass the command directly to avoid timing issues between Claude startup and command input
+    // Use single quotes to prevent shell interpretation of the slash command
+    // Double quotes caused Claude to interpret /teamwork-worker as a file path (--file flag)
     // Include --worker-id so the worker can register its session ID for state tracking
     const workerCommand = `/teamwork-worker --project ${args.project} --team ${args.team} --role ${worker.role} --worker-id ${workerId} --loop`;
-    sendKeys(sessionName, paneName, `claude "${workerCommand}"`);
+    sendKeys(sessionName, paneName, `claude --dangerously-skip-permissions '${workerCommand}'`);
 
     // Set pane title
     setPaneTitle(sessionName, paneName, `${worker.role}-${workerId}`);

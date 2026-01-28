@@ -295,23 +295,69 @@ Display what happened:
 
 ## Step 5: Loop Mode (if --loop)
 
-**If `--loop` was set and there are more open tasks:**
+**If `--loop` was NOT set:** Exit after task completion.
 
-Output the continue marker:
+**If `--loop` was set:**
 
+Check project completion status:
+
+```bash
+PROJECT_PHASE=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/project-get.js" \
+  --project {PROJECT} \
+  --team {SUB_TEAM} \
+  --field phase)
 ```
-__TEAMWORK_CONTINUE__
+
+**Exit conditions (clear loop state and exit):**
+
+1. `PROJECT_PHASE == "COMPLETE"` - Project is fully complete
+2. All tasks are resolved AND no tasks are in_progress
+
+```bash
+# Check task counts
+OPEN_TASKS=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" \
+  --project {PROJECT} --team {SUB_TEAM} --available --format json | grep -c '"id"' || echo 0)
+
+IN_PROGRESS=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js" \
+  --project {PROJECT} --team {SUB_TEAM} --format json | grep -c '"status": "in_progress"' || echo 0)
+
+if [ "$PROJECT_PHASE" = "COMPLETE" ] || ([ "$OPEN_TASKS" = "0" ] && [ "$IN_PROGRESS" = "0" ]); then
+  # All done - clear loop state and exit
+  bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/loop-state.js" --clear
+  echo "All tasks complete. Project finished."
+  exit 0
+fi
+```
+
+**Continue conditions:**
+
+1. **Tasks available for this worker:** Output `__TEAMWORK_CONTINUE__` immediately
+2. **No tasks available but project not complete:** Wait with backoff, then continue
+
+```python
+poll_interval = args.poll_interval or 30  # seconds
+
+if available_tasks_for_role > 0:
+    # Tasks available - continue immediately
+    print("__TEAMWORK_CONTINUE__")
+else:
+    # No tasks available but project not complete
+    # Wait with backoff before checking again
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"[{timestamp}] No available tasks (role: {role}). Project in {PROJECT_PHASE} phase. Waiting {poll_interval}s...")
+    sleep(poll_interval)
+    print("__TEAMWORK_CONTINUE__")
 ```
 
 The hook reads state from `loop-state.js` and triggers the next iteration with saved context.
 
-**If no more tasks:**
+**When loop ends:**
 
 ```!
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/loop-state.js" --clear
 ```
 
-Exit and report completion.
+Report project completion.
 
 ---
 

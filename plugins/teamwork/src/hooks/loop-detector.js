@@ -14,7 +14,7 @@ const { readStdin, outputAndExit, hasStdin, extractTextContent } = require('../l
 // Constants
 // ============================================================================
 
-const TEAMWORK_DIR = path.join(os.homedir(), '.claude', 'teamwork');
+const TEAMWORK_DIR = process.env.TEAMWORK_TEST_BASE_DIR || path.join(os.homedir(), '.claude', 'teamwork');
 const STATE_DIR = path.join(TEAMWORK_DIR, '.loop-state');
 
 // ============================================================================
@@ -127,6 +127,129 @@ function clearLoopState() {
 }
 
 // ============================================================================
+// Project/Swarm State Checks
+// ============================================================================
+
+/**
+ * Check if project is complete
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @returns {boolean} True if project phase is COMPLETE
+ */
+function isProjectComplete(project, team) {
+  if (!project || !team) {
+    return false;
+  }
+
+  const projectFile = path.join(TEAMWORK_DIR, project, team, 'project.json');
+
+  if (!fs.existsSync(projectFile)) {
+    return false;
+  }
+
+  try {
+    const content = fs.readFileSync(projectFile, 'utf-8');
+    const projectData = JSON.parse(content);
+    return projectData.phase === 'COMPLETE';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if swarm shutdown was requested
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @returns {boolean} True if shutdown requested
+ */
+function isSwarmShutdownRequested(project, team) {
+  if (!project || !team) {
+    return false;
+  }
+
+  const swarmFile = path.join(TEAMWORK_DIR, project, team, 'swarm', 'swarm.json');
+
+  if (!fs.existsSync(swarmFile)) {
+    return false;
+  }
+
+  try {
+    const content = fs.readFileSync(swarmFile, 'utf-8');
+    const swarmData = JSON.parse(content);
+    return swarmData.shutdown_requested === true || swarmData.status === 'stopped';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if all tasks are complete (no open or in_progress)
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @returns {boolean} True if all tasks complete
+ */
+function areAllTasksComplete(project, team) {
+  if (!project || !team) {
+    return false;
+  }
+
+  const tasksDir = path.join(TEAMWORK_DIR, project, team, 'tasks');
+
+  if (!fs.existsSync(tasksDir)) {
+    return true; // No tasks = complete
+  }
+
+  try {
+    const files = fs.readdirSync(tasksDir).filter(f => f.endsWith('.json'));
+
+    if (files.length === 0) {
+      return true; // No tasks = complete
+    }
+
+    for (const file of files) {
+      const taskPath = path.join(tasksDir, file);
+      const content = fs.readFileSync(taskPath, 'utf-8');
+      const task = JSON.parse(content);
+
+      if (task.status === 'open' || task.status === 'in_progress') {
+        return false;
+      }
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if worker loop should stop
+ * @param {LoopState} state - Current loop state
+ * @returns {{shouldStop: boolean, reason: string}} Stop decision and reason
+ */
+function shouldStopLoop(state) {
+  const project = state.project;
+  const team = state.team;
+
+  // Check 1: Project phase is COMPLETE
+  if (isProjectComplete(project, team)) {
+    return { shouldStop: true, reason: 'Project phase is COMPLETE' };
+  }
+
+  // Check 2: Swarm shutdown requested
+  if (isSwarmShutdownRequested(project, team)) {
+    return { shouldStop: true, reason: 'Swarm shutdown requested' };
+  }
+
+  // Check 3: All tasks are resolved (no open or in_progress)
+  if (areAllTasksComplete(project, team)) {
+    return { shouldStop: true, reason: 'All tasks complete' };
+  }
+
+  return { shouldStop: false, reason: '' };
+}
+
+// ============================================================================
 // Main Hook Logic
 // ============================================================================
 
@@ -200,6 +323,18 @@ async function main() {
     const project = state.project || '';
     const team = state.team || '';
     const role = state.role || '';
+
+    // Check if loop should stop (project complete, shutdown requested, or all tasks done)
+    const stopCheck = shouldStopLoop(state);
+    if (stopCheck.shouldStop) {
+      clearLoopState();
+      outputAndExit({
+        decision: 'approve',
+        reason: `Loop stopped: ${stopCheck.reason}`,
+        systemMessage: `✅ Teamwork loop stopped | Reason: ${stopCheck.reason}`,
+      });
+      return;
+    }
 
     // Build command
     let cmd = '/teamwork-worker --loop';

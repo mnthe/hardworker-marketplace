@@ -129,13 +129,13 @@ function tmuxSessionExists(sessionName) {
 }
 
 /**
- * Get tmux pane states
+ * Get tmux pane states with extended info (command, alive status)
  * @param {string} sessionName - tmux session name
- * @returns {Object.<number, boolean>} Map of pane index to alive state (true = alive, false = dead)
+ * @returns {Object.<number, {alive: boolean, command: string}>} Map of pane index to state info
  */
 function getTmuxPaneStates(sessionName) {
   try {
-    const output = execSync(`tmux list-panes -t "${sessionName}" -F "#{pane_index}:#{pane_dead}"`, {
+    const output = execSync(`tmux list-panes -t "${sessionName}" -F "#{pane_index}:#{pane_dead}:#{pane_current_command}"`, {
       encoding: 'utf-8'
     });
 
@@ -143,10 +143,14 @@ function getTmuxPaneStates(sessionName) {
     const lines = output.trim().split('\n');
 
     for (const line of lines) {
-      const [indexStr, deadStr] = line.split(':');
-      const paneIndex = parseInt(indexStr, 10);
-      const isDead = deadStr === '1';
-      paneStates[paneIndex] = !isDead; // alive = !dead
+      const parts = line.split(':');
+      const paneIndex = parseInt(parts[0], 10);
+      const isDead = parts[1] === '1';
+      const command = parts.slice(2).join(':') || 'unknown'; // Handle commands with colons
+      paneStates[paneIndex] = {
+        alive: !isDead,
+        command: command
+      };
     }
 
     return paneStates;
@@ -242,13 +246,14 @@ function collectSwarmStatus(project, team) {
     }
 
     const paneIndex = workerData.pane;
-    const isAlive = paneStates[paneIndex] === true;
+    const paneInfo = paneStates[paneIndex] || { alive: false, command: 'unknown' };
 
     workers.push({
       id: workerId,
       role: workerData.role,
       pane: paneIndex,
-      alive: isAlive,
+      alive: paneInfo.alive,
+      command: paneInfo.command,
       current_task: workerData.current_task || null,
       status: workerData.status || 'unknown'
     });
@@ -294,23 +299,25 @@ function formatTable(status) {
     lines.push(' No workers found.');
     lines.push('');
   } else {
-    lines.push('─'.repeat(70));
+    lines.push('─'.repeat(85));
     lines.push(' WORKERS');
-    lines.push('─'.repeat(70));
+    lines.push('─'.repeat(85));
     lines.push('');
-    lines.push('| ID  | Role       | Pane | Alive | Task | Status      |');
-    lines.push('|-----|------------|------|-------|------|-------------|');
+    lines.push('| ID  | Role       | Pane | Alive | Command     | Task | Status      |');
+    lines.push('|-----|------------|------|-------|-------------|------|-------------|');
 
     for (const worker of status.workers) {
       const aliveIcon = worker.alive ? '✓' : '✗';
       const taskDisplay = worker.current_task || '-';
       const paneDisplay = worker.pane !== null ? worker.pane.toString() : '-';
+      const cmdDisplay = (worker.command || '-').substring(0, 11);
 
       lines.push(
         `| ${worker.id.padEnd(3)} ` +
         `| ${worker.role.padEnd(10).substring(0, 10)} ` +
         `| ${paneDisplay.padEnd(4)} ` +
         `| ${aliveIcon.padEnd(5)} ` +
+        `| ${cmdDisplay.padEnd(11)} ` +
         `| ${taskDisplay.toString().padEnd(4)} ` +
         `| ${worker.status.padEnd(11).substring(0, 11)} |`
       );

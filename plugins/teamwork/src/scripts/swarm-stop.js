@@ -23,6 +23,7 @@ const ARG_SPEC = {
   '--team': { key: 'team', aliases: ['-t'], required: true },
   '--worker': { key: 'worker', aliases: ['-w'] },
   '--all': { key: 'all', aliases: ['-a'], flag: true },
+  '--graceful': { key: 'graceful', aliases: ['-g'], flag: true },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
@@ -272,6 +273,33 @@ function stopAllWorkers(project, team) {
   };
 }
 
+/**
+ * Request graceful shutdown of all workers
+ * Sets shutdown_requested flag - workers will stop on next iteration
+ * @param {string} project - Project name
+ * @param {string} team - Team name
+ * @returns {Object} Result object
+ */
+function requestGracefulShutdown(project, team) {
+  const swarmState = readSwarmState(project, team);
+
+  if (!swarmState) {
+    throw new Error('Swarm not found');
+  }
+
+  // Set shutdown_requested flag
+  swarmState.shutdown_requested = true;
+  swarmState.shutdown_requested_at = new Date().toISOString();
+  writeSwarmState(project, team, swarmState);
+
+  return {
+    status: 'success',
+    action: 'graceful_shutdown_requested',
+    message: 'Workers will stop on their next iteration',
+    workers: swarmState.workers
+  };
+}
+
 // ============================================================================
 // Main Entry Point
 // ============================================================================
@@ -296,8 +324,8 @@ function main() {
   const args = parseArgs(ARG_SPEC);
 
   // Validate mutually exclusive options
-  if (!args.worker && !args.all) {
-    console.error('Error: Either --worker or --all is required');
+  if (!args.worker && !args.all && !args.graceful) {
+    console.error('Error: Either --worker, --all, or --graceful is required');
     process.exit(1);
   }
 
@@ -308,7 +336,10 @@ function main() {
 
   let result;
 
-  if (args.worker) {
+  if (args.graceful) {
+    // Request graceful shutdown (workers stop on next iteration)
+    result = requestGracefulShutdown(args.project, args.team);
+  } else if (args.worker) {
     // Stop specific worker
     result = stopWorker(args.project, args.team, args.worker);
   } else {

@@ -188,8 +188,8 @@ function calculateTaskStats(tasks) {
       stats.by_role[task.role].resolved++;
     }
 
-    // Track active workers
-    if (task.claimed_by) {
+    // Track active workers - only include in_progress tasks (not resolved historical claims)
+    if (task.status === 'in_progress' && task.claimed_by) {
       const worker = {
         session: task.claimed_by,
         task_id: task.id,
