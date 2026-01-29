@@ -31,9 +31,38 @@ const { readStdin, createSessionStart, runHook } = require('../lib/hook-utils.js
  */
 
 /**
+ * Compare task IDs for sorting
+ * Numeric IDs sorted numerically, non-numeric IDs sorted alphabetically after
+ * @param {string} a - First task ID
+ * @param {string} b - Second task ID
+ * @returns {number} Comparison result
+ */
+function compareTaskIds(a, b) {
+  const aNum = parseInt(a, 10);
+  const bNum = parseInt(b, 10);
+  const aIsNum = !isNaN(aNum) && String(aNum) === a;
+  const bIsNum = !isNaN(bNum) && String(bNum) === b;
+
+  // Both numeric: sort numerically
+  if (aIsNum && bIsNum) {
+    return aNum - bNum;
+  }
+  // Only a is numeric: a comes first
+  if (aIsNum) {
+    return -1;
+  }
+  // Only b is numeric: b comes first
+  if (bIsNum) {
+    return 1;
+  }
+  // Both non-numeric: sort alphabetically
+  return a.localeCompare(b);
+}
+
+/**
  * Read tasks from session directory
  * @param {string} sessionId - Session ID
- * @returns {TaskSummary[]} Array of task summaries
+ * @returns {TaskSummary[]} Array of task summaries (sorted by ID)
  */
 function readTasks(sessionId) {
   const sessionDir = getSessionDir(sessionId);
@@ -61,6 +90,9 @@ function readTasks(sessionId) {
         // Skip invalid task files
       }
     }
+
+    // Sort by task ID (numeric first, then alphabetic)
+    tasks.sort((a, b) => compareTaskIds(a.id, b.id));
 
     return tasks;
   } catch {
@@ -343,5 +375,10 @@ async function main() {
   process.exit(0);
 }
 
-// Entry point
-runHook(main, () => createSessionStart());
+// Entry point - only run when executed directly
+if (require.main === module) {
+  runHook(main, () => createSessionStart());
+}
+
+// Export for testing
+module.exports = { compareTaskIds };
