@@ -259,6 +259,21 @@ function buildRecoveryMessage(sessionId, goal, phase, explorationStage, scriptsP
 ║ 🔄 ULTRAWORK CONTEXT RESTORED AFTER COMPACTION            ║
 ╚═══════════════════════════════════════════════════════════╝
 
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ ⚠️  MANDATORY FIRST ACTION - DO THIS NOW                   ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃                                                           ┃
+┃   Invoke: Skill(skill="ultrawork")                        ┃
+┃                                                           ┃
+┃   This restores:                                          ┃
+┃   • Full workflow phases and transitions                  ┃
+┃   • Evidence requirements and blocked patterns            ┃
+┃   • Verification protocol                                 ┃
+┃                                                           ┃
+┃   DO NOT proceed until you have read the skill.           ┃
+┃                                                           ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
 Session ID: ${sessionId}
 Goal: ${goal}
 Phase: ${phase}
