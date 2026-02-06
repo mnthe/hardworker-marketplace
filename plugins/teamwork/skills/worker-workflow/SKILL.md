@@ -1,85 +1,79 @@
 ---
 name: worker-workflow
-description: Core task execution workflow for teamwork workers (Phase 1-5). Ensures workers properly claim, execute, and update task status.
+description: |
+  Core task execution workflow for teamwork workers using native Claude Code APIs.
+  Covers task discovery, claiming, implementation, evidence collection, and completion.
 ---
 
 # Task Execution Workflow
 
-This skill provides the complete workflow for executing teamwork tasks. Follow these phases in order.
-
-## Input Format
-
-Your prompt includes:
-
-```
-TEAMWORK_DIR: {path to teamwork directory}
-PROJECT: {project name}
-SUB_TEAM: {sub-team name}
-SCRIPTS_PATH: {path to scripts directory}
-
-Options:
-- role_filter: {role} (optional)
-- strict_mode: true|false
-```
-
----
-
-<WARNING>
-**SCRIPTS_PATH is NOT a shell environment variable.**
-
-The value `SCRIPTS_PATH: /path/to/scripts` in your prompt is text. When writing bash commands:
-
-**WRONG** (will fail):
-```bash
-bun "$SCRIPTS_PATH/task-list.js"  # Shell cannot expand $SCRIPTS_PATH
-```
-
-**CORRECT** (substitute the actual value):
-```bash
-bun "/path/to/scripts/task-list.js"  # Use the value from your prompt directly
-```
-
-Always extract the path from your prompt and use it literally in commands.
-</WARNING>
+This skill provides the complete workflow for executing teamwork tasks using native Claude Code APIs. Follow these phases in order.
 
 ---
 
 ## Phase 1: Find Task
 
-List available tasks (open, unblocked, unclaimed):
+List available tasks using native TaskList:
 
-```bash
-bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --available --format json
+```python
+# List all tasks in the team
+tasks = TaskList()
 ```
 
-Or filter by your role:
+Filter for tasks that are:
+- **Unblocked**: No pending dependencies (all `blockedBy` tasks are completed)
+- **Unowned**: No `owner` assigned yet
+- **Open**: Status is not `completed` or `in_progress`
 
-```bash
-bun "$SCRIPTS_PATH/task-list.js" --project {PROJECT} --team {SUB_TEAM} --available --role {role_filter}
+If your agent has a role specialization, prioritize tasks matching your role.
+
+**If no task found:** Send a message to the orchestrator and wait for assignment.
+
+```python
+SendMessage(
+    type="message",
+    recipient="orchestrator",
+    content="No available tasks matching my role. Waiting for assignment.",
+    summary="Worker idle - no tasks available"
+)
 ```
 
-**If no task found:** Report "No available tasks" and exit.
+---
 
 ## Phase 2: Claim Task
 
-Atomically claim the task before starting work:
+Claim the task by setting yourself as the owner and updating the status:
 
-```bash
-bun "$SCRIPTS_PATH/task-claim.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} --owner ${CLAUDE_SESSION_ID}
+```python
+TaskUpdate(
+    taskId="<TASK_ID>",
+    owner="<your-agent-name>",
+    status="in_progress",
+    activeForm="Working on: <task subject>"
+)
 ```
 
-**If claim fails (conflict):** Another worker took it. Find a different task.
+**If claim fails (conflict):** Another worker took it. Return to Phase 1 and find a different task.
+
+---
 
 ## Phase 3: Implement
 
 Execute the task using your specialization:
 
-1. Read the task description carefully
-2. Use tools (Read, Write, Edit, Bash)
+1. Read the task description carefully (use `TaskGet` if needed)
+2. Use tools: Read, Write, Edit, Bash, Glob, Grep
 3. Follow existing patterns in the codebase
 4. Keep changes focused on the task scope
 
-## Phase 4: Verify & Collect Evidence
+```python
+# Get full task details if needed
+task = TaskGet(taskId="<TASK_ID>")
+```
+
+---
+
+## Phase 4: Verify and Collect Evidence
 
 For each deliverable, collect **concrete evidence**:
 
@@ -91,165 +85,97 @@ For each deliverable, collect **concrete evidence**:
 
 **Exit code requirement**: All command evidence MUST include exit code.
 
-## Phase 5: Update Task Status (CRITICAL)
+Append evidence to the task description as markdown:
 
-**This phase is MANDATORY. Never skip it.**
+```python
+TaskUpdate(
+    taskId="<TASK_ID>",
+    description="""
+<original task description>
+
+## Evidence
+- Created src/models/User.ts (85 lines)
+- npm run db:migrate: exit code 0
+- npm test -- schema.test.ts: 8/8 passed, exit code 0
+"""
+)
+```
+
+---
+
+## Phase 5: Complete Task
 
 ### On Success
 
-Mark task as resolved with evidence:
+Mark the task as completed and notify the orchestrator:
 
-```bash
-bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
-  --status resolved \
-  --add-evidence "Created src/models/User.ts (85 lines)" \
-  --add-evidence "npm test: 12/12 passed, exit code 0" \
-  --owner ${CLAUDE_SESSION_ID}
+```python
+# Mark task complete
+TaskUpdate(taskId="<TASK_ID>", status="completed")
+
+# Notify orchestrator
+SendMessage(
+    type="message",
+    recipient="orchestrator",
+    content="Task <TASK_ID> complete. <brief summary of what was done>.",
+    summary="Task <TASK_ID> completed"
+)
 ```
 
 ### On Failure
 
-Add failure evidence and release the task for another worker:
+Add failure evidence to the description and release the task for another worker:
 
-```bash
-# Add evidence of what went wrong
-bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
-  --add-evidence "FAILED: npm test exited with code 1 - TypeError in auth.ts:42" \
-  --owner ${CLAUDE_SESSION_ID}
+```python
+# Add failure evidence
+TaskUpdate(
+    taskId="<TASK_ID>",
+    description="""
+<original description>
 
-# Release task for retry by another worker
-bun "$SCRIPTS_PATH/task-update.js" --project {PROJECT} --team {SUB_TEAM} --id {TASK_ID} \
-  --release --owner ${CLAUDE_SESSION_ID}
+## Failure
+- FAILED: npm test exited with code 1 - TypeError in auth.ts:42
+- Root cause: Missing dependency injection for database client
+""",
+    status="open",
+    owner=""
+)
+
+# Notify orchestrator of failure
+SendMessage(
+    type="message",
+    recipient="orchestrator",
+    content="Task <TASK_ID> failed. Reason: <failure description>. Released for retry.",
+    summary="Task <TASK_ID> failed - released"
+)
 ```
 
-Do NOT mark as resolved if failed - release for retry.
-
----
-
-## Mailbox Integration (Task Completion Notification)
-
-When a worker completes a task, it should notify the orchestrator so that the orchestrator can assign the next available task. Teamwork supports this through the mailbox system.
-
-### Automatic Notification (Recommended)
-
-When updating task status to `resolved` with the `--worker-id` parameter, task-update.js automatically sends an `idle_notification` to the orchestrator:
-
-```bash
-bun "$SCRIPTS_PATH/task-update.js" \
-  --project {PROJECT} \
-  --team {SUB_TEAM} \
-  --id {TASK_ID} \
-  --status resolved \
-  --worker-id {WORKER_ID} \
-  --add-evidence "Implementation complete"
-```
-
-**When to use:**
-- Working in swarm mode (automatic worker spawning)
-- Worker was spawned by orchestrator with assigned worker ID
-- Standard workflow for coordinated teams
-
-### Manual Notification (Advanced)
-
-For custom notification workflows or when automatic notification isn't available, send notifications directly using mailbox-send.js:
-
-```bash
-bun "$SCRIPTS_PATH/mailbox-send.js" \
-  --project {PROJECT} \
-  --team {SUB_TEAM} \
-  --from {WORKER_ID} \
-  --to orchestrator \
-  --type idle_notification \
-  --payload '{"worker_id":"{WORKER_ID}","completed_task_id":"{TASK_ID}","completed_status":"resolved"}'
-```
-
-**When to use:**
-- Custom orchestration logic
-- Non-standard notification payloads
-- Troubleshooting coordination issues
-
-### Orchestrator Receiving Pattern
-
-The orchestrator polls for notifications using mailbox-poll.js:
-
-```bash
-# Poll for idle notifications with 30 second timeout
-bun "$SCRIPTS_PATH/mailbox-poll.js" \
-  --project {PROJECT} \
-  --team {SUB_TEAM} \
-  --inbox orchestrator \
-  --timeout 30000 \
-  --type idle_notification
-```
-
-**Returns:**
-- Empty array `[]` if timeout expires with no messages
-- Array of message objects if notifications received:
-  ```json
-  [
-    {
-      "from": "w1",
-      "to": "orchestrator",
-      "type": "idle_notification",
-      "payload": {
-        "worker_id": "w1",
-        "completed_task_id": "3",
-        "completed_status": "resolved"
-      },
-      "timestamp": "2026-01-27T10:30:00Z",
-      "read": false
-    }
-  ]
-  ```
-
-### Notification Workflow
-
-```
-Worker completes task
-    │
-    ├─→ task-update.js --status resolved --worker-id w1
-    │       │
-    │       └─→ Sends idle_notification to orchestrator inbox
-    │
-    └─→ Worker waits for next task assignment
-            │
-            └─→ Orchestrator polls inbox
-                    │
-                    ├─→ Receives idle_notification
-                    └─→ Assigns next task to idle worker
-```
-
-**Benefits:**
-- Reduces polling overhead (orchestrator-driven task assignment)
-- Enables dynamic load balancing
-- Improves coordination in multi-worker swarms
+Do NOT mark as completed if failed - release for retry by another worker.
 
 ---
 
 ## Phase 6: Commit Changes
 
-**After task is marked resolved, commit ONLY the files you modified:**
+**After task is marked completed, commit ONLY the files you modified.**
 
-⚠️ **CRITICAL: Selective File Staging**
+**CRITICAL: Selective File Staging**
 
 ```bash
-# ❌ FORBIDDEN - NEVER use these:
+# FORBIDDEN - NEVER use these:
 git add -A        # Stages ALL files
 git add .         # Stages ALL files
-git add --all     # Stages ALL files
-git add *         # Glob expansion - dangerous
 
-# ✅ REQUIRED - Only add files YOU modified during this task:
+# REQUIRED - Only add files YOU modified during this task:
 git add path/to/file1.ts path/to/file2.ts && git commit -m "$(cat <<'EOF'
 <type>(<scope>): <short description>
 
-[teamwork] Project: {PROJECT} | Team: {SUB_TEAM} | Task: {TASK_ID}
+[teamwork] Task: <TASK_ID>
 
-{TASK_TITLE}
+<TASK_SUBJECT>
 
 Evidence:
-- {evidence 1}
-- {evidence 2}
+- <evidence 1>
+- <evidence 2>
 
 Files changed:
 - path/to/file1.ts
@@ -277,7 +203,21 @@ EOF
 
 **Skip commit if:**
 - No files changed (`git status --porcelain` is empty)
-- Task not resolved (failed/released)
+- Task not completed (failed/released)
+
+---
+
+## Native API Quick Reference
+
+| Action | API Call |
+|--------|---------|
+| List tasks | `TaskList()` |
+| Get task details | `TaskGet(taskId="<id>")` |
+| Claim task | `TaskUpdate(taskId="<id>", owner="<name>", status="in_progress")` |
+| Update description | `TaskUpdate(taskId="<id>", description="...")` |
+| Complete task | `TaskUpdate(taskId="<id>", status="completed")` |
+| Release task | `TaskUpdate(taskId="<id>", status="open", owner="")` |
+| Message orchestrator | `SendMessage(type="message", recipient="orchestrator", content="...")` |
 
 ---
 
@@ -286,11 +226,11 @@ EOF
 Before ending your work, verify:
 
 - [ ] Phase 1: Found an available task
-- [ ] Phase 2: Successfully claimed it
+- [ ] Phase 2: Successfully claimed it (owner set, status in_progress)
 - [ ] Phase 3: Implemented the solution
 - [ ] Phase 4: Collected concrete evidence with exit codes
-- [ ] Phase 5: Called task-update.js with --status resolved OR --release
-- [ ] **Phase 6: Committed ONLY your modified files (if task resolved)**
+- [ ] Phase 5: Called TaskUpdate with status="completed" OR released with status="open"
+- [ ] Phase 6: Committed ONLY your modified files (if task completed)
 
 **If you skip Phase 5, the task will remain stuck in `in_progress` status forever.**
 **If you skip Phase 6, your changes may be lost or mixed with other workers' changes.**

@@ -1,6 +1,6 @@
 ---
 name: task-decomposition
-description: Hybrid task decomposition strategy for teamwork projects. Covers plan-based and semantic decomposition, granularity rules, role assignment, and complexity assessment.
+description: Hybrid task decomposition strategy for teamwork projects. Covers plan-based and semantic decomposition, granularity rules, role assignment, dependency management, and complexity assessment.
 ---
 
 # Task Decomposition Strategy
@@ -25,11 +25,11 @@ Use when `plans` option is provided with detailed implementation documents.
 Example transformation:
 ```
 Plan: "03.impl-workspace-setup.md"
-├─ Step 1: Root workspace → Task: "Initialize pnpm monorepo workspace"
-├─ Step 2.1: Database package → Task: "Create database package structure"
-├─ Step 2.2: items schema → Task: "Implement items.schema.ts"
-├─ Step 2.3: item-features schema → Task: "Implement item-features.schema.ts with pgvector"
-└─ Step 3: Docker → Task: "Configure Docker Compose for dev environment"
+|- Step 1: Root workspace -> Task: "Initialize pnpm monorepo workspace"
+|- Step 2.1: Database package -> Task: "Create database package structure"
+|- Step 2.2: items schema -> Task: "Implement items.schema.ts"
+|- Step 2.3: item-features schema -> Task: "Implement item-features.schema.ts with pgvector"
++- Step 3: Docker -> Task: "Configure Docker Compose for dev environment"
 ```
 
 ### Strategy B: Semantic Decomposition
@@ -37,7 +37,7 @@ Plan: "03.impl-workspace-setup.md"
 Use when no plan documents provided, or as sub-decomposition within Strategy A.
 
 1. **File-based**: New file creation = separate task
-2. **Complexity-based**: Complex file with multiple classes → split by class
+2. **Complexity-based**: Complex file with multiple classes -> split by class
 3. **Dependency-based**: Interface and implementation = separate tasks
 4. **Test-based**: Each independently testable unit = candidate task
 
@@ -51,15 +51,86 @@ Use when no plan documents provided, or as sub-decomposition within Strategy A.
 
 ### Anti-patterns (Avoid)
 
-- ❌ "Setup entire workspace" (too broad)
-- ❌ "Implement backend" (too vague)
-- ❌ "Create all schemas" (bundles multiple files)
+- "Setup entire workspace" (too broad)
+- "Implement backend" (too vague)
+- "Create all schemas" (bundles multiple files)
 
 ### Good patterns (Recommended)
 
-- ✅ "Create items.schema.ts with Item table"
-- ✅ "Add SearchUseCase with keyword search"
-- ✅ "Configure Docker Compose for PostgreSQL"
+- "Create items.schema.ts with Item table"
+- "Add SearchUseCase with keyword search"
+- "Configure Docker Compose for PostgreSQL"
+
+---
+
+## Task Creation with Native API
+
+Create tasks using the native `TaskCreate` API:
+
+```python
+# Create a task
+TaskCreate(
+    subject="Implement items.schema.ts",
+    description="Create PostgreSQL schema for items table with id, name, description, price columns. Include proper indexes.",
+    activeForm="Implementing items schema"
+)  # Returns task with auto-assigned ID
+```
+
+### Setting Dependencies
+
+Use `TaskUpdate` with `addBlockedBy` to define task dependencies:
+
+```python
+# Task 1: no dependencies (can start immediately)
+TaskCreate(subject="Setup database schema", description="...")  # -> task 1
+
+# Task 2: depends on task 1
+TaskCreate(subject="Implement auth middleware", description="...")  # -> task 2
+TaskUpdate(taskId="2", addBlockedBy=["1"])
+
+# Task 3: depends on task 2
+TaskCreate(subject="Create login/signup UI", description="...")  # -> task 3
+TaskUpdate(taskId="3", addBlockedBy=["2"])
+
+# Task 4: depends on both task 1 and task 2
+TaskCreate(subject="Write integration tests", description="...")  # -> task 4
+TaskUpdate(taskId="4", addBlockedBy=["1", "2"])
+```
+
+### Dependency Rules
+
+- **Minimize dependencies**: Maximize parallelism by only adding necessary `blockedBy` links
+- **No circular dependencies**: Task A blocks B blocks A is invalid
+- **Blocked tasks auto-unblock**: When all `blockedBy` tasks complete, the task becomes available for workers
+- **Independent tasks have no blockedBy**: They can be picked up by any idle worker immediately
+
+### Example: Full Task Creation
+
+```python
+# Foundation tasks (no dependencies)
+TaskCreate(subject="Initialize project structure", description="...")      # -> task 1
+TaskCreate(subject="Configure TypeScript and ESLint", description="...")  # -> task 2
+
+# Core implementation (depends on foundation)
+TaskCreate(subject="Create database models", description="...")           # -> task 3
+TaskUpdate(taskId="3", addBlockedBy=["1"])
+
+TaskCreate(subject="Implement REST API endpoints", description="...")     # -> task 4
+TaskUpdate(taskId="4", addBlockedBy=["1", "3"])
+
+TaskCreate(subject="Build React components", description="...")           # -> task 5
+TaskUpdate(taskId="5", addBlockedBy=["2"])
+
+# Integration (depends on both API and UI)
+TaskCreate(subject="Connect frontend to API", description="...")          # -> task 6
+TaskUpdate(taskId="6", addBlockedBy=["4", "5"])
+
+# Testing (depends on integration)
+TaskCreate(subject="Write E2E tests", description="...")                  # -> task 7
+TaskUpdate(taskId="7", addBlockedBy=["6"])
+```
+
+This creates a natural execution order where independent tasks run in parallel and dependent tasks wait for their prerequisites.
 
 ---
 
@@ -111,6 +182,6 @@ Workers use different models based on task complexity. Assign complexity to opti
 
 1. **Be specific** - Vague tasks get vague results
 2. **Include context** - Description should be self-contained
-3. **Maximize parallelism** - Minimize unnecessary dependencies
+3. **Maximize parallelism** - Minimize unnecessary `addBlockedBy` dependencies
 4. **Granular tasks** - Prefer more smaller tasks over fewer large ones
 5. **Clear acceptance criteria** - Workers need to know when task is complete
