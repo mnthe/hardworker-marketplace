@@ -1,27 +1,26 @@
 {
   "name": "teamwork",
-  "version": "0.28.3",
+  "version": "3.0.0",
   "skills": "./skills/",
-  "description": "Multi-session collaboration plugin with role-based workers, file-per-task storage, and dashboard status (cross-platform version using javascript/Bun).",
+  "description": "Native teammate-based collaboration plugin with role-based workers, event-driven coordination, and Claude Code agent teams.",
   "author": {
     "name": "mnthe"
   },
   "keywords": [
     "teamwork",
     "collaboration",
-    "multi-session",
+    "agent-teams",
     "role-based",
     "workers",
     "task-management",
     "parallel",
-    "typescript",
+    "native-api",
     "cross-platform"
   ],
   "license": "MIT",
   "commands": "./commands/",
   "agents": [
     "./agents/backend/AGENT.md",
-    "./agents/coordinator/AGENT.md",
     "./agents/devops/AGENT.md",
     "./agents/docs/AGENT.md",
     "./agents/final-verifier/AGENT.md",
@@ -30,7 +29,6 @@
     "./agents/review/AGENT.md",
     "./agents/security/AGENT.md",
     "./agents/test/AGENT.md",
-    "./agents/wave-verifier/AGENT.md",
     "./agents/worker/AGENT.md"
   ]
 }
