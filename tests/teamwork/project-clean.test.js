@@ -1,23 +1,19 @@
 #!/usr/bin/env bun
 /**
- * Tests for project-clean.js
+ * Tests for project-clean.js (v3 - delete metadata directory)
  */
 
-const { test, expect, describe, beforeEach, afterEach } = require('bun:test');
+const { test, expect, describe, afterEach } = require('bun:test');
 const path = require('path');
-const os = require('os');
 const fs = require('fs');
-const { runScript, mockProject } = require('../test-utils.js');
+const { runScript, TEAMWORK_TEST_BASE_DIR } = require('../test-utils.js');
 
 const SCRIPT_PATH = path.join(__dirname, '../../plugins/teamwork/src/scripts/project-clean.js');
 
-describe('project-clean.js', () => {
-  let cleanup;
-
+describe('project-clean.js v3', () => {
   afterEach(() => {
-    if (cleanup) {
-      cleanup();
-      cleanup = null;
+    if (fs.existsSync(TEAMWORK_TEST_BASE_DIR)) {
+      fs.rmSync(TEAMWORK_TEST_BASE_DIR, { recursive: true, force: true });
     }
   });
 
@@ -29,33 +25,46 @@ describe('project-clean.js', () => {
     expect(result.stdout).toContain('project-clean');
   });
 
-  test('cleans project tasks and verification directories', () => {
-    const mock = mockProject({ project: 'test-project', team: 'test-team' });
-    cleanup = mock.cleanup;
-
-    // Create some task files
-    fs.writeFileSync(path.join(mock.tasksDir, '1.json'), JSON.stringify({ id: '1' }));
-    fs.writeFileSync(path.join(mock.tasksDir, '2.json'), JSON.stringify({ id: '2' }));
-
-    // Create verification directory
-    const verificationDir = path.join(mock.projectDir, 'verification');
-    fs.mkdirSync(verificationDir, { recursive: true });
-    fs.writeFileSync(path.join(verificationDir, 'wave-1.json'), JSON.stringify({ wave: 1 }));
+  test('deletes project metadata directory', () => {
+    // Create a project directory with metadata
+    const projectDir = path.join(TEAMWORK_TEST_BASE_DIR, 'clean-test', 'dev');
+    fs.mkdirSync(projectDir, { recursive: true });
+    fs.writeFileSync(path.join(projectDir, 'project.json'), JSON.stringify({
+      project: 'clean-test',
+      team: 'dev',
+      goal: 'To be cleaned',
+      created_at: new Date().toISOString()
+    }));
 
     const result = runScript(SCRIPT_PATH, {
-      project: 'test-project',
-      team: 'test-team'
-    }, {
-      env: { ...process.env, HOME: os.tmpdir() }
+      project: 'clean-test',
+      team: 'dev'
     });
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('TEAMWORK PROJECT CLEANED');
-    expect(result.stdout).toContain('test-project');
+    expect(result.stdout).toContain('clean-test');
 
-    // Verify directories are deleted
-    expect(fs.existsSync(mock.tasksDir)).toBe(false);
-    expect(fs.existsSync(verificationDir)).toBe(false);
+    // Verify the project directory was deleted
+    expect(fs.existsSync(projectDir)).toBe(false);
+  });
+
+  test('outputs confirmation message', () => {
+    const projectDir = path.join(TEAMWORK_TEST_BASE_DIR, 'confirm-test', 'main');
+    fs.mkdirSync(projectDir, { recursive: true });
+    fs.writeFileSync(path.join(projectDir, 'project.json'), JSON.stringify({
+      project: 'confirm-test',
+      team: 'main',
+      goal: 'Confirm message test',
+      created_at: new Date().toISOString()
+    }));
+
+    const result = runScript(SCRIPT_PATH, {
+      project: 'confirm-test',
+      team: 'main'
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('cleaned');
   });
 
   test('fails without required parameters', () => {
@@ -77,117 +86,49 @@ describe('project-clean.js', () => {
     expect(result.stderr).toContain('not found');
   });
 
-  test('handles project with no tasks directory', () => {
-    const mock = mockProject({ project: 'test-project', team: 'test-team' });
-    cleanup = mock.cleanup;
+  test('deletes project with nested subdirectories', () => {
+    const projectDir = path.join(TEAMWORK_TEST_BASE_DIR, 'nested-test', 'dev');
+    fs.mkdirSync(projectDir, { recursive: true });
+    fs.writeFileSync(path.join(projectDir, 'project.json'), JSON.stringify({
+      project: 'nested-test',
+      team: 'dev',
+      goal: 'Nested test',
+      created_at: new Date().toISOString()
+    }));
 
-    // Remove tasks directory
-    fs.rmSync(mock.tasksDir, { recursive: true, force: true });
+    // Create nested subdirectories (simulating old state that might remain)
+    const subDir = path.join(projectDir, 'sub', 'deep');
+    fs.mkdirSync(subDir, { recursive: true });
+    fs.writeFileSync(path.join(subDir, 'data.json'), '{}');
 
     const result = runScript(SCRIPT_PATH, {
-      project: 'test-project',
-      team: 'test-team'
-    }, {
-      env: { ...process.env, HOME: os.tmpdir() }
+      project: 'nested-test',
+      team: 'dev'
     });
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('TEAMWORK PROJECT CLEANED');
+    expect(fs.existsSync(projectDir)).toBe(false);
   });
 
-  // Edge case tests
-  test('handles already clean project (no tasks)', () => {
-    const mock = mockProject({ project: 'clean-project', team: 'clean-team' });
-    cleanup = mock.cleanup;
+  test('outputs JSON with cleanup details', () => {
+    const projectDir = path.join(TEAMWORK_TEST_BASE_DIR, 'json-clean', 'dev');
+    fs.mkdirSync(projectDir, { recursive: true });
+    fs.writeFileSync(path.join(projectDir, 'project.json'), JSON.stringify({
+      project: 'json-clean',
+      team: 'dev',
+      goal: 'JSON clean test',
+      created_at: new Date().toISOString()
+    }));
 
-    // Clean project (no task files)
     const result = runScript(SCRIPT_PATH, {
-      project: 'clean-project',
-      team: 'clean-team'
-    }, {
-      env: { ...process.env, HOME: os.tmpdir() }
+      project: 'json-clean',
+      team: 'dev'
     });
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('TEAMWORK PROJECT CLEANED');
-
-    // Verify cleaned_at timestamp added
-    const projectData = JSON.parse(fs.readFileSync(mock.projectFile, 'utf-8'));
-    expect(projectData.cleaned_at).toBeTruthy();
-  });
-
-  test('handles project with in_progress tasks', () => {
-    const mock = mockProject({ project: 'progress-project', team: 'progress-team' });
-    cleanup = mock.cleanup;
-
-    // Create in_progress task
-    const taskFile = path.join(mock.tasksDir, '1.json');
-    const taskData = {
-      id: '1',
-      title: 'Task in progress',
-      status: 'in_progress',
-      claimed_by: 'session-123',
-      claimed_at: new Date().toISOString()
-    };
-    fs.writeFileSync(taskFile, JSON.stringify(taskData));
-
-    const result = runScript(SCRIPT_PATH, {
-      project: 'progress-project',
-      team: 'progress-team'
-    }, {
-      env: { ...process.env, HOME: os.tmpdir() }
-    });
-
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('TEAMWORK PROJECT CLEANED');
-    expect(fs.existsSync(mock.tasksDir)).toBe(false);
-  });
-
-  test('cleans verification directory explicitly', () => {
-    const mock = mockProject({ project: 'verify-project', team: 'verify-team' });
-    cleanup = mock.cleanup;
-
-    // Create verification files
-    const verificationDir = path.join(mock.projectDir, 'verification');
-    fs.mkdirSync(verificationDir, { recursive: true });
-    fs.writeFileSync(path.join(verificationDir, 'wave-1.json'), JSON.stringify({ wave: 1 }));
-    fs.writeFileSync(path.join(verificationDir, 'wave-2.json'), JSON.stringify({ wave: 2 }));
-
-    const result = runScript(SCRIPT_PATH, {
-      project: 'verify-project',
-      team: 'verify-team'
-    }, {
-      env: { ...process.env, HOME: os.tmpdir() }
-    });
-
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('verification');
-    expect(fs.existsSync(verificationDir)).toBe(false);
-  });
-
-  test('resets stats to zero after clean', () => {
-    const mock = mockProject({ project: 'stats-project', team: 'stats-team' });
-    cleanup = mock.cleanup;
-
-    // Update stats to non-zero values
-    const projectData = JSON.parse(fs.readFileSync(mock.projectFile, 'utf-8'));
-    projectData.stats = { total: 10, open: 5, in_progress: 3, resolved: 2 };
-    fs.writeFileSync(mock.projectFile, JSON.stringify(projectData));
-
-    const result = runScript(SCRIPT_PATH, {
-      project: 'stats-project',
-      team: 'stats-team'
-    }, {
-      env: { ...process.env, HOME: os.tmpdir() }
-    });
-
-    expect(result.exitCode).toBe(0);
-
-    // Verify stats reset
-    const cleanedData = JSON.parse(fs.readFileSync(mock.projectFile, 'utf-8'));
-    expect(cleanedData.stats.total).toBe(0);
-    expect(cleanedData.stats.open).toBe(0);
-    expect(cleanedData.stats.in_progress).toBe(0);
-    expect(cleanedData.stats.resolved).toBe(0);
+    expect(result.json).toBeTruthy();
+    expect(result.json.project).toBe('json-clean');
+    expect(result.json.team).toBe('dev');
+    expect(result.json.cleaned_at).toBeTruthy();
   });
 });

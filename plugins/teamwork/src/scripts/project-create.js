@@ -1,35 +1,26 @@
 #!/usr/bin/env bun
 /**
- * Project Create Script
- * Creates teamwork project.json file
+ * Project Create Script (v3 - lightweight metadata only)
  *
- * Usage: project-create.js --project <name> --team <name> --goal "..."
+ * Creates a lightweight project.json metadata file.
+ * No task files, no wave system - native TaskCreate handles tasks.
+ *
+ * Usage: project-create.js --project <name> --team <name> --goal "..." [--options '{"key":"value"}']
  */
 
 const fs = require('fs');
 const { parseArgs, generateHelp } = require('../lib/args.js');
-const { getProjectDir, getProjectFile, getTasksDir } = require('../lib/project-utils.js');
+const { getProjectDir, getProjectFile } = require('../lib/project-utils.js');
 
 // ============================================================================
 // CLI Arguments Parsing
 // ============================================================================
 
-/**
- * @typedef {import('../lib/types.js').Project} Project
- */
-
-/**
- * @typedef {Object} CliArgs
- * @property {string} project
- * @property {string} team
- * @property {string} goal
- * @property {boolean} help
- */
-
 const ARG_SPEC = {
   '--project': { key: 'project', aliases: ['-p'], required: true },
   '--team': { key: 'team', aliases: ['-t'], required: true },
   '--goal': { key: 'goal', aliases: ['-g'], required: true },
+  '--options': { key: 'options', aliases: ['-o'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
@@ -44,45 +35,48 @@ const ARG_SPEC = {
 function main() {
   // Check for help flag first
   if (process.argv.includes('--help') || process.argv.includes('-h')) {
-    console.log(generateHelp('project-create.js', ARG_SPEC, 'Create a new teamwork project with metadata and directory structure'));
+    console.log(generateHelp('project-create.js', ARG_SPEC, 'Create lightweight teamwork project metadata'));
     process.exit(0);
   }
 
   const args = parseArgs(ARG_SPEC);
 
-  // Get paths from project-utils
+  // Create project directory (no tasks subdirectory - native handles tasks)
   const projectDir = getProjectDir(args.project, args.team);
-  const tasksDir = getTasksDir(args.project, args.team);
-  const projectFile = getProjectFile(args.project, args.team);
-
-  // Create directories
   fs.mkdirSync(projectDir, { recursive: true });
-  fs.mkdirSync(tasksDir, { recursive: true });
 
   // Generate timestamp
   const timestamp = new Date().toISOString();
 
-  // Create project data
-  /** @type {Project} */
+  // Parse optional options JSON
+  let options = undefined;
+  if (args.options) {
+    try {
+      options = JSON.parse(args.options);
+    } catch (e) {
+      console.error('Error: Invalid JSON in --options parameter');
+      process.exit(1);
+    }
+  }
+
+  // Create lightweight project data (no stats, no wave system)
   const projectData = {
     project: args.project,
     team: args.team,
     goal: args.goal,
-    created_at: timestamp,
-    updated_at: timestamp,
-    stats: {
-      total: 0,
-      open: 0,
-      in_progress: 0,
-      resolved: 0,
-    },
+    created_at: timestamp
   };
 
+  // Add options only if provided
+  if (options !== undefined) {
+    projectData.options = options;
+  }
+
   // Write project.json
+  const projectFile = getProjectFile(args.project, args.team);
   fs.writeFileSync(projectFile, JSON.stringify(projectData, null, 2), 'utf-8');
 
-  // Output success message and project data
-  console.log('OK: Project created');
+  // Output project data as JSON
   console.log(JSON.stringify(projectData, null, 2));
 }
 
