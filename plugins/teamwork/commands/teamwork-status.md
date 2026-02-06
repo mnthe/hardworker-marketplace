@@ -1,15 +1,15 @@
 ---
 name: teamwork-status
-description: "Dashboard view of teamwork project status"
-argument-hint: "[--project NAME] [--team NAME] [--verbose] | --help"
-allowed-tools: ["Bash", "Read", "Glob"]
+description: "Show teamwork project status dashboard"
+argument-hint: '[--project NAME] [--team NAME]'
+allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/project-status.js:*)", "Read", "TaskList"]
 ---
 
 # Teamwork Status Command
 
 ## Overview
 
-Display a dashboard-style status view of a teamwork project.
+Display a dashboard-style status view of a teamwork project. Uses native TaskList for live task status and project-status.js for project metadata.
 
 ---
 
@@ -18,7 +18,6 @@ Display a dashboard-style status view of a teamwork project.
 Parse options:
 - `--project NAME`: Override project detection
 - `--team NAME`: Override sub-team detection
-- `--verbose`: Show task details
 
 Detect project/team:
 ```bash
@@ -29,143 +28,64 @@ SUB_TEAM=$(git rev-parse --abbrev-ref HEAD 2>/dev/null | tr '/' '-' || echo "mai
 # Check for overrides in arguments
 ```
 
-Teamwork directory: `~/.claude/teamwork/{PROJECT}/{SUB_TEAM}/`
+## Step 2: Gather Status Data
 
-## Step 2: Display Status Dashboard
-
-Call the project-status.js script to display the comprehensive status dashboard:
+**Option A: Use project-status.js for project metadata**
 
 ```bash
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/src/scripts"
-
-# Basic dashboard (table format)
-bun "${SCRIPTS}/project-status.js" --project "${PROJECT}" --team "${SUB_TEAM}" --format table
-
-# With verbose output (show all task details)
-bun "${SCRIPTS}/project-status.js" --project "${PROJECT}" --team "${SUB_TEAM}" --format table --verbose
-
-# JSON output (for programmatic use)
-bun "${SCRIPTS}/project-status.js" --project "${PROJECT}" --team "${SUB_TEAM}" --format json
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/project-status.js" --project "${PROJECT}" --team "${SUB_TEAM}" --format table
 ```
 
-The script automatically handles:
-- Project existence check (exits with error if not found)
-- Reading project.json, tasks/, waves.json, verification/ files
-- Calculating statistics (total, open, in-progress, resolved)
-- Role-based completion tracking
-- Wave progress and verification (if waves.json exists)
-- Active worker display
-- Blocked task detection
+**Option B: Use native TaskList for live task status**
+
+```python
+tasks = TaskList()
+# Parse task list for status counts
+```
+
+Combine both sources for a comprehensive dashboard.
 
 **If project doesn't exist:**
 ```
 Error: Project not found: {PROJECT}/{SUB_TEAM}
+
+Start a project with: /teamwork "your goal"
 ```
 
-Exit with code 1. Suggest running: `/teamwork "your goal"`
-
-## Step 3: Display Dashboard Output
-
-**Render:**
+## Step 3: Display Dashboard
 
 ```markdown
-═══════════════════════════════════════════════════════════
- TEAMWORK STATUS
-═══════════════════════════════════════════════════════════
+# Teamwork Status
 
- Project: {PROJECT}
- Sub-team: {SUB_TEAM}
- Goal: {goal}
+## Project
+- Name: {PROJECT}
+- Sub-team: {SUB_TEAM}
+- Goal: {goal}
 
-───────────────────────────────────────────────────────────
- PROGRESS
-───────────────────────────────────────────────────────────
+## Progress
 
- ████████████░░░░░░░░ 60% (6/10)
+{completed}/{total} tasks ({percentage}%)
 
- Open:       3 tasks
- In Progress: 1 task
- Completed:  6 tasks
+| Status | Count |
+|--------|-------|
+| Completed | {n} |
+| In Progress | {n} |
+| Pending | {n} |
+| Blocked | {n} |
 
-{If waves.json exists:}
-───────────────────────────────────────────────────────────
- WAVE PROGRESS
-───────────────────────────────────────────────────────────
+## Tasks
 
- Wave 1: ✅ VERIFIED   (3/3 tasks, 100%)
- Wave 2: ✅ VERIFIED   (5/5 tasks, 100%)
- Wave 3: ⏳ IN PROGRESS (2/4 tasks, 50%)
-         Task 7: ✓ resolved
-         Task 8: ◐ in progress (session-abc)
-         Task 9: ○ open
-         Task 10: ○ open
- Wave 4: ⏸️  PENDING    (0/2 tasks, 0%)
-         (blocked by Wave 3)
+| ID | Task | Status | Owner |
+|----|------|--------|-------|
+| 1 | ... | completed | worker-backend |
+| 2 | ... | in_progress | worker-frontend |
+| 3 | ... | pending | - |
 
- Overall: Wave 3/4 active
-
-{If verification files exist:}
-───────────────────────────────────────────────────────────
- VERIFICATION
-───────────────────────────────────────────────────────────
-
- Wave 1: ✅ PASS (verified 2026-01-15 10:30)
-         - Build passed
-         - Tests passed (15/15)
-         - No conflicts
-
- Wave 2: ✅ PASS (verified 2026-01-15 11:45)
-         - Build passed
-         - Tests passed (23/23)
-         - No conflicts
-
- Wave 3: (in progress, not yet verified)
-
-───────────────────────────────────────────────────────────
- BY ROLE
-───────────────────────────────────────────────────────────
-
- backend:   ████████████████████ 100% (3/3) ✓
- frontend:  ████████░░░░░░░░░░░░  40% (2/5)
- test:      ░░░░░░░░░░░░░░░░░░░░   0% (0/2)
-
-───────────────────────────────────────────────────────────
- ACTIVE WORKERS
-───────────────────────────────────────────────────────────
-
- session-abc: #7 Build login form (5m ago)
- session-xyz: #9 Add unit tests (2m ago)
-
-───────────────────────────────────────────────────────────
- BLOCKED TASKS
-───────────────────────────────────────────────────────────
-
- #10 Integration tests - blocked by: #7, #8
-
-───────────────────────────────────────────────────────────
- COMMANDS
-───────────────────────────────────────────────────────────
-
- /teamwork-worker              Start working on tasks
- /teamwork-worker --loop       Continuous worker mode
- /teamwork-worker --strict     Strict evidence mode (for waves)
- /teamwork-status --verbose    Show task details
-
-═══════════════════════════════════════════════════════════
-
-{Wave-based projects show additional sections:}
-- WAVE PROGRESS: Shows wave-by-wave execution status
-- VERIFICATION: Shows verification results for completed waves
+## Commands
+- /teamwork-worker     Start a worker
+- /teamwork-verify     Run verification
+- /teamwork-clean      Clean up project
 ```
-
-## Step 3: Verbose Mode
-
-If `--verbose` flag is provided, the dashboard includes additional sections:
-- **Wave task details**: Per-task status within each wave
-- **Verification details**: Individual check results with evidence
-- **All tasks table**: Comprehensive task listing with status icons
-
-The verbose output is automatically generated by the project-status.js script.
 
 ---
 
@@ -173,6 +93,5 @@ The verbose output is automatically generated by the project-status.js script.
 
 | Option | Description |
 |--------|-------------|
-| `--project NAME` | Override project name |
-| `--team NAME` | Override sub-team name |
-| `--verbose` | Show detailed task list |
+| `--project NAME` | Override project name (default: git repo name) |
+| `--team NAME` | Override sub-team name (default: branch name) |
