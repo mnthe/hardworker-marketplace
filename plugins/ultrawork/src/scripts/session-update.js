@@ -4,7 +4,7 @@
  * Usage: session-update.js --session <ID> [--phase PHASE] [--exploration-stage STAGE] [--iteration N]
  */
 
-const { updateSession, resolveSessionId, readSession } = require('../lib/session-utils.js');
+const { updateSession, resolveSessionId, readSession, validatePhaseTransition } = require('../lib/session-utils.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
 
 // ============================================================================
@@ -20,6 +20,7 @@ const ARG_SPEC = {
   '--plan-approved': { key: 'planApproved', aliases: ['-P'], flag: true },
   '--exploration-stage': { key: 'explorationStage', aliases: ['-e'] },
   '--iteration': { key: 'iteration', aliases: ['-i'] },
+  '--force': { key: 'force', aliases: ['-f'], flag: true },
   '--quiet': { key: 'quiet', aliases: ['-q'], flag: true },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
@@ -101,6 +102,28 @@ async function main() {
     // Normalize and validate phase if provided
     if (args.phase) {
       args.phase = normalizePhase(args.phase);
+    }
+
+    // Phase transition validation
+    if (args.phase) {
+      const currentSession = readSession(args.sessionId);
+      const currentPhase = currentSession.phase;
+
+      // Skip validation if phase isn't changing
+      if (currentPhase !== args.phase) {
+        const result = validatePhaseTransition(currentPhase, args.phase, {
+          skip_verify: currentSession.options?.skip_verify || false
+        });
+
+        if (!result.allowed) {
+          if (args.force) {
+            console.error(`WARNING: ${result.reason} (overridden with --force)`);
+          } else {
+            console.error(`Error: ${result.reason}`);
+            process.exit(1);
+          }
+        }
+      }
     }
 
     // Update session with file locking

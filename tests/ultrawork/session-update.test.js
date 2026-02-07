@@ -61,7 +61,10 @@ describe('session-update.js', () => {
       expect(updated.phase).toBe('EXECUTION');
     });
 
-    test('should update phase to VERIFICATION', async () => {
+    test('should update phase to VERIFICATION from EXECUTION', async () => {
+      // First move to EXECUTION (valid from PLANNING)
+      await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'EXECUTION']);
+      // Then move to VERIFICATION (valid from EXECUTION)
       const result = await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'VERIFICATION']);
 
       expect(result.exitCode).toBe(0);
@@ -70,7 +73,12 @@ describe('session-update.js', () => {
       expect(updated.phase).toBe('VERIFICATION');
     });
 
-    test('should update phase to COMPLETE', async () => {
+    test('should update phase to COMPLETE from VERIFICATION', async () => {
+      // First move to EXECUTION (valid from PLANNING)
+      await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'EXECUTION']);
+      // Then move to VERIFICATION (valid from EXECUTION)
+      await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'VERIFICATION']);
+      // Then move to COMPLETE (valid from VERIFICATION)
       const result = await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'COMPLETE']);
 
       expect(result.exitCode).toBe(0);
@@ -154,6 +162,169 @@ describe('session-update.js', () => {
 
       const after = readSession(session.sessionId);
       expect(after.updated_at).not.toBe(before.updated_at);
+    });
+  });
+
+  describe('phase transition validation', () => {
+    test('should reject EXECUTION to COMPLETE when skip_verify is false', async () => {
+      // Create session in EXECUTION phase with skip_verify=false (default)
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'EXECUTION',
+        skip_verify: false
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'COMPLETE'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('VERIFICATION');
+      // Phase should remain unchanged
+      const updated = readSession(session.sessionId);
+      expect(updated.phase).toBe('EXECUTION');
+    });
+
+    test('should include valid alternatives in error message', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'EXECUTION',
+        skip_verify: false
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'COMPLETE'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      // Error should mention VERIFICATION as the required step
+      expect(result.stderr).toContain('VERIFICATION');
+      // Error should mention --force as override option
+      expect(result.stderr).toContain('--force');
+    });
+
+    test('should allow EXECUTION to COMPLETE with --force flag and print warning', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'EXECUTION',
+        skip_verify: false
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'COMPLETE',
+        '--force'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toContain('WARNING');
+      // Phase should be updated despite validation failure
+      const updated = readSession(session.sessionId);
+      expect(updated.phase).toBe('COMPLETE');
+    });
+
+    test('should allow EXECUTION to COMPLETE when skip_verify is true', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'EXECUTION',
+        skip_verify: true
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'COMPLETE'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const updated = readSession(session.sessionId);
+      expect(updated.phase).toBe('COMPLETE');
+    });
+
+    test('should allow valid transition PLANNING to EXECUTION', async () => {
+      // Default session starts in PLANNING
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'EXECUTION'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const updated = readSession(session.sessionId);
+      expect(updated.phase).toBe('EXECUTION');
+    });
+
+    test('should allow valid transition EXECUTION to VERIFICATION', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'EXECUTION'
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'VERIFICATION'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const updated = readSession(session.sessionId);
+      expect(updated.phase).toBe('VERIFICATION');
+    });
+
+    test('should allow valid transition VERIFICATION to COMPLETE', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'VERIFICATION'
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'COMPLETE'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const updated = readSession(session.sessionId);
+      expect(updated.phase).toBe('COMPLETE');
+    });
+
+    test('should reject PLANNING to COMPLETE', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'COMPLETE'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('blocked');
+    });
+
+    test('should allow any phase to CANCELLED', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'EXECUTION'
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'CANCELLED'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const updated = readSession(session.sessionId);
+      expect(updated.phase).toBe('CANCELLED');
+    });
+
+    test('should reject transition from terminal state to active state', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'COMPLETE'
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'EXECUTION'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('terminal');
     });
   });
 });
