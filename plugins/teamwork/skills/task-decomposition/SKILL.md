@@ -178,6 +178,187 @@ Workers use different models based on task complexity. Assign complexity to opti
 
 ---
 
+## Structured Description Convention
+
+Tasks should use structured descriptions with markdown sections to provide clear guidance to workers.
+
+### Description Template
+
+```markdown
+## Description
+What needs to be done (clear, actionable explanation)
+
+## Approach
+standard | tdd
+
+## Success Criteria
+- Criterion 1
+- Criterion 2
+- Criterion 3
+
+## Verification Commands
+command1
+command2
+```
+
+### Section Definitions
+
+| Section | Required | Default | Purpose |
+|---------|----------|---------|---------|
+| `## Description` | Yes | - | What needs to be done |
+| `## Approach` | No | standard | `standard` or `tdd` workflow |
+| `## Success Criteria` | Recommended | General evidence | Checklist for verification |
+| `## Verification Commands` | Recommended | Skip | Commands workers run to verify |
+
+### Approach Selection
+
+| Task Type | Recommended Approach | Rationale |
+|-----------|---------------------|-----------|
+| New feature with clear spec | tdd | Test-first ensures spec compliance |
+| Bug fix | tdd | Test reproduces bug first |
+| Refactoring | standard | Existing tests cover behavior |
+| Configuration/docs | standard | Not testable |
+| Security-critical code | tdd | Security tests first |
+| API endpoints | tdd | Contract-driven development |
+| Database schema | standard | Migrations not test-driven |
+| UI components | standard | Visual testing preferred |
+
+### Success Criteria Guidelines
+
+**Good criteria are:**
+- **Specific**: "Tests pass: npm test -- tests/auth.test.ts (exit code 0)" not "Tests pass"
+- **Verifiable**: Include commands or file paths
+- **Complete**: Cover all aspects of the task
+- **Independent**: Each criterion can be checked separately
+
+**Examples:**
+
+❌ **Vague:**
+```
+- Code works
+- Tests pass
+- No errors
+```
+
+✅ **Specific:**
+```
+- Auth middleware in src/middleware/auth.ts
+- Tests pass: npm test -- tests/auth.test.ts (exit code 0)
+- Invalid tokens return 401 status
+- Type check passes: npx tsc --noEmit src/middleware/auth.ts
+```
+
+### Verification Commands Guidelines
+
+**Include commands that:**
+- Run relevant tests (scoped, not full suite)
+- Type check modified files
+- Run build (if applicable)
+- Verify runtime behavior
+
+**Examples:**
+
+```bash
+# Test commands (scoped)
+npm test -- tests/feature.test.ts
+bun test tests/feature.test.ts
+
+# Type checking
+npx tsc --noEmit src/file.ts
+
+# Build verification
+npm run build
+bun run build
+
+# Runtime checks
+docker-compose up -d && docker-compose ps
+curl -X POST http://localhost:3000/api/endpoint
+```
+
+**Do NOT include:**
+- Full test suite commands (`npm test` without scope)
+- Deployment commands
+- Commands requiring manual verification
+- Commands with side effects (database resets, etc.)
+
+### Example: Backend Task (TDD)
+
+```python
+TaskCreate(
+    subject="Implement user registration endpoint",
+    description="""## Description
+POST /api/auth/register endpoint with email/password validation, password hashing, and duplicate email check.
+
+## Approach
+tdd
+
+## Success Criteria
+- Test file created first (TDD-RED)
+- Endpoint in src/api/auth/register.ts
+- Tests pass: npm test -- tests/auth-register.test.ts (exit code 0)
+- Duplicate emails return 409
+- Weak passwords rejected with 400
+
+## Verification Commands
+npm test -- tests/auth-register.test.ts
+npx tsc --noEmit src/api/auth/register.ts
+""",
+    activeForm="Implementing user registration"
+)
+```
+
+### Example: Frontend Task (Standard)
+
+```python
+TaskCreate(
+    subject="Create market card component",
+    description="""## Description
+React component displaying market name, description, current odds, and bet buttons. Include loading states and error handling.
+
+## Approach
+standard
+
+## Success Criteria
+- Component in src/components/MarketCard.tsx
+- Tests pass: npm test -- tests/MarketCard.test.ts (exit code 0)
+- Accessible: proper ARIA labels
+- Responsive design for mobile/desktop
+
+## Verification Commands
+npm test -- tests/MarketCard.test.ts
+npm run build
+""",
+    activeForm="Creating market card component"
+)
+```
+
+### Example: DevOps Task (Standard)
+
+```python
+TaskCreate(
+    subject="Configure CI/CD pipeline",
+    description="""## Description
+GitHub Actions workflow for automated testing and deployment. Run on every push to main. Deploy to Vercel on success.
+
+## Approach
+standard
+
+## Success Criteria
+- .github/workflows/ci.yml created
+- Workflow runs on push to main
+- Tests run in CI environment
+- Deployment to Vercel on success
+
+## Verification Commands
+gh workflow view ci
+gh run list --workflow=ci
+""",
+    activeForm="Configuring CI/CD pipeline"
+)
+```
+
+---
+
 ## Best Practices
 
 1. **Be specific** - Vague tasks get vague results
@@ -185,3 +366,6 @@ Workers use different models based on task complexity. Assign complexity to opti
 3. **Maximize parallelism** - Minimize unnecessary `addBlockedBy` dependencies
 4. **Granular tasks** - Prefer more smaller tasks over fewer large ones
 5. **Clear acceptance criteria** - Workers need to know when task is complete
+6. **Use structured descriptions** - All tasks should follow the markdown section format
+7. **Choose appropriate approach** - TDD for new features/bugs, standard for refactoring/config
+8. **Provide verification commands** - Workers need concrete commands to verify completion

@@ -199,46 +199,139 @@ Use when no plan documents provided, or as sub-decomposition within Strategy A.
 
 #### Role Assignment
 
-| Role       | When to Use                                |
-| ---------- | ------------------------------------------ |
-| `frontend` | UI, components, styling, user interactions |
-| `backend`  | API, services, database, business logic    |
-| `test`     | Tests, fixtures, mocks                     |
-| `devops`   | CI/CD, deployment, infrastructure          |
-| `docs`     | Documentation, README, examples            |
-| `security` | Auth, permissions, input validation        |
-| `review`   | Code review, refactoring                   |
-| `worker`   | Miscellaneous, cross-cutting               |
+| Role       | When to Use                                | TDD Recommended |
+| ---------- | ------------------------------------------ | --------------- |
+| `frontend` | UI, components, styling, user interactions | Optional        |
+| `backend`  | API, services, database, business logic    | Yes             |
+| `test`     | Tests, fixtures, mocks                     | Yes             |
+| `devops`   | CI/CD, deployment, infrastructure          | No              |
+| `docs`     | Documentation, README, examples            | No              |
+| `security` | Auth, permissions, input validation        | Yes             |
+| `review`   | Code review, refactoring                   | No              |
+| `worker`   | Miscellaneous, cross-cutting               | Conditional     |
+
+#### Structured Description Convention
+
+When creating tasks, embed metadata in the description using markdown sections:
+
+| Section | Required | Default | Purpose |
+|---------|----------|---------|---------|
+| `## Description` | Yes | - | What needs to be done |
+| `## Approach` | No | standard | `standard` or `tdd` |
+| `## Success Criteria` | Recommended | General evidence | Checklist for verification |
+| `## Verification Commands` | Recommended | Skip | Commands workers run to verify |
+
+Workers parse these sections to determine their workflow (TDD vs standard) and verification strategy.
+
+**Example task description structure:**
+
+```markdown
+## Description
+Create PostgreSQL tables for users, sessions, tokens.
+
+## Approach
+standard
+
+## Success Criteria
+- Schema migration file created
+- Migration runs successfully: npm run db:migrate (exit code 0)
+- Tables exist: users, sessions, tokens
+
+## Verification Commands
+npm run db:migrate
+npm test -- tests/schema.test.ts
+```
 
 ### Step 4: Create Tasks
 
-Use **TaskCreate** for each task, then **TaskUpdate** to set dependencies:
+Use **TaskCreate** for each task, then **TaskUpdate** to set dependencies.
+
+**IMPORTANT**: Use structured descriptions with `## Description`, `## Approach`, `## Success Criteria`, and `## Verification Commands` sections.
 
 ```python
 # Create independent tasks
 TaskCreate(
     subject="Setup database schema",
-    description="Create PostgreSQL tables for users, sessions, tokens. Role: backend.",
+    description="""## Description
+Create PostgreSQL tables for users, sessions, tokens.
+
+## Approach
+standard
+
+## Success Criteria
+- Schema migration file created
+- Migration runs successfully: npm run db:migrate (exit code 0)
+- Tables exist: users, sessions, tokens
+
+## Verification Commands
+npm run db:migrate
+npm test -- tests/schema.test.ts
+""",
     activeForm="Setting up database schema"
 )  # returns task_id (e.g., "1")
 
 TaskCreate(
     subject="Configure Docker Compose for PostgreSQL",
-    description="Docker Compose with PostgreSQL and pgvector. Role: devops.",
+    description="""## Description
+Docker Compose with PostgreSQL and pgvector. Add health checks and volume mounts.
+
+## Approach
+standard
+
+## Success Criteria
+- docker-compose.yml created
+- PostgreSQL container starts: docker-compose up (exit code 0)
+- Database accessible on port 5432
+
+## Verification Commands
+docker-compose config --quiet
+docker-compose up -d
+docker-compose ps | grep postgres
+""",
     activeForm="Configuring Docker Compose"
 )  # returns task_id (e.g., "2")
 
 # Create dependent tasks and set dependencies
 TaskCreate(
     subject="Implement auth middleware",
-    description="JWT-based auth middleware with token validation. Role: backend.",
+    description="""## Description
+JWT-based auth middleware with token validation. Handle invalid tokens with 401.
+
+## Approach
+tdd
+
+## Success Criteria
+- Test file created first (TDD-RED)
+- Auth middleware in src/middleware/auth.ts
+- Tests pass: npm test -- tests/auth.test.ts (exit code 0)
+- Invalid tokens return 401
+
+## Verification Commands
+npm test -- tests/auth.test.ts
+npx tsc --noEmit src/middleware/auth.ts
+""",
     activeForm="Implementing auth middleware"
 )  # returns task_id (e.g., "3")
 TaskUpdate(taskId="3", addBlockedBy=["1"])
 
 TaskCreate(
     subject="Create login/signup UI",
-    description="React forms with validation, error handling. Role: frontend.",
+    description="""## Description
+React forms with validation, error handling, and loading states.
+
+## Approach
+standard
+
+## Success Criteria
+- Login form component created
+- Signup form component created
+- Form validation using Zod
+- Tests pass: npm test -- tests/auth-ui.test.ts (exit code 0)
+
+## Verification Commands
+npm test -- tests/auth-ui.test.ts
+npm run build
+""",
     activeForm="Creating login/signup UI"
 )  # returns task_id (e.g., "4")
 TaskUpdate(taskId="4", addBlockedBy=["3"])
