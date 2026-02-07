@@ -1,6 +1,6 @@
 {
   "name": "teamwork",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "skills": "./skills/",
   "description": "Native teammate-based collaboration plugin with role-based workers, event-driven coordination, and Claude Code agent teams.",
   "author": {

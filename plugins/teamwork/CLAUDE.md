@@ -16,7 +16,7 @@ Key features:
 - Event-driven coordination via hooks (`TaskCompleted`, `TeammateIdle`)
 - Project-based state management with shared task files
 - Structured evidence collection and validation
-- 4 lightweight scripts for project lifecycle (setup, create, status, clean)
+- 5 lightweight scripts for project lifecycle (setup, create, get, status, clean)
 
 ## File Structure
 
@@ -35,9 +35,10 @@ plugins/teamwork/
 │   │   ├── project-get.js     # Get project metadata
 │   │   ├── project-clean.js   # Clean project state
 │   │   └── project-status.js  # Project dashboard
-│   └── hooks/                 # Lifecycle hooks (2 files)
-│       ├── project-progress.js  # TaskCompleted hook
-│       └── teammate-idle.js     # TeammateIdle hook
+│   └── hooks/                 # Lifecycle hooks (3 files)
+│       ├── project-progress.js      # TaskCompleted hook
+│       ├── teammate-idle.js         # TeammateIdle hook
+│       └── orchestrator-completed.js # SubagentStop hook for orchestrator
 ├── agents/                    # Agent definitions
 │   ├── orchestrator/          # Planning and coordination (delegate mode)
 │   ├── final-verifier/        # Project-level verification
@@ -61,7 +62,7 @@ plugins/teamwork/
 │   ├── teamwork-clean/        # Project reset procedures
 │   └── worker-workflow/       # Task execution workflow
 ├── hooks/
-│   └── hooks.json             # Hook configuration (TaskCompleted, TeammateIdle)
+│   └── hooks.json             # Hook configuration (TaskCompleted, TeammateIdle, SubagentStop)
 └── CLAUDE.md                  # This file
 ```
 
@@ -76,6 +77,10 @@ All scripts use Bun runtime with flag-based parameters. Project scripts use `--p
 | **project-get.js** | Get project metadata | `--project <name>` `--team <name>` |
 | **project-clean.js** | Clean project state | `--project <name>` `--team <name>` |
 | **project-status.js** | Get project dashboard status | `--project <name>` `--team <name>` `[--format json|table]` `[--field <path>]` `[--verbose]` |
+| **codex-verify.js** | Run Codex CLI as auxiliary verifier (dual gate) | `--mode check\|review\|exec\|full` `--working-dir <dir>` `--criteria "c1\|c2"` `--output <file>` |
+
+**Supporting files:**
+- `codex-output-schema.json` - JSON schema for Codex verification output format
 
 Task management is handled by native Claude Code API:
 - `TaskCreate` - Create tasks for teammates
@@ -91,6 +96,7 @@ Hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 |-----------|-------|---------|
 | **project-progress.js** | TaskCompleted | Track project progress when tasks complete |
 | **teammate-idle.js** | TeammateIdle | Detect idle teammates and assign new work |
+| **orchestrator-completed.js** | SubagentStop (teamwork:orchestrator) | Track orchestrator completion |
 
 ## Skill Inventory
 
@@ -248,6 +254,28 @@ Hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 Project finished. All tasks verified.
 
+## Codex Dual Gate Verification
+
+Teamwork integrates with Codex CLI as an auxiliary verifier in the final-verifier agent.
+
+### How It Works
+
+**Fork-Join Pattern:**
+1. **Phase 0 (Fork)**: Final verifier spawns background Codex process via `codex-verify.js`
+2. **Phases 1-4**: Final verifier performs primary checks (build, tests, evidence completeness)
+3. **Phase 4.5 (Join)**: Final verifier waits for Codex completion, reads results from output file
+4. **Phase 5**: Combined verdict (both gates must pass)
+
+**Graceful Degradation:**
+- If Codex not installed: Verifier continues with primary checks only
+- If Codex fails: Logged as warning, primary gate verdict takes precedence
+- Script detects Codex availability via `which codex` check
+
+**Why Dual Gate?**
+- Final verifier focuses on build/test success and evidence completeness
+- Codex provides code quality analysis and pattern detection
+- Two independent verifiers increase confidence in project completion
+
 ## Development Rules
 
 ### Script Usage Pattern
@@ -316,6 +344,13 @@ bun "$SCRIPTS_PATH/project-status.js" --project {PROJECT} --team {SUB_TEAM}
       "hooks": [{
         "type": "command",
         "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/teammate-idle.js"
+      }]
+    }],
+    "SubagentStop": [{
+      "matcher": "teamwork:orchestrator",
+      "hooks": [{
+        "type": "command",
+        "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/orchestrator-completed.js"
       }]
     }]
   }

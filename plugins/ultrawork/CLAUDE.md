@@ -14,7 +14,7 @@ Ultrawork enforces a strict workflow cycle:
 Key features:
 
 - Session isolation with state tracking
-- Multi-agent orchestration (explorer, planner, worker, verifier, reviewer)
+- Multi-agent orchestration (explorer, planner, worker, verifier, reviewer, scope-analyzer)
 - Gate enforcement (blocks code edits during PLANNING phase)
 - TDD support with test-first enforcement
 - Evidence collection via lifecycle hooks
@@ -31,7 +31,8 @@ plugins/ultrawork/
 │   │   ├── file-lock.js       # Cross-platform file locking
 │   │   ├── session-utils.js   # Session management utilities
 │   │   ├── hook-utils.js      # Hook utilities (stdin, output helpers, error handling)
-│   │   └── args.js            # Command-line argument parsing utility
+│   │   ├── args.js            # Command-line argument parsing utility
+│   │   └── blocked-patterns.js # Blocked pattern detection for verification
 │   ├── scripts/               # CLI scripts (18 files)
 │   │   ├── setup-ultrawork.js
 │   │   ├── session-get.js
@@ -49,9 +50,11 @@ plugins/ultrawork/
 │   │   ├── ultrawork-clean.js
 │   │   ├── ultrawork-evidence.js
 │   │   ├── evidence-summary.js  # AI-friendly evidence index
-│   │   └── evidence-query.js    # Filter & query evidence
-│   └── hooks/                 # Lifecycle hooks (10 files)
+│   │   ├── evidence-query.js    # Filter & query evidence
+│   │   └── scope-set.js         # Set scope expansion data in context.json
+│   └── hooks/                 # Lifecycle hooks (11 files)
 │       ├── session-start-hook.js
+│       ├── compact-recovery-hook.js
 │       ├── session-context-hook.js
 │       ├── agent-lifecycle-tracking.js
 │       ├── post-tool-use-evidence.js
@@ -66,7 +69,8 @@ plugins/ultrawork/
 │   ├── planner/
 │   ├── worker/
 │   ├── verifier/
-│   └── reviewer/
+│   ├── reviewer/
+│   └── scope-analyzer/
 ├── commands/                  # Command definitions
 ├── hooks/
 │   └── hooks.json            # Hook configuration
@@ -102,6 +106,10 @@ All scripts use Bun runtime with flag-based parameters.
 | **task-summary.js**       | Generate AI-friendly task markdown                          | `--session <ID>` `--task <ID>` `--save`                                                                               |
 | **evidence-summary.js**   | Generate AI-friendly evidence index                         | `--session <ID>` `--save` `--format md\|json`                                                                         |
 | **evidence-query.js**     | Query evidence with filters                                 | `--session <ID>` `--type test_result` `--last 5` `--search "npm"` `--task 1`                                          |
+| **codex-verify.js**       | Run Codex CLI as auxiliary verifier (dual gate)             | `--mode check\|review\|exec\|full` `--working-dir <dir>` `--criteria "c1\|c2"` `--output <file>`                      |
+
+**Supporting files:**
+- `codex-output-schema.json` - JSON schema for Codex verification output format
 
 ## Data Access Guide
 
@@ -517,6 +525,39 @@ Verifier scans all evidence for these patterns. If found → instant FAIL:
 - "FIXME"
 - "not implemented"
 - "placeholder"
+
+## Codex Dual Gate Verification
+
+Ultrawork integrates with Codex CLI as an auxiliary verifier running in parallel during the VERIFICATION phase.
+
+### How It Works
+
+**Fork-Join Pattern:**
+1. **Phase 0 (Fork)**: Verifier spawns background Codex process via `codex-verify.js`
+2. **Phases 1-4**: Verifier performs primary checks (evidence audit, tests, blocked patterns)
+3. **Phase 4.5 (Join)**: Verifier waits for Codex completion, reads results from output file
+4. **Phase 5**: Combined verdict (both gates must pass)
+
+**Graceful Degradation:**
+- If Codex not installed: Verifier continues with primary checks only
+- If Codex fails: Logged as warning, primary gate verdict takes precedence
+- Script detects Codex availability via `which codex` check
+
+**Verification Modes:**
+- `check`: Quick lint-style checks
+- `review`: Code quality review
+- `exec`: Run tests and validation
+- `full`: Complete verification (check + review + exec)
+
+**Output Format:**
+- Codex writes JSON to temporary file (schema: `codex-output-schema.json`)
+- Verifier parses results and integrates into final verdict
+- Both gate results included in evidence log
+
+**Why Dual Gate?**
+- Ultrawork verifier focuses on evidence completeness and test execution
+- Codex provides code quality analysis and pattern detection
+- Two independent verifiers increase confidence in PASS verdict
 
 ## Hook Configuration
 
