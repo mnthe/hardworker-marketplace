@@ -104,6 +104,31 @@ Each piece of evidence MUST include:
 
 ## Process
 
+### Phase 0: Fork Codex Verification (Background)
+
+Launch Codex verification in background before starting main verification:
+
+```bash
+# Build criteria list from all tasks
+bun "{SCRIPTS_PATH}/task-list.js" --session ${CLAUDE_SESSION_ID} --format json
+# Extract all criteria[] arrays, pipe-join them
+
+# Launch Codex in background (non-blocking)
+bun "{SCRIPTS_PATH}/codex-verify.js" \
+  --mode full \
+  --working-dir ${WORKING_DIR} \
+  --criteria "criterion1|criterion2|criterion3" \
+  --goal "${GOAL}" \
+  --output /tmp/codex-${CLAUDE_SESSION_ID}.json \
+  run_in_background=True
+```
+
+**Important**:
+- Use `run_in_background=True` parameter in Bash tool
+- Store background task reference for Phase 4.5
+- Codex runs in parallel while Phase 1-4 execute
+- If codex CLI not available, script returns `verdict: "SKIP"` (exit 0)
+
 ### Phase 1: Read Session & Tasks
 
 ```bash
@@ -165,17 +190,63 @@ echo "EXIT_CODE: $?"
 
 Record ALL outputs as final evidence.
 
+### Phase 4.5: Join Codex Result
+
+Await the background Codex verification result:
+
+```bash
+# Wait for Codex to complete (timeout: 5 minutes)
+TaskOutput(background_task_from_phase_0, block=True, timeout=300000)
+
+# Read Codex result
+codex_result=$(cat /tmp/codex-${CLAUDE_SESSION_ID}.json)
+```
+
+Parse Codex result JSON:
+
+```json
+{
+  "available": true,
+  "verdict": "PASS" | "FAIL" | "SKIP",
+  "review": { "issues": [...] },
+  "exec": { "criteria_results": [...] },
+  "summary": "..."
+}
+```
+
+**Codex verdict handling**:
+- `PASS`: Codex found no issues → continue to Phase 5
+- `FAIL`: Codex found issues → add to fail reasons in Phase 5
+- `SKIP`: Codex not installed → treat as pass-through (no additional checks)
+
+**If verdict is FAIL**:
+- Extract issues from `review.issues[]` and `exec.criteria_results[]`
+- Add Codex findings to overall fail reasons
+- Include in fix task creation
+
 ### Phase 5: PASS/FAIL Determination
 
 **PASS Requirements (ALL must be true):**
 
 | Check | Requirement |
 |-------|-------------|
-| **Evidence Complete** | Every criterion has concrete evidence |
-| **Evidence Valid** | All evidence has command + output + exit code |
-| **No Speculation** | Zero blocked patterns found |
-| **Commands Pass** | All verification commands exit 0 |
-| **Tasks Closed** | All tasks (except verify) status="resolved" |
+| **Claude Gate: Evidence Complete** | Every criterion has concrete evidence |
+| **Claude Gate: Evidence Valid** | All evidence has command + output + exit code |
+| **Claude Gate: No Speculation** | Zero blocked patterns found |
+| **Claude Gate: Commands Pass** | All verification commands exit 0 |
+| **Claude Gate: Tasks Closed** | All tasks (except verify) status="resolved" |
+| **Codex Gate: PASS or SKIP** | Codex verification passed OR not installed |
+
+**Dual Gate Decision Table:**
+
+| Claude Gate | Codex Gate | Final Verdict | Action |
+|-------------|------------|---------------|--------|
+| PASS | PASS | **PASS** | Complete session |
+| PASS | FAIL | **FAIL** | Create tasks for Codex issues |
+| FAIL | PASS | **FAIL** | Create tasks for Claude issues |
+| FAIL | FAIL | **FAIL** | Create tasks for all issues |
+| PASS | SKIP | **PASS** | Complete session (Codex unavailable) |
+| FAIL | SKIP | **FAIL** | Create tasks for Claude issues |
 
 **FAIL Triggers:**
 
@@ -184,6 +255,7 @@ Record ALL outputs as final evidence.
 | **Missing evidence** | Create task: "Add evidence for [criterion]" |
 | **Blocked pattern** | Create task: "Replace speculation with evidence" |
 | **Command failure** | Create task: "Fix failing tests" |
+| **Codex found issues** | Create task: "Fix Codex-identified issue: [detail]" |
 
 ### Phase 6: Update Files
 
@@ -224,28 +296,64 @@ bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EX
 
 ## Verdict: PASS / FAIL
 
-## Evidence Audit
+## Claude Gate
+
+### Evidence Audit
 
 | Task | Criterion | Evidence | Status |
 |------|-----------|----------|--------|
 | 1 | Tests pass | npm test exit 0 | ✓ |
 | 2 | API works | Missing | ✗ |
 
-## Blocked Pattern Scan
+### Blocked Pattern Scan
 - Found: 0 / Found: 2 patterns
 
-## Final Verification
+### Final Verification
 - Tests: PASS (15/15)
 - Build: PASS
 
+### Claude Gate Verdict: PASS / FAIL
+
+## Codex Gate
+
+### Codex Availability
+- Available: true / false
+- Verdict: PASS / FAIL / SKIP
+
+### Codex Review Findings
+- Issues Found: 2
+  1. Warning: Potential null pointer in src/auth.ts:42
+  2. Info: Consider error handling in src/api.ts:15
+
+### Codex Exec Criteria Results
+
+| Criterion | Status | Evidence |
+|-----------|--------|----------|
+| Tests pass | PASS | All test files execute successfully |
+| API works | FAIL | No GET /api/users endpoint found |
+
+### Codex Gate Verdict: PASS / FAIL / SKIP
+
+**SKIP Note** (if applicable): Codex CLI not installed - verification skipped (graceful degradation)
+
+## Combined Verdict
+
+| Gate | Result |
+|------|--------|
+| Claude Gate | PASS / FAIL |
+| Codex Gate | PASS / FAIL / SKIP |
+| **Final Verdict** | **PASS / FAIL** |
+
 ## Issues (if FAIL)
-1. Task 2: Missing evidence for "API works"
-2. Task 3: Found "TODO" in evidence
+1. Claude: Task 2: Missing evidence for "API works"
+2. Claude: Task 3: Found "TODO" in evidence
+3. Codex: No GET /api/users endpoint found (criterion: "API works")
+4. Codex: Warning - Potential null pointer in src/auth.ts:42
 
 ## Session Updated
 - Session ID: ${CLAUDE_SESSION_ID}
 - Verify task status: resolved (PASS) / open (FAIL)
-- Phase: COMPLETE (if PASS)
+- Phase: COMPLETE (if PASS) / EXECUTION (if FAIL)
 ```
 
 ---
