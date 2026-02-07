@@ -16,7 +16,7 @@ Key features:
 - Event-driven coordination via hooks (`TaskCompleted`, `TeammateIdle`)
 - Project-based state management with shared task files
 - Structured evidence collection and validation
-- 5 lightweight scripts for project lifecycle (setup, create, get, status, clean)
+- 6 scripts for project lifecycle and verification (setup, create, get, status, clean, codex-verify)
 
 ## File Structure
 
@@ -29,7 +29,7 @@ plugins/teamwork/
 │   │   ├── args.js            # Common argument parsing
 │   │   ├── blocked-patterns.js # Blocked pattern detection
 │   │   └── domain-config.js   # Domain configuration
-│   ├── scripts/               # CLI scripts (5 files)
+│   ├── scripts/               # CLI scripts (6 files)
 │   │   ├── setup-teamwork.js  # Initialize teamwork environment
 │   │   ├── project-create.js  # Create new project with metadata
 │   │   ├── project-get.js     # Get project metadata

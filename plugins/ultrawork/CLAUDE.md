@@ -33,7 +33,7 @@ plugins/ultrawork/
 │   │   ├── hook-utils.js      # Hook utilities (stdin, output helpers, error handling)
 │   │   ├── args.js            # Command-line argument parsing utility
 │   │   └── blocked-patterns.js # Blocked pattern detection for verification
-│   ├── scripts/               # CLI scripts (18 files)
+│   ├── scripts/               # CLI scripts (19 files)
 │   │   ├── setup-ultrawork.js
 │   │   ├── session-get.js
 │   │   ├── session-field.js     # Optimized single field extraction

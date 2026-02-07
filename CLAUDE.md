@@ -636,8 +636,8 @@ bun test tests/ultrawork/session-get.test.js
 
 - `tests/{plugin}/*.test.js` - Script tests
 - `tests/{plugin}/lib/*.test.js` - Library module tests
-- `tests/{plugin}/test-utils.js` - Shared test utilities
-- `tests/{plugin}/preload.js` - Test isolation preload
+- `tests/{plugin}/test-utils.js` - Shared test utilities (ultrawork, teamwork)
+- `tests/{plugin}/preload.js` - Test isolation preload (ultrawork, teamwork)
 
 ### Functional Testing (Manual)
 
