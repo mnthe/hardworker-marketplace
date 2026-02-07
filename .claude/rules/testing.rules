@@ -1,7 +1,7 @@
 # Testing Standards
 
 **Source of Truth**: Both (this file for detailed standards, CLAUDE.md for overview)
-**Last Updated**: 2026-01-16
+**Last Updated**: 2026-02-07
 
 ## Test Discipline
 
@@ -65,22 +65,34 @@ Tests: 15 passed, 15 total
 **Conclusion**: All tests passing, criterion met.
 ```
 
-## Manual Testing for Bun Scripts
+## Automated Testing with Bun
 
-Since this project lacks automated test framework:
+This project uses Bun's built-in test runner for automated tests.
 
-### Script Validation
+### Running Tests
 
 ```bash
-# Syntax check
-bun --check src/scripts/*.js
+# Run all tests for a plugin
+bun test tests/ultrawork/
+bun test tests/teamwork/
 
-# ESLint (if available)
-npx eslint src/scripts/*.js
+# Run specific test file
+bun test tests/ultrawork/session-get.test.js
+
+# Run with coverage
+bun test tests/ultrawork/ --coverage
 ```
 
-### Functional Testing
+### Test Structure
 
+- `tests/{plugin}/*.test.js` - Script tests
+- `tests/{plugin}/lib/*.test.js` - Library module tests
+- `tests/{plugin}/test-utils.js` - Shared test utilities
+- `tests/{plugin}/preload.js` - Test isolation preload
+
+### Functional Testing (Manual)
+
+For features not covered by automated tests:
 1. **Session State**: Create session, verify JSON structure
 2. **Task Operations**: Create/update/list tasks
 3. **Hook Execution**: Verify hooks trigger correctly

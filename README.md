@@ -60,14 +60,12 @@ claude plugin install knowledge-extraction@hardworker-marketplace
 ### Example: teamwork Session
 
 ```bash
-# Terminal 1: Start coordination
+# Start coordination (orchestrator spawns native teammates automatically)
 /teamwork "build REST API with tests and docs"
 
-# Terminal 2: Backend worker (continuous mode)
-/teamwork-worker --role backend --loop
-
-# Terminal 3: Test worker
-/teamwork-worker --role test --loop
+# Orchestrator creates tasks, spawns role-based workers as native teammates
+# Workers execute tasks, coordinate via SendMessage
+# Event-driven: TaskCompleted and TeammateIdle hooks drive progress
 
 # Check status
 /teamwork-status
@@ -81,7 +79,7 @@ claude plugin install knowledge-extraction@hardworker-marketplace
 | Team collaboration, parallel work | **teamwork** |
 | Capturing code patterns and insights | **knowledge-extraction** |
 | CI/CD and automation | **ultrawork --auto** |
-| Multiple terminal sessions | **teamwork** |
+| Parallel agent collaboration | **teamwork** |
 | TDD workflow enforcement | **ultrawork** |
 
 See [Detailed Scenarios](#decision-guide) below for more guidance.
@@ -98,11 +96,11 @@ Strict verification-first development mode with session isolation and mandatory 
 
 **[Full Documentation →](plugins/ultrawork/)**
 
-### teamwork - Multi-Session Collaboration
+### teamwork - Native Teammate Collaboration
 
-Role-based worker agents for parallel development across multiple terminal sessions.
+Role-based worker agents for parallel development using Claude Code's native teammate API.
 
-**Key Features:** Role-based worker agents (frontend, backend, devops, test, docs, security, review), file-per-task storage, continuous loop mode, dashboard status, project and team isolation.
+**Key Features:** Role-based worker agents (frontend, backend, devops, test, docs, security, review), native teammate API, event-driven coordination (TaskCompleted, TeammateIdle hooks), dashboard status, project and team isolation.
 
 **[Full Documentation →](plugins/teamwork/)**
 
@@ -118,14 +116,14 @@ Extract and manage knowledge from codebases for AI agent context.
 
 | Feature | ultrawork | teamwork | knowledge-extraction |
 |---------|-----------|----------|---------------------|
-| **Primary Use Case** | Solo developer, strict verification | Team collaboration, parallel work | Pattern capture, documentation |
-| **Session Model** | Single session, isolated worktree | Multi-terminal, shared project | Session-based insights |
-| **Verification** | Mandatory, multi-tier (task + final) | Optional, wave-based | Not applicable |
+| **Primary Use Case** | Solo developer, strict verification | Agent team collaboration, parallel work | Pattern capture, documentation |
+| **Session Model** | Single session, isolated worktree | Single session, native teammate API | Session-based insights |
+| **Verification** | Mandatory, multi-tier (task + final) | Final verifier agent | Not applicable |
 | **Evidence Collection** | Automatic via hooks | Structured via workers | Insight extraction |
-| **Concurrency** | Parallel workers, single session | Multiple sessions, file locks | Single session |
-| **Role Specialization** | No | Yes (8 roles) | No |
+| **Concurrency** | Parallel workers, single session | Native teammates, event-driven coordination | Single session |
+| **Role Specialization** | No | Yes (8 worker roles) | No |
 | **Auto Mode** | Yes (`--auto` flag) | No (interactive only) | No (hook-based) |
-| **Best For** | Feature implementation, bug fixes | Large features, team projects | Learning, documentation |
+| **Best For** | Feature implementation, bug fixes | Large features, parallel agent work | Learning, documentation |
 
 ## Architecture Overview
 
@@ -144,9 +142,9 @@ flowchart TD
     end
 
     subgraph teamwork
-        TW_CMD["/teamwork"] --> TW_AGENTS[11 Agents]
+        TW_CMD["/teamwork"] --> TW_AGENTS[10 Agents]
         TW_AGENTS --> TW_STATE["~/.claude/teamwork/"]
-        Hooks --> TW_HOOKS[Loop Detector]
+        Hooks --> TW_HOOKS[Event Hooks]
         TW_HOOKS --> TW_STATE
     end
 
@@ -168,7 +166,7 @@ flowchart TD
 ### Data Flow
 
 1. **ultrawork**: Goal → Explorer → Planner → Workers (parallel) → Verifier → Complete
-2. **teamwork**: Goal → Orchestrator → Tasks ← Workers (multi-terminal) → Verification → Complete
+2. **teamwork**: Goal → Orchestrator → Tasks ← Workers (native teammates) → Verification → Complete
 3. **knowledge-extraction**: Session → Hooks → Storage → Extract → Components
 
 ## Decision Guide
@@ -193,20 +191,21 @@ Use ultrawork when:
 **Recommendation: teamwork**
 
 Use teamwork when:
-- Multiple developers working on same project
+- Need parallel agent collaboration on a project
 - Tasks can be parallelized across roles
 - Need specialization (frontend, backend, test, etc.)
-- Want continuous loop mode for unattended work
-- Require wave-based verification
+- Want event-driven coordination with native teammate API
+- Require final verification by dedicated verifier agent
 
 ```bash
-# Terminal 1: Coordinator
+# Single session: Orchestrator spawns and coordinates native teammates
 /teamwork "build REST API with authentication"
 
-# Terminal 2-4: Workers
-/teamwork-worker --role backend --loop
-/teamwork-worker --role frontend --loop
-/teamwork-worker --role test --loop
+# Orchestrator automatically:
+# - Creates tasks via TaskCreate
+# - Spawns workers: Task(teamwork:backend), Task(teamwork:frontend), etc.
+# - Assigns tasks via TaskUpdate(owner)
+# - Monitors via TaskCompleted and TeammateIdle hooks
 ```
 
 #### Scenario 3: Strict Verification Required
@@ -220,16 +219,16 @@ Use ultrawork when:
 - Want automatic execute→verify retry loop
 - Need final verifier to audit all evidence
 
-#### Scenario 4: Parallel Development Across Terminals
+#### Scenario 4: Parallel Agent Development
 
 **Recommendation: teamwork**
 
 Use teamwork when:
-- Multiple terminal sessions needed
-- Workers should claim tasks independently
-- Need role-based task filtering
-- Require file-based locking for concurrency
-- Want fresh start mechanism for stuck workers
+- Need multiple agents working in parallel
+- Workers should receive tasks from orchestrator
+- Need role-based task assignment
+- Require event-driven coordination
+- Want native teammate API for agent lifecycle management
 
 #### Scenario 5: Capturing Code Patterns and Insights
 
@@ -278,13 +277,11 @@ Pattern skills: **backend-patterns**, **frontend-patterns**, **security-patterns
 
 **Key Pattern:** All agents use `scripts-path-usage` for correct script invocation.
 
-### teamwork Skills (7 skills)
+### teamwork Skills (4 skills)
 
-Core workflow skills: **worker-workflow** (shared 5-phase task execution), **monitoring-loop** (orchestrator patterns), **task-decomposition** (parallel planning), **teamwork-clean** (project reset), **swarm-workflow** (automatic worker spawning).
+Core workflow skills: **worker-workflow** (task execution with native API), **event-coordination** (hook-based orchestration patterns), **task-decomposition** (parallel planning with role assignment), **teamwork-clean** (project reset).
 
-Utility skills: **scripts-path-usage**, **utility-scripts**.
-
-**Key Pattern:** The `worker-workflow` skill is shared by all 8 role-specific workers.
+**Key Pattern:** The `worker-workflow` skill is shared by all 8 role-specific workers. The `event-coordination` skill drives the orchestrator's hook-based coordination via `TaskCompleted` and `TeammateIdle` events.
 
 ### knowledge-extraction Skills (1 skill)
 
@@ -335,11 +332,11 @@ bun -e "
 
 **Solution:** List sessions with `/ultrawork-status --all`. Verify `$CLAUDE_SESSION_ID` is set. Sessions in terminal states are auto-deleted after 7 days.
 
-### Issue 3: Workers Not Finding Tasks (teamwork)
+### Issue 3: Workers Not Receiving Tasks (teamwork)
 
-**Symptom:** `/teamwork-worker` exits with "No available tasks".
+**Symptom:** Spawned workers are idle and not executing tasks.
 
-**Solution:** Check `/teamwork-status --verbose`. Verify project/team names match. Try general worker with `/teamwork-worker --loop` (no role filter). Use `--loop` for continuous polling.
+**Solution:** Check `/teamwork-status`. Verify the orchestrator has created tasks via `TaskCreate` and assigned them via `TaskUpdate(owner)`. Check that `TaskCompleted` and `TeammateIdle` hooks are registered in `hooks/hooks.json`. Workers receive tasks through orchestrator assignment, not self-claiming.
 
 ### Issue 4: Evidence Collection Failing (ultrawork)
 

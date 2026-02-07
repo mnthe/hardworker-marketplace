@@ -9,8 +9,8 @@ Claude Code plugin marketplace. A collection of plugins focused on "hardworker" 
 | Plugin               | Description                                                                         |
 | -------------------- | ----------------------------------------------------------------------------------- |
 | ultrawork            | Verification-first development with session isolation and evidence-based completion |
-| teamwork             | Multi-session collaboration with role-based workers                                 |
-| knowledge-extraction | Extract and manage knowledge from codebases                                         |
+| teamwork             | Native teammate-based collaboration with event-driven coordination                  |
+| knowledge-extraction | Extract and manage insights from Claude sessions                                    |
 
 ### Tech Stack
 
@@ -306,7 +306,7 @@ Skills are injected into the agent's context at spawn time, providing specialize
 
 Document step-by-step processes with concrete bash commands and evidence requirements.
 
-**Examples**: `tdd-workflow`, `worker-workflow`, `monitoring-loop`
+**Examples**: `tdd-workflow`, `worker-workflow`, `event-coordination`
 
 ```markdown
 ## Phase 1: Setup
@@ -354,7 +354,7 @@ Explain design principles, rationale, and decision-making frameworks.
 
 Document complex coordination logic with pseudocode and state transitions.
 
-**Examples**: `monitoring-loop`, `task-decomposition`, `planning`
+**Examples**: `event-coordination`, `task-decomposition`, `planning`
 
 ```markdown
 ## Loop Structure
@@ -374,7 +374,7 @@ while (!isComplete()) {
 
 ### Skill Inventory
 
-**Total skills across all plugins: 23**
+**Total skills across all plugins: 20**
 
 | Plugin | Skill | Purpose |
 |--------|-------|---------|
@@ -393,13 +393,10 @@ while (!isComplete()) {
 | | `frontend-patterns` | React and frontend best practices |
 | | `consistency-review` | Code consistency and pattern adherence |
 | | `testing-patterns` | Testing patterns for unit/integration/E2E |
-| **teamwork** (7) | `scripts-path-usage` | Quick reference for SCRIPTS_PATH usage |
-| | `monitoring-loop` | Wave-based monitoring algorithm |
-| | `task-decomposition` | Breaking goals into tasks |
-| | `utility-scripts` | Comprehensive script usage guide |
-| | `worker-workflow` | Task execution workflow (Phase 1-5) |
+| **teamwork** (4) | `event-coordination` | Event-driven coordination patterns for orchestrator |
+| | `task-decomposition` | Goal decomposition into parallelizable tasks |
+| | `worker-workflow` | Core task execution workflow for worker agents |
 | | `teamwork-clean` | Project reset and recovery |
-| | `swarm-workflow` | Swarm orchestration with tmux and worktrees |
 | **knowledge-extraction** (1) | `insight-awareness` | Knowledge extraction principles |
 
 ### Cross-Plugin Skill Management
@@ -408,24 +405,24 @@ while (!isComplete()) {
 
 **Strategy: Copy and adapt**
 
-When multiple plugins need the same skill (e.g., `scripts-path-usage`, `utility-scripts`):
+When multiple plugins need the same skill (e.g., `task-decomposition`, `worker-workflow`):
 
 1. **Copy the skill** to each plugin's `skills/` directory
 2. **Adapt for context** - Customize examples, variable names, and script paths for the target plugin
 3. **Maintain independently** - Changes in one plugin's version don't propagate to others
 
-**Example: `scripts-path-usage` skill**
+**Example: Task decomposition concept (different skill names per plugin)**
 
-| Plugin | Location | Adapted For |
-|--------|----------|-------------|
-| ultrawork | `plugins/ultrawork/skills/scripts-path-usage/` | ultrawork session scripts, CLAUDE_SESSION_ID variable |
-| teamwork | `plugins/teamwork/skills/scripts-path-usage/` | teamwork project scripts, PROJECT/SUB_TEAM variables |
+| Plugin | Skill Name | Location | Adapted For |
+|--------|------------|----------|-------------|
+| ultrawork | `planning` | `plugins/ultrawork/skills/planning/` | Session-based task decomposition with success criteria |
+| teamwork | `task-decomposition` | `plugins/teamwork/skills/task-decomposition/` | Role-based task decomposition with native TaskCreate API |
 
 **When updating shared skills:**
 
 ```bash
 # Find all copies of a skill
-find plugins -name "SKILL.md" -path "*scripts-path-usage*"
+find plugins -name "SKILL.md" -path "*task-decomposition*"
 
 # After updating one copy, manually sync critical changes to others
 # Adapt context-specific examples while keeping core patterns consistent
@@ -539,12 +536,17 @@ grep -r "script-name.js" agents/ skills/ commands/
 
 Lifecycle hooks for automation:
 
-| Hook Type       | Purpose                    |
-| --------------- | -------------------------- |
-| session-start   | Initialize session context |
-| session-context | Inject session variables   |
-| post-tool-use   | Evidence collection        |
-| agent-lifecycle | Track agent execution      |
+| Hook Event       | Purpose                              | Used By            |
+| ---------------- | ------------------------------------ | ------------------ |
+| SessionStart     | Initialize session context, cleanup  | ultrawork          |
+| UserPromptSubmit | Inject session variables, detect keywords | ultrawork     |
+| PreToolUse       | Gate enforcement, lifecycle tracking | ultrawork          |
+| PostToolUse      | Evidence collection, gate status     | ultrawork          |
+| SubagentStart    | Track agent spawn                    | ultrawork          |
+| SubagentStop     | Track agent completion               | ultrawork, teamwork, knowledge-extraction |
+| Stop             | Validate evidence, extract insights  | ultrawork, knowledge-extraction |
+| TaskCompleted    | Track project progress               | teamwork           |
+| TeammateIdle     | Detect idle teammates, assign work   | teamwork           |
 
 Hook safety rules:
 - Keep hooks idempotent
@@ -583,18 +585,18 @@ When multiple plugins need the same component (skill, script, lib):
 2. **Adapt for context** - modify descriptions and examples for the specific plugin
 3. **Maintain independently** - changes in one plugin don't automatically propagate
 
-**Example: `scripts-path-usage` skill**
+**Example: `task-decomposition` skill**
 
 | Plugin | Status | Notes |
 |--------|--------|-------|
-| ultrawork | ✅ Has copy | Tailored for ultrawork agents |
-| teamwork | ✅ Has copy | Tailored for teamwork agents |
+| ultrawork | `planning` skill | Session-based task decomposition with success criteria |
+| teamwork | `task-decomposition` skill | Role-based task decomposition with native TaskCreate API |
 
 **When updating shared components:**
 
 ```bash
 # Find all copies of a shared skill/component
-find plugins -name "SKILL.md" -path "*scripts-path-usage*"
+find plugins -name "SKILL.md" -path "*task-decomposition*" -o -path "*planning*"
 
 # After updating one copy, manually sync critical changes to others
 # (Adapt context-specific examples, keep core patterns consistent)
@@ -617,19 +619,29 @@ find plugins -name "SKILL.md" -path "*scripts-path-usage*"
 
 ## Testing Approach
 
-This project does not have an automated test framework. Follow manual testing procedures.
+This project uses Bun's built-in test runner for automated tests.
 
-### Script Validation
+### Running Tests
 
 ```bash
-# Syntax check (run scripts to validate)
-bun src/scripts/*.js --help
+# Run all tests for a plugin
+bun test tests/ultrawork/
+bun test tests/teamwork/
 
-# ESLint (if available)
-npx eslint src/scripts/*.js
+# Run specific test file
+bun test tests/ultrawork/session-get.test.js
 ```
 
-### Functional Testing
+### Test Structure
+
+- `tests/{plugin}/*.test.js` - Script tests
+- `tests/{plugin}/lib/*.test.js` - Library module tests
+- `tests/{plugin}/test-utils.js` - Shared test utilities
+- `tests/{plugin}/preload.js` - Test isolation preload
+
+### Functional Testing (Manual)
+
+For features not covered by automated tests:
 
 1. **Session State**: Create session, verify JSON structure
 2. **Task Operations**: Create/update/list tasks
@@ -734,12 +746,12 @@ CLAUDE.md files provide context to AI agents.
 # ultrawork - verification-first development
 /ultrawork "task description"
 /ultrawork-status
-/ultrawork-cancel
+/ultrawork-clean
 
-# teamwork - multi-session collaboration
+# teamwork - native teammate collaboration
 /teamwork "project goal"
 /teamwork-status
-/teamwork-worker --role backend
+/teamwork-verify
 ```
 
 ### Session Directories

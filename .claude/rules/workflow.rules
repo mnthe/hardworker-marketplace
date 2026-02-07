@@ -1,7 +1,7 @@
 # Workflow Standards
 
 **Source of Truth**: Both (this file for detailed standards, CLAUDE.md for overview)
-**Last Updated**: 2026-01-16
+**Last Updated**: 2026-02-07
 
 ## Context Management
 
@@ -95,7 +95,7 @@ Invoke when relevant:
 
 ## Code Review Checklist
 
-- [ ] `set -euo pipefail` in all scripts
+- [ ] `#!/usr/bin/env bun` shebang in all scripts
 - [ ] Flag-based parameter parsing
 - [ ] Error handling with meaningful messages
 - [ ] No hardcoded paths (use environment variables)
