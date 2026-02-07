@@ -50,13 +50,14 @@ plugins/ultrawork/
 │   │   ├── ultrawork-evidence.js
 │   │   ├── evidence-summary.js  # AI-friendly evidence index
 │   │   └── evidence-query.js    # Filter & query evidence
-│   └── hooks/                 # Lifecycle hooks (9 files)
+│   └── hooks/                 # Lifecycle hooks (10 files)
 │       ├── session-start-hook.js
 │       ├── session-context-hook.js
 │       ├── agent-lifecycle-tracking.js
 │       ├── post-tool-use-evidence.js
 │       ├── gate-enforcement.js
 │       ├── gate-status-notification.js
+│       ├── subagent-start-tracking.js
 │       ├── subagent-stop-tracking.js
 │       ├── stop-hook.js
 │       └── keyword-detector.js
@@ -149,8 +150,9 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **post-tool-use-evidence.js**   | PostToolUse             | Collect evidence from tool usage                | Records command execution (Bash), file operations (Write/Edit), test results                                                                                       |
 | **gate-enforcement.js**         | PreToolUse (Edit/Write) | Enforce phase restrictions and TDD order        | Blocks code edits during PLANNING; blocks implementation before tests in TDD tasks                                                                                 |
 | **gate-status-notification.js** | PostToolUse (Task)      | Notify about gate enforcement status            | Displays session phase and gate rules after Task tool usage                                                                                                        |
-| **subagent-stop-tracking.js**   | SubagentStop            | Track subagent completion                       | Records when explorer/worker/verifier agents complete                                                                                                              |
-| **stop-hook.js**                | Stop                    | Cleanup on session end                          | Removes temporary state on Claude Code exit                                                                                                                        |
+| **subagent-start-tracking.js**  | SubagentStart (ultrawork:.*) | Track subagent spawn                        | Records agent_id, agent_type to session.active_agents[]                                                                                                            |
+| **subagent-stop-tracking.js**   | SubagentStop            | Track subagent completion                       | Uses agent_type for filtering, removes from active_agents[], records completion with agent_type in evidence                                                        |
+| **stop-hook.js**                | Stop                    | Validate evidence on stop                       | Checks stop_hook_active to prevent loops, validates evidence sufficiency, enforces zero-tolerance rules                                                            |
 | **keyword-detector.js**         | UserPromptSubmit        | Detect ultrawork keywords and transform prompts | Transforms "ultrawork X", "ulw X", "uw X" to /ultrawork commands; supports --auto and --plan-only modes                                                            |
 
 ## Agent Inventory
@@ -843,3 +845,12 @@ bun src/scripts/ultrawork-clean.js --all
 - The agent should recognize the pattern and correct itself
 
 **Technical limitation**: There's no way to implement hard enforcement without Claude Code providing an `agent_context` field in hook inputs that distinguishes orchestrator from worker contexts.
+
+### Hook Input Fields (Verified 2026-02-07)
+
+SubagentStop hook input includes fields not previously utilized:
+- `agent_type`: Agent type identifier (format: `"ultrawork:worker"`, `"ultrawork:explorer"`, etc.)
+- `agent_transcript_path`: Path to subagent's transcript file
+- `stop_hook_active`: Boolean indicating if a stop hook already blocked
+
+These fields enable agent_type-based filtering and lifecycle tracking. The `agent_type` format for plugin agents is `plugin:agent_name` (e.g., `"ultrawork:worker"`), confirmed via live testing.
