@@ -3,14 +3,11 @@
 /**
  * TeammateIdle hook handler for teamwork v3.
  *
- * Fires when a teammate becomes idle. Checks for unassigned, unblocked tasks
- * and outputs availability information.
+ * Fires when a teammate becomes idle (finishes current turn). Checks for
+ * unassigned, unblocked tasks and outputs structured availability information.
  *
- * Input (stdin JSON, schema TBD - defensive parsing):
- *   { teammate_name, team_name, ... }
- *
- * Output (stdout):
- *   Message indicating idle teammate and available task count.
+ * @see https://code.claude.com/docs/en/hooks
+ * @see https://code.claude.com/docs/en/agent-teams
  */
 
 const fs = require('fs');
@@ -18,11 +15,28 @@ const path = require('path');
 const os = require('os');
 
 // ============================================================================
+// Types (based on Claude Code hook input schema)
+// ============================================================================
+
+/**
+ * TeammateIdle hook input.
+ * Note: Exact schema is not fully documented. Fields are parsed defensively.
+ *
+ * @typedef {Object} TeammateIdleInput
+ * @property {string} [session_id] - Current session ID
+ * @property {string} [hook_event_name] - "TeammateIdle"
+ * @property {string} [teammate_name] - Name of the idle teammate
+ * @property {string} [team_name] - Team name
+ * @property {string} [agent_type] - Agent type (e.g., "teamwork:backend")
+ * @property {boolean} [stop_hook_active] - Whether stop hook is already active
+ */
+
+// ============================================================================
 // Main
 // ============================================================================
 
 async function main() {
-  // Read hook input from stdin (defensive parsing)
+  /** @type {TeammateIdleInput} */
   let input = {};
   try {
     const raw = await Bun.stdin.text();
@@ -30,17 +44,19 @@ async function main() {
       input = JSON.parse(raw);
     }
   } catch {
-    // Invalid or missing JSON input - exit gracefully
     process.exit(0);
   }
 
-  const { teammate_name, team_name } = input;
+  // Guard: stop_hook_active prevents infinite loops
+  if (input.stop_hook_active) {
+    process.exit(0);
+  }
+
+  const { teammate_name, team_name, agent_type } = input;
   if (!team_name) {
-    // No team context available - nothing to report
     process.exit(0);
   }
 
-  // Attempt to read tasks from native task directory
   const tasksDir = path.join(os.homedir(), '.claude', 'tasks', team_name);
 
   let tasks = [];
@@ -50,15 +66,13 @@ async function main() {
       for (const file of files) {
         try {
           const content = fs.readFileSync(path.join(tasksDir, file), 'utf-8');
-          const task = JSON.parse(content);
-          tasks.push(task);
+          tasks.push(JSON.parse(content));
         } catch {
           // Skip unreadable task files
         }
       }
     }
   } catch {
-    // Directory read failed - exit gracefully
     process.exit(0);
   }
 
@@ -75,14 +89,31 @@ async function main() {
 
   const displayName = teammate_name || 'Unknown teammate';
 
+  // Extract role from agent_type if available (e.g., "teamwork:backend" → "backend")
+  const role = agent_type?.startsWith('teamwork:')
+    ? agent_type.split(':')[1]
+    : null;
+
+  // Structured JSON output for orchestrator context
+  const output = {
+    event: 'teammate_idle',
+    teammate: displayName,
+    role,
+    available_tasks: available.length,
+    total_tasks: tasks.length,
+    completed_tasks: tasks.filter(t => t.status === 'completed').length
+  };
+
   if (available.length > 0) {
-    console.log(`${displayName} idle. ${available.length} unassigned tasks available.`);
+    output.message = `${displayName} idle. ${available.length} unassigned tasks available.`;
+    output.task_ids = available.map(t => t.id);
   } else {
-    console.log(`${displayName} idle. No tasks available.`);
+    output.message = `${displayName} idle. No tasks available.`;
   }
+
+  console.log(JSON.stringify(output));
 }
 
 main().catch(() => {
-  // Top-level error catch - hooks must never fail
   process.exit(0);
 });

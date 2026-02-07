@@ -3,15 +3,12 @@
 /**
  * TaskCompleted hook handler for teamwork v3.
  *
- * Fires when a task is marked as completed. Reads all tasks for the team
- * and outputs progress summary. When all tasks are done, signals readiness
- * for final verification.
+ * Fires when a native task is marked as completed. Reads all tasks for the team
+ * and outputs a structured progress summary. When all tasks are done, signals
+ * readiness for final verification.
  *
- * Input (stdin JSON, schema TBD - defensive parsing):
- *   { task_id, team_name, status, ... }
- *
- * Output (stdout):
- *   Progress message indicating completed/total tasks.
+ * @see https://code.claude.com/docs/en/hooks
+ * @see https://code.claude.com/docs/en/agent-teams
  */
 
 const fs = require('fs');
@@ -19,11 +16,28 @@ const path = require('path');
 const os = require('os');
 
 // ============================================================================
+// Types (based on Claude Code hook input schema)
+// ============================================================================
+
+/**
+ * TaskCompleted hook input.
+ * Note: Exact schema is not fully documented. Fields are parsed defensively.
+ *
+ * @typedef {Object} TaskCompletedInput
+ * @property {string} [session_id] - Current session ID
+ * @property {string} [hook_event_name] - "TaskCompleted"
+ * @property {string} [task_id] - ID of the completed task
+ * @property {string} [team_name] - Team name for the task list
+ * @property {string} [status] - New task status ("completed")
+ * @property {boolean} [stop_hook_active] - Whether stop hook is already active
+ */
+
+// ============================================================================
 // Main
 // ============================================================================
 
 async function main() {
-  // Read hook input from stdin (defensive parsing)
+  /** @type {TaskCompletedInput} */
   let input = {};
   try {
     const raw = await Bun.stdin.text();
@@ -31,18 +45,19 @@ async function main() {
       input = JSON.parse(raw);
     }
   } catch {
-    // Invalid or missing JSON input - exit gracefully
+    process.exit(0);
+  }
+
+  // Guard: stop_hook_active prevents infinite loops
+  if (input.stop_hook_active) {
     process.exit(0);
   }
 
   const teamName = input.team_name;
   if (!teamName) {
-    // No team context available - nothing to report
     process.exit(0);
   }
 
-  // Attempt to read tasks from native task directory
-  // Note: exact path may vary; defensive file access
   const tasksDir = path.join(os.homedir(), '.claude', 'tasks', teamName);
 
   let tasks = [];
@@ -52,21 +67,18 @@ async function main() {
       for (const file of files) {
         try {
           const content = fs.readFileSync(path.join(tasksDir, file), 'utf-8');
-          const task = JSON.parse(content);
-          tasks.push(task);
+          tasks.push(JSON.parse(content));
         } catch {
           // Skip unreadable task files
         }
       }
     }
   } catch {
-    // Directory read failed - exit gracefully
     process.exit(0);
   }
 
   const total = tasks.length;
   if (total === 0) {
-    // No tasks found - exit gracefully
     process.exit(0);
   }
 
@@ -74,14 +86,23 @@ async function main() {
   const inProgress = tasks.filter(t => t.status === 'in_progress').length;
   const pending = total - completed - inProgress;
 
+  // Structured JSON output for orchestrator context
+  const output = {
+    event: 'task_completed',
+    task_id: input.task_id || null,
+    progress: { total, completed, in_progress: inProgress, pending },
+    all_done: completed === total
+  };
+
   if (completed === total) {
-    console.log(`All ${total} tasks completed. Ready for final verification.`);
+    output.message = `All ${total} tasks completed. Ready for final verification.`;
   } else {
-    console.log(`Progress: ${completed}/${total} completed, ${inProgress} in progress, ${pending} pending.`);
+    output.message = `Progress: ${completed}/${total} completed, ${inProgress} in progress, ${pending} pending.`;
   }
+
+  console.log(JSON.stringify(output));
 }
 
 main().catch(() => {
-  // Top-level error catch - hooks must never fail
   process.exit(0);
 });

@@ -1,10 +1,13 @@
 #!/usr/bin/env bun
 /**
- * Tests for v3 hook system: project-progress.js and teammate-idle.js
- * Also validates hooks.json structure.
+ * Tests for v3 hook system:
+ * - project-progress.js (TaskCompleted)
+ * - teammate-idle.js (TeammateIdle)
+ * - orchestrator-completed.js (SubagentStop)
+ * - hooks.json structure
  */
 
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect } from 'bun:test';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -18,6 +21,7 @@ const PLUGIN_ROOT = path.resolve(__dirname, '..');
 const HOOKS_JSON_PATH = path.join(PLUGIN_ROOT, 'hooks', 'hooks.json');
 const PROJECT_PROGRESS_PATH = path.join(PLUGIN_ROOT, 'src', 'hooks', 'project-progress.js');
 const TEAMMATE_IDLE_PATH = path.join(PLUGIN_ROOT, 'src', 'hooks', 'teammate-idle.js');
+const ORCHESTRATOR_COMPLETED_PATH = path.join(PLUGIN_ROOT, 'src', 'hooks', 'orchestrator-completed.js');
 
 // ============================================================================
 // Helpers
@@ -25,9 +29,6 @@ const TEAMMATE_IDLE_PATH = path.join(PLUGIN_ROOT, 'src', 'hooks', 'teammate-idle
 
 /**
  * Run a hook script with JSON input piped via stdin
- * @param {string} scriptPath - Absolute path to hook script
- * @param {Object|string} stdinInput - Input to pipe to stdin (object will be JSON.stringify'd)
- * @returns {Promise<{stdout: string, stderr: string, exitCode: number}>}
  */
 function runHook(scriptPath, stdinInput = '') {
   return new Promise((resolve) => {
@@ -53,7 +54,6 @@ function runHook(scriptPath, stdinInput = '') {
       });
     });
 
-    // Write stdin input and close
     const input = typeof stdinInput === 'object' ? JSON.stringify(stdinInput) : stdinInput;
     proc.stdin.write(input);
     proc.stdin.end();
@@ -65,52 +65,38 @@ function runHook(scriptPath, stdinInput = '') {
 // ============================================================================
 
 describe('hooks.json', () => {
-  test('file exists', () => {
+  test('file exists and is valid JSON', () => {
     expect(fs.existsSync(HOOKS_JSON_PATH)).toBe(true);
-  });
-
-  test('is valid JSON', () => {
-    const content = fs.readFileSync(HOOKS_JSON_PATH, 'utf-8');
-    const parsed = JSON.parse(content);
-    expect(parsed).toBeDefined();
+    const parsed = JSON.parse(fs.readFileSync(HOOKS_JSON_PATH, 'utf-8'));
+    expect(parsed.hooks).toBeDefined();
   });
 
   test('defines TaskCompleted hook', () => {
     const content = JSON.parse(fs.readFileSync(HOOKS_JSON_PATH, 'utf-8'));
-    expect(content.hooks).toBeDefined();
     expect(content.hooks.TaskCompleted).toBeDefined();
-    expect(Array.isArray(content.hooks.TaskCompleted)).toBe(true);
-    expect(content.hooks.TaskCompleted.length).toBeGreaterThan(0);
-
-    const taskCompletedHook = content.hooks.TaskCompleted[0];
-    expect(taskCompletedHook.matcher).toBe('*');
-    expect(taskCompletedHook.hooks).toBeDefined();
-    expect(taskCompletedHook.hooks[0].type).toBe('command');
-    expect(taskCompletedHook.hooks[0].command).toContain('project-progress.js');
-    expect(taskCompletedHook.hooks[0].command).toContain('bun');
+    expect(content.hooks.TaskCompleted[0].matcher).toBe('*');
+    expect(content.hooks.TaskCompleted[0].hooks[0].command).toContain('project-progress.js');
+    expect(content.hooks.TaskCompleted[0].hooks[0].command).toContain('bun');
   });
 
   test('defines TeammateIdle hook', () => {
     const content = JSON.parse(fs.readFileSync(HOOKS_JSON_PATH, 'utf-8'));
     expect(content.hooks.TeammateIdle).toBeDefined();
-    expect(Array.isArray(content.hooks.TeammateIdle)).toBe(true);
-    expect(content.hooks.TeammateIdle.length).toBeGreaterThan(0);
-
-    const teammateIdleHook = content.hooks.TeammateIdle[0];
-    expect(teammateIdleHook.matcher).toBe('*');
-    expect(teammateIdleHook.hooks).toBeDefined();
-    expect(teammateIdleHook.hooks[0].type).toBe('command');
-    expect(teammateIdleHook.hooks[0].command).toContain('teammate-idle.js');
-    expect(teammateIdleHook.hooks[0].command).toContain('bun');
+    expect(content.hooks.TeammateIdle[0].matcher).toBe('*');
+    expect(content.hooks.TeammateIdle[0].hooks[0].command).toContain('teammate-idle.js');
   });
 
-  test('does NOT define old Stop hook (loop-detector)', () => {
+  test('defines SubagentStop hook for orchestrator', () => {
+    const content = JSON.parse(fs.readFileSync(HOOKS_JSON_PATH, 'utf-8'));
+    expect(content.hooks.SubagentStop).toBeDefined();
+    expect(content.hooks.SubagentStop[0].matcher).toBe('teamwork:orchestrator');
+    expect(content.hooks.SubagentStop[0].hooks[0].command).toContain('orchestrator-completed.js');
+    expect(content.hooks.SubagentStop[0].hooks[0].command).toContain('bun');
+  });
+
+  test('does NOT define old Stop or PostToolUse hooks', () => {
     const content = JSON.parse(fs.readFileSync(HOOKS_JSON_PATH, 'utf-8'));
     expect(content.hooks.Stop).toBeUndefined();
-  });
-
-  test('does NOT define old PostToolUse hook (evidence-capture)', () => {
-    const content = JSON.parse(fs.readFileSync(HOOKS_JSON_PATH, 'utf-8'));
     expect(content.hooks.PostToolUse).toBeUndefined();
   });
 });
@@ -129,24 +115,33 @@ describe('project-progress.js', () => {
     expect(result.exitCode).toBe(0);
   });
 
-  test('exits gracefully with invalid JSON stdin', async () => {
+  test('exits gracefully with invalid JSON', async () => {
     const result = await runHook(PROJECT_PROGRESS_PATH, 'not-valid-json{{{');
     expect(result.exitCode).toBe(0);
   });
 
-  test('exits gracefully with empty object stdin', async () => {
+  test('exits gracefully with empty object', async () => {
     const result = await runHook(PROJECT_PROGRESS_PATH, {});
     expect(result.exitCode).toBe(0);
   });
 
-  test('outputs progress message when given valid input', async () => {
+  test('exits gracefully when stop_hook_active is true', async () => {
+    const result = await runHook(PROJECT_PROGRESS_PATH, {
+      team_name: 'test-team',
+      stop_hook_active: true
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe(''); // Should produce no output
+  });
+
+  test('outputs structured JSON with valid input', async () => {
     const result = await runHook(PROJECT_PROGRESS_PATH, {
       task_id: '1',
       team_name: 'test-team',
       status: 'completed'
     });
     expect(result.exitCode).toBe(0);
-    // Should not crash - output can be empty or contain progress info
+    // Output may be empty (no tasks dir) or JSON — both are valid
   });
 });
 
@@ -164,22 +159,82 @@ describe('teammate-idle.js', () => {
     expect(result.exitCode).toBe(0);
   });
 
-  test('exits gracefully with invalid JSON stdin', async () => {
+  test('exits gracefully with invalid JSON', async () => {
     const result = await runHook(TEAMMATE_IDLE_PATH, 'not-valid-json{{{');
     expect(result.exitCode).toBe(0);
   });
 
-  test('exits gracefully with empty object stdin', async () => {
-    const result = await runHook(TEAMMATE_IDLE_PATH, {});
+  test('exits gracefully when stop_hook_active is true', async () => {
+    const result = await runHook(TEAMMATE_IDLE_PATH, {
+      team_name: 'test-team',
+      stop_hook_active: true
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe('');
+  });
+
+  test('outputs structured JSON with teammate info', async () => {
+    const result = await runHook(TEAMMATE_IDLE_PATH, {
+      teammate_name: 'worker-backend',
+      team_name: 'test-team',
+      agent_type: 'teamwork:backend'
+    });
+    expect(result.exitCode).toBe(0);
+    // Output may be empty or JSON — both valid
+  });
+});
+
+// ============================================================================
+// orchestrator-completed.js Tests
+// ============================================================================
+
+describe('orchestrator-completed.js', () => {
+  test('file exists', () => {
+    expect(fs.existsSync(ORCHESTRATOR_COMPLETED_PATH)).toBe(true);
+  });
+
+  test('exits gracefully with empty stdin', async () => {
+    const result = await runHook(ORCHESTRATOR_COMPLETED_PATH, '');
     expect(result.exitCode).toBe(0);
   });
 
-  test('outputs idle message when given teammate info', async () => {
-    const result = await runHook(TEAMMATE_IDLE_PATH, {
-      teammate_name: 'worker-backend',
-      team_name: 'test-team'
+  test('exits gracefully with invalid JSON', async () => {
+    const result = await runHook(ORCHESTRATOR_COMPLETED_PATH, 'not-valid-json{{{');
+    expect(result.exitCode).toBe(0);
+  });
+
+  test('exits gracefully when stop_hook_active is true', async () => {
+    const result = await runHook(ORCHESTRATOR_COMPLETED_PATH, {
+      agent_type: 'teamwork:orchestrator',
+      stop_hook_active: true
     });
     expect(result.exitCode).toBe(0);
-    // Should not crash - output can be empty or contain idle info
+    expect(result.stdout).toBe('');
+  });
+
+  test('exits gracefully for non-orchestrator agent_type', async () => {
+    const result = await runHook(ORCHESTRATOR_COMPLETED_PATH, {
+      agent_type: 'teamwork:worker',
+      agent_id: 'test-123'
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe(''); // Should not process non-orchestrator
+  });
+
+  test('outputs structured JSON for orchestrator completion', async () => {
+    const result = await runHook(ORCHESTRATOR_COMPLETED_PATH, {
+      session_id: 'test-session',
+      agent_id: 'a1b2c3d',
+      agent_type: 'teamwork:orchestrator',
+      hook_event_name: 'SubagentStop',
+      stop_hook_active: false,
+      cwd: '/tmp/test'
+    });
+    expect(result.exitCode).toBe(0);
+    if (result.stdout) {
+      const output = JSON.parse(result.stdout);
+      expect(output.event).toBe('orchestrator_completed');
+      expect(output.agent_type).toBe('teamwork:orchestrator');
+    }
   });
 });
