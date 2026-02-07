@@ -28,7 +28,8 @@ const {
   getClaudeSessionId,
   getCurrentSessionFile,
   cleanupOldSessions,
-  getCurrentSessionId
+  getCurrentSessionId,
+  validatePhaseTransition
 } = require('../../../plugins/ultrawork/src/lib/session-utils.js');
 
 /**
@@ -412,6 +413,162 @@ describe('session-utils.js', () => {
     });
   });
 
+  describe('validatePhaseTransition', () => {
+    // ================================================================
+    // Valid transitions
+    // ================================================================
+
+    test('should allow PLANNING -> EXECUTION', () => {
+      const result = validatePhaseTransition('PLANNING', 'EXECUTION');
+      expect(result.allowed).toBe(true);
+      expect(result.reason).toBeUndefined();
+    });
+
+    test('should allow EXECUTION -> VERIFICATION', () => {
+      const result = validatePhaseTransition('EXECUTION', 'VERIFICATION');
+      expect(result.allowed).toBe(true);
+    });
+
+    test('should allow EXECUTION -> COMPLETE when skip_verify=true', () => {
+      const result = validatePhaseTransition('EXECUTION', 'COMPLETE', { skip_verify: true });
+      expect(result.allowed).toBe(true);
+    });
+
+    test('should allow VERIFICATION -> COMPLETE', () => {
+      const result = validatePhaseTransition('VERIFICATION', 'COMPLETE');
+      expect(result.allowed).toBe(true);
+    });
+
+    test('should allow VERIFICATION -> EXECUTION (Ralph loop)', () => {
+      const result = validatePhaseTransition('VERIFICATION', 'EXECUTION');
+      expect(result.allowed).toBe(true);
+    });
+
+    test('should allow same -> same (no-op)', () => {
+      const phases = ['PLANNING', 'EXECUTION', 'VERIFICATION', 'COMPLETE', 'CANCELLED', 'FAILED'];
+      for (const phase of phases) {
+        const result = validatePhaseTransition(phase, phase);
+        expect(result.allowed).toBe(true);
+      }
+    });
+
+    // ANY -> CANCELLED
+    test('should allow ANY -> CANCELLED', () => {
+      const phases = ['PLANNING', 'EXECUTION', 'VERIFICATION', 'COMPLETE', 'FAILED'];
+      for (const phase of phases) {
+        const result = validatePhaseTransition(phase, 'CANCELLED');
+        expect(result.allowed).toBe(true);
+      }
+    });
+
+    // ANY -> FAILED
+    test('should allow ANY -> FAILED', () => {
+      const phases = ['PLANNING', 'EXECUTION', 'VERIFICATION', 'COMPLETE', 'CANCELLED'];
+      for (const phase of phases) {
+        const result = validatePhaseTransition(phase, 'FAILED');
+        expect(result.allowed).toBe(true);
+      }
+    });
+
+    // ================================================================
+    // Blocked transitions
+    // ================================================================
+
+    test('should block EXECUTION -> COMPLETE without skip_verify', () => {
+      const result = validatePhaseTransition('EXECUTION', 'COMPLETE');
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('VERIFICATION phase required');
+      expect(result.reason).toContain('--force');
+    });
+
+    test('should block EXECUTION -> COMPLETE with skip_verify=false', () => {
+      const result = validatePhaseTransition('EXECUTION', 'COMPLETE', { skip_verify: false });
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('VERIFICATION phase required');
+    });
+
+    test('should block PLANNING -> COMPLETE', () => {
+      const result = validatePhaseTransition('PLANNING', 'COMPLETE');
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('Cannot skip EXECUTION and VERIFICATION');
+    });
+
+    test('should block PLANNING -> VERIFICATION', () => {
+      const result = validatePhaseTransition('PLANNING', 'VERIFICATION');
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('EXECUTION phase must come before VERIFICATION');
+    });
+
+    // Terminal phases block transitions to active phases
+    test('should block COMPLETE -> active phases', () => {
+      const activePhases = ['PLANNING', 'EXECUTION', 'VERIFICATION'];
+      for (const phase of activePhases) {
+        const result = validatePhaseTransition('COMPLETE', phase);
+        expect(result.allowed).toBe(false);
+        expect(result.reason).toContain('terminal state');
+        expect(result.reason).toContain('Start a new session');
+      }
+    });
+
+    test('should block CANCELLED -> active phases', () => {
+      const activePhases = ['PLANNING', 'EXECUTION', 'VERIFICATION'];
+      for (const phase of activePhases) {
+        const result = validatePhaseTransition('CANCELLED', phase);
+        expect(result.allowed).toBe(false);
+        expect(result.reason).toContain('terminal state');
+      }
+    });
+
+    test('should block FAILED -> active phases', () => {
+      const activePhases = ['PLANNING', 'EXECUTION', 'VERIFICATION'];
+      for (const phase of activePhases) {
+        const result = validatePhaseTransition('FAILED', phase);
+        expect(result.allowed).toBe(false);
+        expect(result.reason).toContain('terminal state');
+      }
+    });
+
+    // ================================================================
+    // Force override
+    // ================================================================
+
+    test('should allow any transition with force=true', () => {
+      // Test a normally blocked transition
+      const result = validatePhaseTransition('COMPLETE', 'PLANNING', { force: true });
+      expect(result.allowed).toBe(true);
+    });
+
+    test('should allow EXECUTION -> COMPLETE with force=true (no skip_verify needed)', () => {
+      const result = validatePhaseTransition('EXECUTION', 'COMPLETE', { force: true });
+      expect(result.allowed).toBe(true);
+    });
+
+    test('should allow PLANNING -> VERIFICATION with force=true', () => {
+      const result = validatePhaseTransition('PLANNING', 'VERIFICATION', { force: true });
+      expect(result.allowed).toBe(true);
+    });
+
+    // ================================================================
+    // Edge cases
+    // ================================================================
+
+    test('should handle missing options parameter', () => {
+      const result = validatePhaseTransition('PLANNING', 'EXECUTION');
+      expect(result.allowed).toBe(true);
+    });
+
+    test('should handle empty options object', () => {
+      const result = validatePhaseTransition('PLANNING', 'EXECUTION', {});
+      expect(result.allowed).toBe(true);
+    });
+
+    test('should include phase names in blocked reason messages', () => {
+      const result = validatePhaseTransition('COMPLETE', 'EXECUTION');
+      expect(result.reason).toContain('COMPLETE');
+      expect(result.reason).toContain('EXECUTION');
+    });
+  });
+
   describe('exports', () => {
     test('should export all required functions', () => {
       const sessionUtils = require('../../../plugins/ultrawork/src/lib/session-utils.js');
@@ -430,6 +587,7 @@ describe('session-utils.js', () => {
       expect(typeof sessionUtils.getCurrentSessionFile).toBe('function');
       expect(typeof sessionUtils.cleanupOldSessions).toBe('function');
       expect(typeof sessionUtils.getCurrentSessionId).toBe('function');
+      expect(typeof sessionUtils.validatePhaseTransition).toBe('function');
     });
   });
 });
