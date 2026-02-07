@@ -243,30 +243,19 @@ function buildVerificationPrompt(criteria, goal, designPath) {
  */
 function runCodexExec(workingDir, criteria, goal, model, designPath) {
   const prompt = buildVerificationPrompt(criteria, goal, designPath);
-  const tmpFile = path.join(require('os').tmpdir(), `codex-verify-${Date.now()}.txt`);
 
   try {
     const effectiveModel = model || DEFAULT_MODEL;
-    const args = ['exec', '--sandbox', 'read-only', '-o', tmpFile, '-m', effectiveModel];
-    args.push(prompt);
+    const args = ['exec', '--sandbox', 'read-only', '-m', effectiveModel, prompt];
 
-    execFileSync('codex', args, {
+    const output = execFileSync('codex', args, {
       cwd: workingDir,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout: 300000
-    });
+    }).trim();
 
-    // Read the final message from the output file
-    const output = fs.existsSync(tmpFile)
-      ? fs.readFileSync(tmpFile, 'utf-8').trim()
-      : '';
-
-    // Try to parse structured output from codex response
     const criteriaResults = parseExecOutput(output, criteria);
-
-    // Cleanup temp file
-    try { fs.unlinkSync(tmpFile); } catch (_) {}
 
     return {
       exit_code: 0,
@@ -274,16 +263,9 @@ function runCodexExec(workingDir, criteria, goal, model, designPath) {
       criteria_results: criteriaResults
     };
   } catch (error) {
-    // Read output file if it exists (codex may have written partial results)
-    let fileOutput = '';
-    if (fs.existsSync(tmpFile)) {
-      try { fileOutput = fs.readFileSync(tmpFile, 'utf-8').trim(); } catch (_) {}
-      try { fs.unlinkSync(tmpFile); } catch (_) {}
-    }
-
     const stdout = error.stdout ? error.stdout.toString().trim() : '';
     const stderr = error.stderr ? error.stderr.toString().trim() : '';
-    const combinedOutput = [fileOutput, stdout, stderr].filter(Boolean).join('\n');
+    const combinedOutput = [stdout, stderr].filter(Boolean).join('\n');
 
     return {
       exit_code: error.status || 1,

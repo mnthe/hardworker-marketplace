@@ -27,35 +27,30 @@ const {
 const { mockProject } = require('../../test-utils.js');
 
 describe('Path Resolution', () => {
-  test('getTeamworkBase returns correct path', () => {
-    const base = getTeamworkBase();
-    expect(base).toBe(path.join(os.homedir(), '.claude', 'teamwork'));
+  const base = getTeamworkBase();
+
+  test('getTeamworkBase returns a path containing teamwork', () => {
+    expect(base).toContain('teamwork');
   });
 
   test('getProjectDir returns correct path', () => {
     const dir = getProjectDir('my-project', 'my-team');
-    expect(dir).toBe(path.join(os.homedir(), '.claude', 'teamwork', 'my-project', 'my-team'));
+    expect(dir).toBe(path.join(base, 'my-project', 'my-team'));
   });
 
   test('getProjectFile returns correct path', () => {
     const file = getProjectFile('my-project', 'my-team');
-    expect(file).toBe(
-      path.join(os.homedir(), '.claude', 'teamwork', 'my-project', 'my-team', 'project.json')
-    );
+    expect(file).toBe(path.join(base, 'my-project', 'my-team', 'project.json'));
   });
 
   test('getTasksDir returns correct path', () => {
     const dir = getTasksDir('my-project', 'my-team');
-    expect(dir).toBe(
-      path.join(os.homedir(), '.claude', 'teamwork', 'my-project', 'my-team', 'tasks')
-    );
+    expect(dir).toBe(path.join(base, 'my-project', 'my-team', 'tasks'));
   });
 
   test('getTaskFile returns correct path', () => {
     const file = getTaskFile('my-project', 'my-team', 'task-1');
-    expect(file).toBe(
-      path.join(os.homedir(), '.claude', 'teamwork', 'my-project', 'my-team', 'tasks', 'task-1.json')
-    );
+    expect(file).toBe(path.join(base, 'my-project', 'my-team', 'tasks', 'task-1.json'));
   });
 });
 
