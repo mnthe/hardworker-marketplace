@@ -42,6 +42,8 @@ const ARG_SPEC = {
   '--output': { key: 'output', aliases: ['-o'] },
   '--model': { key: 'model', aliases: ['-M'] },
   '--goal': { key: 'goal', aliases: ['-g'] },
+  '--base': { key: 'base', aliases: ['-b'] },
+  '--design': { key: 'design', aliases: ['-d'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
@@ -75,36 +77,90 @@ function checkCodexAvailability() {
 // ============================================================================
 
 /**
- * Run codex review --uncommitted in the specified directory
+ * Extract the final review text from codex review session log.
+ * @param {string} rawOutput - Full codex review session log
+ * @returns {string} Extracted review text
+ */
+function extractReviewContent(rawOutput) {
+  const lines = rawOutput.split('\n');
+  const contentLines = [];
+  let inContent = false;
+
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i];
+    if (line.startsWith('--------') || line.startsWith('session id:') ||
+        line.startsWith('model:') || line.startsWith('provider:') ||
+        line.startsWith('sandbox:') || line.startsWith('approval:') ||
+        line.startsWith('workdir:') || line.startsWith('reasoning') ||
+        line.startsWith('mcp startup:') || line === 'user' ||
+        line === 'thinking' || line === 'exec') {
+      if (inContent) break;
+      continue;
+    }
+    if (line.trim().length > 0) {
+      inContent = true;
+      contentLines.unshift(line);
+    }
+  }
+
+  return contentLines.join('\n').trim() || rawOutput.trim();
+}
+
+/**
+ * Detect the default branch for the repo (main/master/develop).
  * @param {string} workingDir - Project directory
+ * @returns {string|null} Branch name or null
+ */
+function detectDefaultBranch(workingDir) {
+  const candidates = ['main', 'master', 'develop'];
+  for (const branch of candidates) {
+    try {
+      execSync(`git rev-parse --verify ${branch}`, {
+        cwd: workingDir,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      return branch;
+    } catch (_) {}
+  }
+  return null;
+}
+
+/**
+ * Run codex review in the specified directory.
+ * Review strategy:
+ *   1. If --base is provided, review against that ref
+ *   2. Otherwise, auto-detect default branch and use --base
+ *   3. Fall back to --uncommitted if no base found
+ * @param {string} workingDir - Project directory
+ * @param {string} [base] - Base branch or commit ref to diff against
  * @returns {{ exit_code: number, output: string, issues: string[] }}
  */
-function runCodexReview(workingDir) {
+function runCodexReview(workingDir, base) {
+  const effectiveBase = base || detectDefaultBranch(workingDir);
+  const reviewArg = effectiveBase ? `--base ${effectiveBase}` : '--uncommitted';
   try {
-    const output = execSync(
-      'codex review --uncommitted --sandbox read-only',
-      {
-        cwd: workingDir,
-        encoding: 'utf-8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-        timeout: 120000
-      }
-    );
-    return { exit_code: 0, output: output.trim(), issues: [] };
+    const rawOutput = execSync(`codex review ${reviewArg}`, {
+      cwd: workingDir,
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 180000
+    });
+    const output = extractReviewContent(rawOutput);
+    return { exit_code: 0, output, issues: [] };
   } catch (error) {
-    const output = error.stdout ? error.stdout.toString().trim() : '';
+    const stdout = error.stdout ? error.stdout.toString().trim() : '';
     const stderr = error.stderr ? error.stderr.toString().trim() : '';
-    const combinedOutput = [output, stderr].filter(Boolean).join('\n');
+    const rawOutput = [stdout, stderr].filter(Boolean).join('\n');
+    const output = extractReviewContent(rawOutput);
 
-    // Parse issues from output if possible
-    const issues = combinedOutput
+    const issues = output
       .split('\n')
       .filter(line => line.trim().length > 0)
       .slice(0, 50);
 
     return {
       exit_code: error.status || 1,
-      output: combinedOutput,
+      output,
       issues
     };
   }
@@ -126,16 +182,28 @@ function parseCriteria(criteriaStr) {
 }
 
 /**
- * Build a verification prompt from criteria
+ * Build a verification prompt from criteria, goal, and optional design doc
  * @param {string[]} criteria - List of success criteria
  * @param {string} [goal] - Optional project goal for context
+ * @param {string} [designPath] - Optional path to design document
  * @returns {string}
  */
-function buildVerificationPrompt(criteria, goal) {
+function buildVerificationPrompt(criteria, goal, designPath) {
   let prompt = 'You are verifying code changes against success criteria.\n\n';
 
   if (goal) {
     prompt += `Project Goal: ${goal}\n\n`;
+  }
+
+  if (designPath) {
+    try {
+      const designContent = fs.readFileSync(designPath, 'utf-8');
+      prompt += '## Design Document\n\n';
+      prompt += designContent.trim();
+      prompt += '\n\n---\n\n';
+    } catch (_) {
+      prompt += `(Design file not found: ${designPath})\n\n`;
+    }
   }
 
   prompt += 'Verify each of the following criteria by reading code and running read-only commands.\n';
@@ -164,37 +232,54 @@ function buildVerificationPrompt(criteria, goal) {
  * @param {string[]} criteria - Success criteria to verify
  * @param {string} [goal] - Optional project goal
  * @param {string} [model] - Optional model override
+ * @param {string} [designPath] - Optional path to design document
  * @returns {{ exit_code: number, output: string, criteria_results: Array }}
  */
-function runCodexExec(workingDir, criteria, goal, model) {
-  const prompt = buildVerificationPrompt(criteria, goal);
+function runCodexExec(workingDir, criteria, goal, model, designPath) {
+  const prompt = buildVerificationPrompt(criteria, goal, designPath);
+  const tmpFile = path.join(require('os').tmpdir(), `codex-verify-${Date.now()}.txt`);
 
   try {
-    const args = ['exec', '--sandbox', 'read-only', '--output-last-message'];
+    const args = ['exec', '--sandbox', 'read-only', '-o', tmpFile];
     if (model) {
-      args.push('--model', model);
+      args.push('-m', model);
     }
     args.push(prompt);
 
-    const output = execFileSync('codex', args, {
+    execFileSync('codex', args, {
       cwd: workingDir,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout: 300000
     });
 
+    // Read the final message from the output file
+    const output = fs.existsSync(tmpFile)
+      ? fs.readFileSync(tmpFile, 'utf-8').trim()
+      : '';
+
     // Try to parse structured output from codex response
-    const criteriaResults = parseExecOutput(output.trim(), criteria);
+    const criteriaResults = parseExecOutput(output, criteria);
+
+    // Cleanup temp file
+    try { fs.unlinkSync(tmpFile); } catch (_) {}
 
     return {
       exit_code: 0,
-      output: output.trim(),
+      output,
       criteria_results: criteriaResults
     };
   } catch (error) {
-    const output = error.stdout ? error.stdout.toString().trim() : '';
+    // Read output file if it exists (codex may have written partial results)
+    let fileOutput = '';
+    if (fs.existsSync(tmpFile)) {
+      try { fileOutput = fs.readFileSync(tmpFile, 'utf-8').trim(); } catch (_) {}
+      try { fs.unlinkSync(tmpFile); } catch (_) {}
+    }
+
+    const stdout = error.stdout ? error.stdout.toString().trim() : '';
     const stderr = error.stderr ? error.stderr.toString().trim() : '';
-    const combinedOutput = [output, stderr].filter(Boolean).join('\n');
+    const combinedOutput = [fileOutput, stdout, stderr].filter(Boolean).join('\n');
 
     return {
       exit_code: error.status || 1,
@@ -389,12 +474,12 @@ function main() {
   }
 
   if (args.mode === 'review' || args.mode === 'full') {
-    reviewResult = runCodexReview(args.workingDir);
+    reviewResult = runCodexReview(args.workingDir, args.base);
   }
 
   if (args.mode === 'exec' || args.mode === 'full') {
     const criteria = parseCriteria(args.criteria);
-    execResult = runCodexExec(args.workingDir, criteria, args.goal, args.model);
+    execResult = runCodexExec(args.workingDir, criteria, args.goal, args.model, args.design);
   }
 
   const verdict = determineVerdict(reviewResult, execResult);
