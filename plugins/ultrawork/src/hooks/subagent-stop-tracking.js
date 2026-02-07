@@ -153,7 +153,6 @@ async function main() {
     // Parse hook input fields
     const agentId = hookInput.agent_id || '';
     const agentType = hookInput.agent_type || '';
-    const agentTranscriptPath = hookInput.agent_transcript_path || '';
     const agentOutput = hookInput.output || '';
     let taskId = hookInput.task_id || '';
 
@@ -194,8 +193,7 @@ async function main() {
     /** @type {SessionWithWorkers} */
     const session = JSON.parse(content);
 
-    // Use agent_type for role detection (primary)
-    const agentRole = agentType ? agentType.split(':')[1] : ''; // 'worker', 'explorer', 'verifier'
+    // Use agent_type for detection (primary)
     const isUltraworkAgent = agentType && agentType.startsWith('ultrawork:');
 
     // Fall back to session.workers[] for backward compatibility
@@ -285,10 +283,15 @@ async function main() {
             agent_type: agentType,
           };
 
+          // Remove from active_agents
+          const activeAgents = (sessionWithWorkers.active_agents || [])
+            .filter((a) => a.agent_id !== agentId);
+
           return {
             ...sessionWithWorkers,
             workers,
             evidence_log: [...s.evidence_log, completedEvidence],
+            active_agents: activeAgents,
           };
         });
 
