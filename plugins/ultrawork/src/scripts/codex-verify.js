@@ -45,6 +45,7 @@ const ARG_SPEC = {
 };
 
 const VALID_MODES = ['check', 'review', 'exec', 'full'];
+const DEFAULT_MODEL = 'gpt-5.3-codex';
 
 // ============================================================================
 // Codex Availability
@@ -245,10 +246,8 @@ function runCodexExec(workingDir, criteria, goal, model, designPath) {
   const tmpFile = path.join(require('os').tmpdir(), `codex-verify-${Date.now()}.txt`);
 
   try {
-    const args = ['exec', '--sandbox', 'read-only', '-o', tmpFile];
-    if (model) {
-      args.push('-m', model);
-    }
+    const effectiveModel = model || DEFAULT_MODEL;
+    const args = ['exec', '--sandbox', 'read-only', '-o', tmpFile, '-m', effectiveModel];
     args.push(prompt);
 
     execFileSync('codex', args, {
