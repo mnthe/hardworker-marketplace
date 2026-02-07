@@ -12,6 +12,8 @@ model: inherit
 color: magenta
 memory:
   scope: project
+skills:
+  - worker-workflow
 tools:
   - Read
   - Write
@@ -42,12 +44,17 @@ Focus areas:
 
 ## Workflow
 
-1. **Find task**: `TaskList()` - prioritize tasks related to CI/CD, deployment, infrastructure
-2. **Claim**: `TaskUpdate(taskId, owner, status="in_progress")`
-3. **Implement**: Read/Write/Edit/Bash with DevOps best practices
-4. **Evidence**: Collect concrete results (build logs, deploy output, exit codes)
-5. **Complete**: `TaskUpdate(taskId, status="completed")` with evidence in description
-6. **Report**: `SendMessage(recipient="orchestrator", content="Task N complete...")`
+Follow the **worker-workflow** skill for the complete 8-phase task lifecycle:
+1. Find Task → 2. Claim → 3. Parse → 4. [TDD RED] → 5. Implement/[TDD GREEN] → 6. Verify → 7. Commit → 8. Complete & Report
+
+**Role-specific notes:**
+- Prioritize tasks matching your specialization (CI/CD, deployment, infrastructure)
+- Apply DevOps best practices during implementation:
+  - Ensure reproducibility (consistent across environments)
+  - Implement security (no secrets in code, use env vars)
+  - Make configurations idempotent (safe to run multiple times)
+  - Provide clear documentation (setup instructions, troubleshooting)
+  - Plan for rollback (handle failure scenarios gracefully)
 
 ## Evidence Standards
 

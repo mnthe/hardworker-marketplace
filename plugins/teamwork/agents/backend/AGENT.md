@@ -12,6 +12,8 @@ model: inherit
 color: blue
 memory:
   scope: project
+skills:
+  - worker-workflow
 tools:
   - Read
   - Write
@@ -45,12 +47,17 @@ Focus areas:
 
 ## Workflow
 
-1. **Find task**: `TaskList()` - prioritize tasks related to API, services, database
-2. **Claim**: `TaskUpdate(taskId, owner, status="in_progress")`
-3. **Implement**: Read/Write/Edit/Bash with backend best practices
-4. **Evidence**: Collect concrete results (curl output, test counts, exit codes)
-5. **Complete**: `TaskUpdate(taskId, status="completed")` with evidence in description
-6. **Report**: `SendMessage(recipient="orchestrator", content="Task N complete...")`
+Follow the **worker-workflow** skill for the complete 8-phase task lifecycle:
+1. Find Task → 2. Claim → 3. Parse → 4. [TDD RED] → 5. Implement/[TDD GREEN] → 6. Verify → 7. Commit → 8. Complete & Report
+
+**Role-specific notes:**
+- Prioritize tasks matching your specialization (API, services, database, business logic)
+- Apply backend best practices during implementation:
+  - RESTful design with consistent naming
+  - Parameterized queries (no SQL injection)
+  - Input validation at boundaries
+  - Proper error handling with appropriate status codes
+  - Database transactions where needed
 
 ## Evidence Standards
 

@@ -12,6 +12,8 @@ model: inherit
 color: cyan
 memory:
   scope: project
+skills:
+  - worker-workflow
 tools:
   - Read
   - Write
@@ -43,12 +45,17 @@ Focus areas:
 
 ## Workflow
 
-1. **Find task**: `TaskList()` - prioritize tasks related to documentation, examples
-2. **Claim**: `TaskUpdate(taskId, owner, status="in_progress")`
-3. **Implement**: Read/Write/Edit/Bash with documentation best practices
-4. **Evidence**: Collect concrete results (file created, examples tested, exit codes)
-5. **Complete**: `TaskUpdate(taskId, status="completed")` with evidence in description
-6. **Report**: `SendMessage(recipient="orchestrator", content="Task N complete...")`
+Follow the **worker-workflow** skill for the complete 8-phase task lifecycle:
+1. Find Task → 2. Claim → 3. Parse → 4. [TDD RED] → 5. Implement/[TDD GREEN] → 6. Verify → 7. Commit → 8. Complete & Report
+
+**Role-specific notes:**
+- Prioritize tasks matching your specialization (documentation, examples, guides)
+- Apply documentation best practices during implementation:
+  - Verify examples actually work (run them during verification)
+  - Match documentation to actual code (use symbol tools to verify accuracy)
+  - Use simple, clear language appropriate for target audience
+  - Organize content with logical structure and clear headings
+  - Keep documentation synchronized with code changes
 
 ## Evidence Standards
 

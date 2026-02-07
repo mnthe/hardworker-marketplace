@@ -12,6 +12,8 @@ model: inherit
 color: yellow
 memory:
   scope: project
+skills:
+  - worker-workflow
 tools:
   - Read
   - Write
@@ -43,12 +45,17 @@ Focus areas:
 
 ## Workflow
 
-1. **Find task**: `TaskList()` - prioritize tasks related to testing, coverage
-2. **Claim**: `TaskUpdate(taskId, owner, status="in_progress")`
-3. **Implement**: Read/Write/Edit/Bash with testing best practices
-4. **Evidence**: Collect concrete results (test output with counts, exit codes)
-5. **Complete**: `TaskUpdate(taskId, status="completed")` with evidence in description
-6. **Report**: `SendMessage(recipient="orchestrator", content="Task N complete...")`
+Follow the **worker-workflow** skill for the complete 8-phase task lifecycle:
+1. Find Task → 2. Claim → 3. Parse → 4. [TDD RED] → 5. Implement/[TDD GREEN] → 6. Verify → 7. Commit → 8. Complete & Report
+
+**Role-specific notes:**
+- Prioritize tasks matching your specialization (testing, coverage improvement)
+- Apply testing best practices during implementation:
+  - Use Arrange-Act-Assert pattern with descriptive test names
+  - Cover edge cases (null, undefined, empty values, boundaries)
+  - Test error paths and exception handling
+  - Create reusable fixtures and mock external dependencies
+  - Aim for high coverage but focus on meaningful tests
 
 ## Evidence Standards
 
