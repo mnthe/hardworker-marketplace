@@ -105,7 +105,7 @@ Hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **event-coordination** | Event-driven coordination patterns for orchestrator | Hook-based task assignment, idle detection, progress tracking |
 | **task-decomposition** | Goal decomposition into parallelizable tasks | Orchestrator uses for planning phase |
 | **teamwork-clean** | Reset project execution state | Recovery from failed orchestration |
-| **worker-workflow** | Core task execution workflow for worker agents | Find task, implement, collect evidence, report completion |
+| **worker-workflow** | 8-phase task lifecycle with TDD, verification, and commit | Find → Claim → Parse → [TDD RED] → Implement/[TDD GREEN] → Verify → Commit → Complete & Report |
 
 ## Agent Inventory
 
@@ -240,7 +240,10 @@ Hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 1. Orchestrator spawns workers as native teammates: `Task(teamwork:backend)`, `Task(teamwork:frontend)`, etc.
 2. Orchestrator assigns tasks to workers via `TaskUpdate(owner)`
-3. Workers implement tasks, collect evidence, mark resolved
+3. Workers follow 8-phase worker-workflow skill: Find → Claim → Parse → [TDD RED] → Implement/[TDD GREEN] → Verify → Commit → Complete & Report
+   - Workers parse structured task descriptions (XML format with role, purpose, context, constraints)
+   - TDD phases (RED/GREEN) are conditional based on task requirements
+   - Workers collect structured evidence and commit changes before marking resolved
 4. `TaskCompleted` hook notifies orchestrator of progress
 5. `TeammateIdle` hook triggers new task assignment
 
