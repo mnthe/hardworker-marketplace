@@ -120,6 +120,40 @@ describe('session-update.js', () => {
     });
   });
 
+  describe('update design doc', () => {
+    test('should set design doc path with --design-doc', async () => {
+      const designPath = '/project/docs/plans/2026-02-08-design.md';
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--design-doc', designPath
+      ]);
+
+      expect(result.exitCode).toBe(0);
+
+      const updated = readSession(session.sessionId);
+      expect(updated.plan.design_doc).toBe(designPath);
+    });
+
+    test('should preserve design doc when updating other fields', async () => {
+      const designPath = '/project/docs/plans/2026-02-08-design.md';
+      // First set design doc
+      await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--design-doc', designPath
+      ]);
+
+      // Then update phase
+      await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'EXECUTION'
+      ]);
+
+      const updated = readSession(session.sessionId);
+      expect(updated.plan.design_doc).toBe(designPath);
+      expect(updated.phase).toBe('EXECUTION');
+    });
+  });
+
   describe('multiple updates', () => {
     test('should update phase and exploration stage together', async () => {
       const result = await runScript(SCRIPT_PATH, [

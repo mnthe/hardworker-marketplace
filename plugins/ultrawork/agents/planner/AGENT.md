@@ -188,6 +188,15 @@ Write comprehensive design document with:
 - Scope (in/out)
 - Assumptions and risks
 
+After writing the design document, **store the path in session state**:
+
+```bash
+bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} \
+  --design-doc "$WORKING_DIR/docs/plans/YYYY-MM-DD-design.md"
+```
+
+This ensures the verifier can reliably find the design doc for this specific session, even when multiple sessions share the same `working_dir`.
+
 ### Phase 4: Task Decomposition
 
 **Rules:**

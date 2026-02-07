@@ -71,6 +71,11 @@ describe('setup-ultrawork.js', () => {
       expect(session.session_id).toBe(testSessionId);
       expect(session.goal).toBe('Test goal');
       expect(session.phase).toBe('PLANNING');
+
+      // Verify plan structure with design_doc field
+      expect(session.plan).toBeDefined();
+      expect(session.plan.approved_at).toBeNull();
+      expect(session.plan.design_doc).toBeNull();
     });
 
     test('should create session directory structure', async () => {

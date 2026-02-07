@@ -486,6 +486,7 @@ function createSession(args) {
     iteration: 1,
     plan: {
       approved_at: null,
+      design_doc: null,
     },
     options: {
       max_workers: maxWorkers,

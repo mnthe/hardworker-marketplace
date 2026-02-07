@@ -18,6 +18,7 @@ const ARG_SPEC = {
   '--session': { key: 'sessionId', aliases: ['-s'], required: true },
   '--phase': { key: 'phase', aliases: ['-p'] },
   '--plan-approved': { key: 'planApproved', aliases: ['-P'], flag: true },
+  '--design-doc': { key: 'designDoc', aliases: ['-d'] },
   '--exploration-stage': { key: 'explorationStage', aliases: ['-e'] },
   '--iteration': { key: 'iteration', aliases: ['-i'] },
   '--force': { key: 'force', aliases: ['-f'], flag: true },
@@ -72,6 +73,7 @@ function normalizePhase(phase) {
  * @property {string} [sessionId]
  * @property {Phase} [phase]
  * @property {boolean} [planApproved]
+ * @property {string} [designDoc]
  * @property {ExplorationStage} [explorationStage]
  * @property {number} [iteration]
  * @property {boolean} [quiet]
@@ -136,6 +138,11 @@ async function main() {
       // Update plan approval if provided
       if (args.planApproved) {
         session.plan.approved_at = new Date().toISOString();
+      }
+
+      // Update design doc path if provided
+      if (args.designDoc) {
+        session.plan.design_doc = args.designDoc;
       }
 
       // Update exploration stage if provided

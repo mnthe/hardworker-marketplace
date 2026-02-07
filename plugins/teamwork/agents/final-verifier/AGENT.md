@@ -44,12 +44,17 @@ tasks=$(python -c "import sys, json; print(json.dumps(TaskList()))")
 # Extract all criteria/requirements from task descriptions
 # Codex will verify these in parallel while we do our checks
 
+# Design doc path is provided by orchestrator via DESIGN_DOC variable in spawn prompt.
+# If not provided, skip doc-review.
+
 # Launch Codex in background (non-blocking)
+# --design passes design doc for both doc-review and exec context (if available)
 bash -c "bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/codex-verify.js \
   --mode full \
   --working-dir $(pwd) \
   --criteria 'All tasks completed|Build succeeds|Tests pass|No blocked patterns' \
   --goal '${PROJECT_GOAL}' \
+  ${DESIGN_DOC:+--design '${DESIGN_DOC}'} \
   --output /tmp/codex-teamwork-$(date +%s).json" &
 
 CODEX_PID=$!
@@ -61,7 +66,29 @@ CODEX_OUTPUT="/tmp/codex-teamwork-$(date +%s).json"
 - Store background task reference (`CODEX_PID` and `CODEX_OUTPUT` path) for Step 4.5
 - Codex runs in parallel while Steps 1-4 execute
 - If codex CLI not available, script returns `verdict: "SKIP"` (exit 0)
+- If `--design` is provided in `full` mode, Codex also runs doc-review and includes results in output
 - We will join the result in Step 4.5
+
+### Step 0.5: Design Document Verification
+
+If the orchestrator provided a `DESIGN_DOC` path in the spawn prompt:
+
+1. **Verify file exists**: Check the path is valid
+2. **Section check**: Verify required sections exist (Overview, Approach/Decisions, Architecture, Testing Strategy, Scope)
+3. **Blocked patterns**: Scan for TODO, TBD, FIXME, placeholder, "not yet decided", "to be determined"
+4. **Task traceability**: Each task should relate to content in the design document
+
+```bash
+# DESIGN_DOC is provided by orchestrator via spawn prompt
+# If provided, scan for blocked patterns
+if [ -n "$DESIGN_DOC" ] && [ "$DESIGN_DOC" != "null" ] && [ -f "$DESIGN_DOC" ]; then
+  grep -niE "(TODO|TBD|FIXME|placeholder|not yet decided|to be determined)" "$DESIGN_DOC"
+fi
+```
+
+**If design document has issues:**
+- Missing required sections → add to FAIL reasons
+- Blocked patterns found → add to FAIL reasons
 
 ### Step 1: Read All Tasks
 
@@ -145,6 +172,7 @@ Parse Codex result JSON:
   "verdict": "PASS" | "FAIL" | "SKIP",
   "review": { "issues": [...] },
   "exec": { "criteria_results": [...] },
+  "doc_review": { "exit_code": 0, "output": "...", "doc_issues": [...] },
   "summary": "..."
 }
 ```
@@ -156,8 +184,14 @@ Parse Codex result JSON:
 
 **If verdict is FAIL**:
 - Extract issues from `review.issues[]` and `exec.criteria_results[]`
+- Extract design issues from `doc_review.doc_issues[]` (if present)
 - Add Codex findings to overall fail reasons
 - Include in final verdict report
+
+**Doc review result** (when `--design` was provided):
+- `doc_review.doc_issues[]` contains completeness, blocked_pattern, consistency, and quality issues
+- Issues with `severity: "error"` contribute to FAIL verdict
+- Issues with `severity: "warning"` are informational only
 
 ### Step 5: Check Cross-Task Dependencies
 
@@ -243,16 +277,20 @@ FAIL - Issues found that must be resolved.
 **Codex Gate:**
 - Codex verdict is PASS or SKIP (not installed)
 
-**Dual Gate Decision Table:**
+**Triple Gate Decision Table:**
 
-| Claude Gate | Codex Gate | Final Verdict | Action |
-|-------------|------------|---------------|--------|
-| PASS | PASS | **PASS** | Complete project |
-| PASS | FAIL | **FAIL** | Report Codex issues |
-| FAIL | PASS | **FAIL** | Report Claude issues |
-| FAIL | FAIL | **FAIL** | Report all issues |
-| PASS | SKIP | **PASS** | Complete project (Codex unavailable) |
-| FAIL | SKIP | **FAIL** | Report Claude issues |
+| Claude Gate | Codex Gate | Doc Gate | Final Verdict | Action |
+|-------------|------------|----------|---------------|--------|
+| PASS | PASS | PASS | **PASS** | Complete project |
+| PASS | PASS | FAIL | **FAIL** | Report doc issues |
+| PASS | FAIL | PASS | **FAIL** | Report Codex issues |
+| FAIL | any | any | **FAIL** | Report Claude issues |
+| PASS | PASS | N/A | **PASS** | Complete project (no design doc) |
+| PASS | SKIP | PASS | **PASS** | Complete project (Codex unavailable) |
+| PASS | SKIP | N/A | **PASS** | Complete project (no Codex, no design) |
+| FAIL | SKIP | any | **FAIL** | Report Claude issues |
+
+**Note**: Doc Gate is N/A when no design document exists. It only applies when `--design` was provided to Codex.
 
 **FAIL** if ANY of:
 

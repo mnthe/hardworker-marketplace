@@ -8,7 +8,7 @@
  *
  * Used by teamwork plugin for AI-powered code verification and criteria validation.
  *
- * Usage: codex-verify.js --mode <check|review|exec|full> [options]
+ * Usage: codex-verify.js --mode <check|review|exec|full|doc-review> [options]
  */
 
 const fs = require('fs');
@@ -21,7 +21,7 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
 // ============================================================================
 
 /**
- * @typedef {'check'|'review'|'exec'|'full'} VerifyMode
+ * @typedef {'check'|'review'|'exec'|'full'|'doc-review'} VerifyMode
  */
 
 /**
@@ -47,7 +47,7 @@ const ARG_SPEC = {
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
-const VALID_MODES = ['check', 'review', 'exec', 'full'];
+const VALID_MODES = ['check', 'review', 'exec', 'full', 'doc-review'];
 const DEFAULT_MODEL = 'gpt-5.3-codex';
 
 // ============================================================================
@@ -304,6 +304,120 @@ function parseExecOutput(output, criteria) {
 }
 
 // ============================================================================
+// Doc Review Operations
+// ============================================================================
+
+/**
+ * Build a prompt for design document review
+ * @param {string} designPath - Path to design document
+ * @param {string} [goal] - Optional project goal for context
+ * @returns {string}
+ */
+function buildDocReviewPrompt(designPath, goal) {
+  const designContent = fs.readFileSync(designPath, 'utf-8');
+
+  let prompt = 'You are reviewing a design document for quality and completeness.\n\n';
+
+  if (goal) {
+    prompt += `## Goal\n${goal}\n\n`;
+  }
+
+  prompt += `## Design Document\n${designContent}\n\n`;
+  prompt += '## Review Criteria\n\n';
+  prompt += 'Check the following and report issues:\n\n';
+  prompt += '1. **Section Completeness**: Required sections: Overview, Approach/Decisions, Architecture, Testing Strategy, Scope. Report missing sections as errors.\n';
+  prompt += '2. **Blocked Patterns**: Find any TODO, TBD, FIXME, placeholder, "not yet decided", "to be determined", empty sections. Report as errors.\n';
+  prompt += '3. **Internal Consistency**: Check that decisions, architecture, and scope don\'t contradict each other. Report contradictions as errors.\n';
+  prompt += '4. **Quality**: Check for vague statements ("should work", "probably", "maybe"), incomplete lists ("etc.", "..."). Report as warnings.\n\n';
+  prompt += '## Output Format (JSON)\n';
+  prompt += '{\n';
+  prompt += '  "doc_issues": [\n';
+  prompt += '    { "category": "completeness|blocked_pattern|consistency|quality", "severity": "error|warning", "detail": "description" }\n';
+  prompt += '  ],\n';
+  prompt += '  "overall_verdict": "PASS|FAIL",\n';
+  prompt += '  "summary": "one-line summary"\n';
+  prompt += '}\n\n';
+  prompt += 'If no errors found, verdict is PASS. If any errors found, verdict is FAIL. Warnings alone don\'t cause FAIL.';
+
+  return prompt;
+}
+
+/**
+ * Parse doc review output to extract doc_issues
+ * @param {string} output - Raw codex output
+ * @returns {{ doc_issues: Array<{ category: string, severity: string, detail: string }>, verdict: string }}
+ */
+function parseDocReviewOutput(output) {
+  try {
+    const jsonMatch = output.match(/\{[\s\S]*"doc_issues"[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed.doc_issues)) {
+        const hasErrors = parsed.doc_issues.some(issue => issue.severity === 'error');
+        return {
+          doc_issues: parsed.doc_issues,
+          verdict: hasErrors ? 'FAIL' : 'PASS'
+        };
+      }
+    }
+  } catch (_) {
+    // JSON parsing failed, fall through to default
+  }
+
+  return {
+    doc_issues: [{ category: 'completeness', severity: 'error', detail: 'Could not parse doc review result' }],
+    verdict: 'FAIL'
+  };
+}
+
+/**
+ * Run codex doc-review for a design document
+ * @param {string} designPath - Path to design document
+ * @param {string} [goal] - Optional project goal
+ * @param {string} [model] - Optional model override
+ * @returns {{ exit_code: number, output: string, doc_issues: Array, verdict: string }}
+ */
+function runCodexDocReview(designPath, goal, model) {
+  // Validate design file exists before building prompt
+  if (!fs.existsSync(designPath)) {
+    return {
+      exit_code: 1,
+      output: `Design file not found: ${designPath}`,
+      doc_issues: [{ category: 'completeness', severity: 'error', detail: `Design file not found: ${designPath}` }],
+      verdict: 'FAIL'
+    };
+  }
+
+  const prompt = buildDocReviewPrompt(designPath, goal);
+
+  try {
+    const effectiveModel = model || DEFAULT_MODEL;
+    const args = ['exec', '--sandbox', 'read-only', '-m', effectiveModel, prompt];
+
+    const output = execFileSync('codex', args, {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 300000
+    }).trim();
+
+    const { doc_issues, verdict } = parseDocReviewOutput(output);
+
+    return { exit_code: 0, output, doc_issues, verdict };
+  } catch (error) {
+    const stdout = error.stdout ? error.stdout.toString().trim() : '';
+    const stderr = error.stderr ? error.stderr.toString().trim() : '';
+    const combinedOutput = [stdout, stderr].filter(Boolean).join('\n');
+
+    return {
+      exit_code: error.status || 1,
+      output: combinedOutput,
+      doc_issues: [{ category: 'completeness', severity: 'error', detail: 'Codex doc-review exec failed' }],
+      verdict: 'FAIL'
+    };
+  }
+}
+
+// ============================================================================
 // Result Building
 // ============================================================================
 
@@ -326,17 +440,26 @@ function buildSkipResult(mode) {
   if (mode === 'exec' || mode === 'full') {
     result.exec = null;
   }
+  if (mode === 'doc-review' || mode === 'full') {
+    result.doc_review = null;
+  }
 
   return result;
 }
 
 /**
- * Determine overall verdict from review and exec results
+ * Determine overall verdict from review, exec, and doc-review results
  * @param {Object|null} reviewResult - Review result
  * @param {Object|null} execResult - Exec result
+ * @param {Object|null} docReviewResult - Doc review result
  * @returns {'PASS'|'FAIL'}
  */
-function determineVerdict(reviewResult, execResult) {
+function determineVerdict(reviewResult, execResult, docReviewResult) {
+  // If doc-review ran and has errors, that is a FAIL
+  if (docReviewResult && docReviewResult.verdict === 'FAIL') {
+    return 'FAIL';
+  }
+
   // If exec ran and has criteria results, check them
   if (execResult) {
     const allPass = execResult.criteria_results.every(
@@ -357,11 +480,18 @@ function determineVerdict(reviewResult, execResult) {
  * Build summary string from results
  * @param {Object|null} reviewResult
  * @param {Object|null} execResult
+ * @param {Object|null} docReviewResult
  * @param {string} verdict
  * @returns {string}
  */
-function buildSummary(reviewResult, execResult, verdict) {
+function buildSummary(reviewResult, execResult, docReviewResult, verdict) {
   const parts = [];
+
+  if (docReviewResult) {
+    const errorCount = docReviewResult.doc_issues.filter(i => i.severity === 'error').length;
+    const warnCount = docReviewResult.doc_issues.filter(i => i.severity === 'warning').length;
+    parts.push(`Doc review: ${errorCount === 0 ? 'clean' : `${errorCount} error(s), ${warnCount} warning(s)`}`);
+  }
 
   if (reviewResult) {
     const issueCount = reviewResult.issues.length;
@@ -403,6 +533,12 @@ function validateModeArgs(args) {
     console.error(`Error: --criteria (-c) is required for mode "${args.mode}"`);
     process.exit(1);
   }
+
+  // doc-review requires --design
+  if (args.mode === 'doc-review' && !args.design) {
+    console.error('Error: --design (-d) is required for mode "doc-review"');
+    process.exit(1);
+  }
 }
 
 // ============================================================================
@@ -418,7 +554,7 @@ function main() {
   if (process.argv.includes('--help') || process.argv.includes('-h')) {
     console.log(generateHelp('codex-verify.js', ARG_SPEC,
       'Codex CLI wrapper for AI-powered code verification.\n' +
-      'Modes: check (availability), review (code review), exec (criteria verification), full (both).\n' +
+      'Modes: check (availability), review (code review), exec (criteria verification), doc-review (design doc review), full (all).\n' +
       'Gracefully degrades when codex is not installed (SKIP verdict).'
     ));
     process.exit(0);
@@ -440,6 +576,7 @@ function main() {
   // Codex is available - execute requested mode
   let reviewResult = null;
   let execResult = null;
+  let docReviewResult = null;
 
   if (args.mode === 'check') {
     const result = {
@@ -454,6 +591,10 @@ function main() {
     return;
   }
 
+  if (args.mode === 'doc-review') {
+    docReviewResult = runCodexDocReview(args.design, args.goal, args.model);
+  }
+
   if (args.mode === 'review' || args.mode === 'full') {
     reviewResult = runCodexReview(args.workingDir, args.base);
   }
@@ -463,8 +604,12 @@ function main() {
     execResult = runCodexExec(args.workingDir, criteria, args.goal, args.model, args.design);
   }
 
-  const verdict = determineVerdict(reviewResult, execResult);
-  const summary = buildSummary(reviewResult, execResult, verdict);
+  if (args.mode === 'full' && args.design) {
+    docReviewResult = runCodexDocReview(args.design, args.goal, args.model);
+  }
+
+  const verdict = determineVerdict(reviewResult, execResult, docReviewResult);
+  const summary = buildSummary(reviewResult, execResult, docReviewResult, verdict);
 
   const result = {
     available: true,
@@ -479,6 +624,14 @@ function main() {
 
   if (execResult) {
     result.exec = execResult;
+  }
+
+  if (docReviewResult) {
+    result.doc_review = {
+      exit_code: docReviewResult.exit_code,
+      output: docReviewResult.output,
+      doc_issues: docReviewResult.doc_issues
+    };
   }
 
   outputResult(result, args.output);

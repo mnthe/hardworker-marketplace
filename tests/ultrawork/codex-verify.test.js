@@ -197,6 +197,119 @@ describe('codex-verify.js', () => {
     });
   });
 
+  describe('--mode doc-review', () => {
+    // Use non-existent path for most tests: when codex is NOT available,
+    // SKIP is returned before file is ever accessed. When codex IS available,
+    // the fs.existsSync check returns FAIL immediately (no timeout).
+    const nonExistentDesign = '/tmp/nonexistent-codex-verify-test-design-99999.md';
+
+    test('should require --design', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'doc-review'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--design');
+    });
+
+    test('should output JSON with mode and verdict fields', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'doc-review',
+        '--design', nonExistentDesign
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.mode).toBe('doc-review');
+      expect(parsed.verdict).toBeDefined();
+      if (!parsed.available) {
+        expect(parsed.verdict).toBe('SKIP');
+        expect(parsed.doc_review).toBeNull();
+      } else {
+        // Codex available but file doesn't exist → FAIL with doc_issues
+        expect(parsed.verdict).toBe('FAIL');
+        expect(parsed.doc_review).toBeDefined();
+        expect(Array.isArray(parsed.doc_review.doc_issues)).toBe(true);
+      }
+    });
+
+    test('should output SKIP verdict when codex not found', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'doc-review',
+        '--design', nonExistentDesign
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      if (!parsed.available) {
+        expect(parsed.verdict).toBe('SKIP');
+      }
+    });
+
+    test('should not require --working-dir', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'doc-review',
+        '--design', nonExistentDesign
+      ]);
+
+      // Should not fail with working-dir error (exits 0 regardless)
+      expect(result.exitCode).toBe(0);
+    });
+
+    test('should return FAIL with doc_issues when design file not found', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'doc-review',
+        '--design', nonExistentDesign
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      if (parsed.available) {
+        // Codex available but file missing → FAIL with descriptive doc_issues
+        expect(parsed.verdict).toBe('FAIL');
+        expect(parsed.doc_review).toBeDefined();
+        expect(parsed.doc_review.doc_issues.length).toBeGreaterThan(0);
+        expect(parsed.doc_review.doc_issues[0].detail).toContain('not found');
+      }
+    });
+  });
+
+  describe('--mode full with --design', () => {
+    const nonExistentDesign = '/tmp/nonexistent-codex-verify-test-design-99999.md';
+
+    test('should include doc_review in SKIP result when codex not found', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'full',
+        '--working-dir', '/tmp/test-project',
+        '--criteria', 'Tests pass|Code compiles',
+        '--design', nonExistentDesign
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      if (!parsed.available) {
+        expect(parsed.verdict).toBe('SKIP');
+        expect(parsed.doc_review).toBeNull();
+      }
+    });
+
+    test('should still work without --design in full mode', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'full',
+        '--working-dir', '/tmp/test-project',
+        '--criteria', 'Tests pass|Code compiles'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.mode).toBe('full');
+      if (!parsed.available) {
+        // In SKIP mode, doc_review is null for full mode
+        expect(parsed.doc_review).toBeNull();
+      }
+    });
+  });
+
   describe('parameter validation', () => {
     test('should fail when --mode is missing', async () => {
       const result = await runScript(SCRIPT_PATH, []);

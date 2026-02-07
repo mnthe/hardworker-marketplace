@@ -47,9 +47,47 @@ Make PASS/FAIL determination.
 The verifier must:
 
 1. **Audit Evidence** - Check that every success criterion has corresponding evidence
-2. **Scan for Blocked Patterns** - Search all evidence and code for zero-tolerance phrases
-3. **Run Final Tests** - Execute test suite, verify exit code 0
-4. **Make Determination** - Clear PASS or FAIL verdict with rationale
+2. **Verify Design Document** - If design doc exists, check section completeness and blocked patterns (Phase 1.5)
+3. **Scan for Blocked Patterns** - Search all evidence and code for zero-tolerance phrases
+4. **Run Final Tests** - Execute test suite, verify exit code 0
+5. **Make Determination** - Clear PASS or FAIL verdict with rationale (triple gate: Claude + Codex + Doc)
+
+---
+
+## Design Document Verification (Phase 1.5)
+
+If a design document exists in `{WORKING_DIR}/docs/plans/`:
+
+1. **Locate**: Find most recent `*-design.md`
+2. **Section check**: Required sections: Overview, Approach/Decisions, Architecture, Testing Strategy, Scope
+3. **Blocked patterns**: TODO, TBD, FIXME, placeholder, "not yet decided"
+4. **Task traceability**: Each task should relate to design content
+
+**Design doc path retrieval:**
+
+The design doc path is stored in `session.json` by the planner (via `session-update.js --design-doc`). The verifier reads it from session state:
+
+```bash
+DESIGN_DOC=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field plan.design_doc)
+```
+
+**Codex invocation with `--design`:**
+
+The verifier passes the design document to Codex for both doc-review and exec context:
+
+```bash
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/codex-verify.js" \
+  --mode full \
+  --working-dir ${WORKING_DIR} \
+  --criteria "criterion1|criterion2" \
+  --goal "${GOAL}" \
+  --design "${DESIGN_DOC}" \
+  --output /tmp/codex-${CLAUDE_SESSION_ID}.json
+```
+
+When `--design` is provided in `full` mode:
+- **doc-review**: Design document itself is verified for completeness, blocked patterns, consistency, quality
+- **exec**: Design content is injected as context for criteria verification (verifies "implemented as designed")
 
 ---
 
@@ -161,13 +199,25 @@ Exit code: 0
 
 ## PASS Determination
 
-**Verifier can mark PASS only if:**
+**Verifier can mark PASS only if (triple gate):**
 
 1. ✅ All tasks have status `resolved`
 2. ✅ Every success criterion has concrete evidence
 3. ✅ No blocked patterns found in evidence or code
 4. ✅ Final test run passes (exit 0)
 5. ✅ No unresolved issues mentioned in evidence
+6. ✅ Design document passes review (if present) — no missing sections, no blocked patterns
+7. ✅ Codex gate: PASS or SKIP
+
+**Triple Gate Decision:**
+
+| Claude Gate | Codex Gate | Doc Gate | Final Verdict |
+|-------------|------------|----------|---------------|
+| PASS | PASS | PASS | **PASS** |
+| PASS | PASS | FAIL | **FAIL** |
+| PASS | SKIP | PASS | **PASS** |
+| FAIL | any | any | **FAIL** |
+| PASS | PASS | N/A | **PASS** |
 
 **PASS action:**
 

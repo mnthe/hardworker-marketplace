@@ -113,12 +113,17 @@ Launch Codex verification in background before starting main verification:
 bun "{SCRIPTS_PATH}/task-list.js" --session ${CLAUDE_SESSION_ID} --format json
 # Extract all criteria[] arrays, pipe-join them
 
+# Read design doc path from session state (stored by planner)
+DESIGN_DOC=$(bun "{SCRIPTS_PATH}/session-get.js" --session ${CLAUDE_SESSION_ID} --field plan.design_doc)
+
 # Launch Codex in background (non-blocking)
+# --design passes design doc for both doc-review and exec context
 bun "{SCRIPTS_PATH}/codex-verify.js" \
   --mode full \
   --working-dir ${WORKING_DIR} \
   --criteria "criterion1|criterion2|criterion3" \
   --goal "${GOAL}" \
+  --design "${DESIGN_DOC}" \
   --output /tmp/codex-${CLAUDE_SESSION_ID}.json \
   run_in_background=True
 ```
@@ -128,6 +133,32 @@ bun "{SCRIPTS_PATH}/codex-verify.js" \
 - Store background task reference for Phase 4.5
 - Codex runs in parallel while Phase 1-4 execute
 - If codex CLI not available, script returns `verdict: "SKIP"` (exit 0)
+- If `--design` is provided in `full` mode, Codex also runs doc-review and includes results in output
+
+### Phase 1.5: Design Document Verification
+
+If a design document exists in `{WORKING_DIR}/docs/plans/`:
+
+1. **Locate**: Find most recent `*-design.md` in `{WORKING_DIR}/docs/plans/`
+2. **Section check**: Verify required sections exist (Overview, Approach/Decisions, Architecture, Testing Strategy, Scope)
+3. **Blocked patterns**: Scan for TODO, TBD, FIXME, placeholder, "not yet decided", "to be determined"
+4. **Task traceability**: Each task should relate to content in the design document
+5. **Record**: Add design verification evidence to verify task
+
+```bash
+# Read design doc path from session state (stored by planner)
+DESIGN_DOC=$(bun "{SCRIPTS_PATH}/session-get.js" --session ${CLAUDE_SESSION_ID} --field plan.design_doc)
+
+# If design doc exists, scan for blocked patterns
+if [ -n "$DESIGN_DOC" ] && [ "$DESIGN_DOC" != "null" ]; then
+  grep -niE "(TODO|TBD|FIXME|placeholder|not yet decided|to be determined)" "$DESIGN_DOC"
+fi
+```
+
+**If design document has issues:**
+- Missing required sections → add to FAIL reasons
+- Blocked patterns found → add to FAIL reasons
+- Tasks don't map to design → add as warning
 
 ### Phase 1: Read Session & Tasks
 
@@ -210,6 +241,7 @@ Parse Codex result JSON:
   "verdict": "PASS" | "FAIL" | "SKIP",
   "review": { "issues": [...] },
   "exec": { "criteria_results": [...] },
+  "doc_review": { "exit_code": 0, "output": "...", "doc_issues": [...] },
   "summary": "..."
 }
 ```
@@ -221,8 +253,14 @@ Parse Codex result JSON:
 
 **If verdict is FAIL**:
 - Extract issues from `review.issues[]` and `exec.criteria_results[]`
+- Extract design issues from `doc_review.doc_issues[]` (if present)
 - Add Codex findings to overall fail reasons
 - Include in fix task creation
+
+**Doc review result** (when `--design` was provided):
+- `doc_review.doc_issues[]` contains completeness, blocked_pattern, consistency, and quality issues
+- Issues with `severity: "error"` contribute to FAIL verdict
+- Issues with `severity: "warning"` are informational only
 
 ### Phase 5: PASS/FAIL Determination
 
@@ -237,16 +275,20 @@ Parse Codex result JSON:
 | **Claude Gate: Tasks Closed** | All tasks (except verify) status="resolved" |
 | **Codex Gate: PASS or SKIP** | Codex verification passed OR not installed |
 
-**Dual Gate Decision Table:**
+**Triple Gate Decision Table:**
 
-| Claude Gate | Codex Gate | Final Verdict | Action |
-|-------------|------------|---------------|--------|
-| PASS | PASS | **PASS** | Complete session |
-| PASS | FAIL | **FAIL** | Create tasks for Codex issues |
-| FAIL | PASS | **FAIL** | Create tasks for Claude issues |
-| FAIL | FAIL | **FAIL** | Create tasks for all issues |
-| PASS | SKIP | **PASS** | Complete session (Codex unavailable) |
-| FAIL | SKIP | **FAIL** | Create tasks for Claude issues |
+| Claude Gate | Codex Gate | Doc Gate | Final Verdict | Action |
+|-------------|------------|----------|---------------|--------|
+| PASS | PASS | PASS | **PASS** | Complete session |
+| PASS | PASS | FAIL | **FAIL** | Create tasks for doc issues |
+| PASS | FAIL | PASS | **FAIL** | Create tasks for Codex issues |
+| FAIL | any | any | **FAIL** | Create tasks for Claude issues |
+| PASS | PASS | N/A | **PASS** | Complete session (no design doc) |
+| PASS | SKIP | PASS | **PASS** | Complete session (Codex unavailable) |
+| PASS | SKIP | N/A | **PASS** | Complete session (no Codex, no design) |
+| FAIL | SKIP | any | **FAIL** | Create tasks for Claude issues |
+
+**Note**: Doc Gate is N/A when no design document exists. It only applies when `--design` was provided to Codex.
 
 **FAIL Triggers:**
 
@@ -336,12 +378,23 @@ bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EX
 
 **SKIP Note** (if applicable): Codex CLI not installed - verification skipped (graceful degradation)
 
+## Doc Gate (if design document exists)
+
+### Design Document
+- Path: {design_doc_path}
+- Section completeness: PASS / FAIL
+- Blocked patterns: 0 / N found
+- Codex doc-review: PASS / FAIL / N/A
+
+### Doc Gate Verdict: PASS / FAIL / N/A
+
 ## Combined Verdict
 
 | Gate | Result |
 |------|--------|
 | Claude Gate | PASS / FAIL |
 | Codex Gate | PASS / FAIL / SKIP |
+| Doc Gate | PASS / FAIL / N/A |
 | **Final Verdict** | **PASS / FAIL** |
 
 ## Issues (if FAIL)

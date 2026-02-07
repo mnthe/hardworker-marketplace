@@ -11,7 +11,7 @@
     },
     "mode": {
       "type": "string",
-      "enum": ["check", "review", "exec", "full"],
+      "enum": ["check", "review", "exec", "full", "doc-review"],
       "description": "The verification mode that was executed"
     },
     "codex_version": {
@@ -89,6 +89,50 @@
         { "type": "null" }
       ],
       "description": "Results from codex exec verification (exec/full modes)"
+    },
+    "doc_review": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["exit_code", "output", "doc_issues"],
+          "properties": {
+            "exit_code": {
+              "type": "integer",
+              "description": "Exit code from codex doc-review command"
+            },
+            "output": {
+              "type": "string",
+              "description": "Raw output from codex doc-review"
+            },
+            "doc_issues": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["category", "severity", "detail"],
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "enum": ["completeness", "blocked_pattern", "consistency", "quality"],
+                    "description": "Issue category"
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": ["error", "warning"],
+                    "description": "Issue severity (errors cause FAIL, warnings don't)"
+                  },
+                  "detail": {
+                    "type": "string",
+                    "description": "Description of the issue found"
+                  }
+                }
+              },
+              "description": "Issues found during design document review"
+            }
+          }
+        },
+        { "type": "null" }
+      ],
+      "description": "Results from design document review (doc-review/full modes)"
     },
     "verdict": {
       "type": "string",

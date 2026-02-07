@@ -545,14 +545,19 @@ TaskUpdate(taskId="{fix_task_id}", owner="worker-backend")
 
 ### Step 1: Spawn Final Verifier
 
-When all tasks are completed, spawn the final-verifier teammate:
+When all tasks are completed, spawn the final-verifier teammate.
+
+**If a design document was created during planning**, include its path as `DESIGN_DOC` in the prompt so the verifier can perform design document verification:
 
 ```python
 Task(
     subagent_type="teamwork:final-verifier",
     team_name="{PROJECT}-{SUB_TEAM}",
     name="verifier",
-    prompt="Verify project {PROJECT} completion. Run full build, test suite, check all task evidence. Report PASS or FAIL with details."
+    prompt=f"""Verify project {PROJECT} completion. Run full build, test suite, check all task evidence. Report PASS or FAIL with details.
+
+DESIGN_DOC: {design_doc_path or 'none'}
+"""
 )
 ```
 
