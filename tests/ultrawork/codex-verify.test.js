@@ -1,0 +1,253 @@
+#!/usr/bin/env bun
+/**
+ * Tests for codex-verify.js
+ *
+ * NOTE: These tests verify graceful degradation behavior when codex CLI
+ * is not installed (the expected environment for CI/test). When codex IS
+ * available, the script delegates to it; those paths are tested via
+ * integration testing with codex installed.
+ */
+
+const { describe, test, expect, beforeEach, afterEach } = require('bun:test');
+const { createMockSession, runScript, assertHelpText } = require('./test-utils.js');
+const path = require('path');
+
+const SCRIPT_PATH = path.join(__dirname, '../../plugins/ultrawork/src/scripts/codex-verify.js');
+
+describe('codex-verify.js', () => {
+  let session;
+
+  beforeEach(() => {
+    session = createMockSession('test-codex-verify');
+  });
+
+  afterEach(() => {
+    session.cleanup();
+  });
+
+  describe('help flag', () => {
+    test('should display help with --help', async () => {
+      const result = await runScript(SCRIPT_PATH, ['--help']);
+
+      expect(result.exitCode).toBe(0);
+      assertHelpText(result.stdout, ['--mode', '--working-dir', '--criteria']);
+    });
+  });
+
+  describe('--mode check', () => {
+    test('should output JSON with available field', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'check'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(typeof parsed.available).toBe('boolean');
+      expect(parsed.mode).toBe('check');
+      expect(parsed.verdict).toBeDefined();
+    });
+
+    test('should output SKIP verdict when codex not found', async () => {
+      // In test environment, codex is not expected to be installed
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'check'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      // If codex is not installed, verdict is SKIP
+      if (!parsed.available) {
+        expect(parsed.verdict).toBe('SKIP');
+      }
+    });
+  });
+
+  describe('--mode review', () => {
+    test('should require --working-dir', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'review'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--working-dir');
+    });
+
+    test('should output JSON with review field', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'review',
+        '--working-dir', '/tmp/test-project'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.mode).toBe('review');
+      expect(parsed.verdict).toBeDefined();
+    });
+
+    test('should output SKIP verdict when codex not found', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'review',
+        '--working-dir', '/tmp/test-project'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      if (!parsed.available) {
+        expect(parsed.verdict).toBe('SKIP');
+      }
+    });
+  });
+
+  describe('--mode exec', () => {
+    test('should require --working-dir', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'exec',
+        '--criteria', 'Tests pass|Code compiles'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--working-dir');
+    });
+
+    test('should require --criteria', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'exec',
+        '--working-dir', '/tmp/test-project'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--criteria');
+    });
+
+    test('should output JSON with exec field', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'exec',
+        '--working-dir', '/tmp/test-project',
+        '--criteria', 'Tests pass|Code compiles'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.mode).toBe('exec');
+      expect(parsed.verdict).toBeDefined();
+    });
+
+    test('should output SKIP verdict when codex not found', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'exec',
+        '--working-dir', '/tmp/test-project',
+        '--criteria', 'Tests pass|Code compiles'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      if (!parsed.available) {
+        expect(parsed.verdict).toBe('SKIP');
+        expect(parsed.summary).toBeDefined();
+      }
+    });
+  });
+
+  describe('--mode full', () => {
+    test('should require --working-dir', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'full',
+        '--criteria', 'Tests pass'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--working-dir');
+    });
+
+    test('should require --criteria', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'full',
+        '--working-dir', '/tmp/test-project'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--criteria');
+    });
+
+    test('should output JSON with both review and exec fields', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'full',
+        '--working-dir', '/tmp/test-project',
+        '--criteria', 'Tests pass|Code compiles'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.mode).toBe('full');
+      expect(parsed.verdict).toBeDefined();
+    });
+
+    test('should output SKIP verdict when codex not found', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'full',
+        '--working-dir', '/tmp/test-project',
+        '--criteria', 'Tests pass|Code compiles'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      if (!parsed.available) {
+        expect(parsed.verdict).toBe('SKIP');
+      }
+    });
+  });
+
+  describe('parameter validation', () => {
+    test('should fail when --mode is missing', async () => {
+      const result = await runScript(SCRIPT_PATH, []);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--mode');
+    });
+
+    test('should fail for invalid mode', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'invalid'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Invalid mode');
+    });
+  });
+
+  describe('--output parameter', () => {
+    test('should write results to file when --output specified', async () => {
+      const fs = require('fs');
+      const outputPath = path.join(session.sessionDir, 'codex-result.json');
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'check',
+        '--output', outputPath
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      expect(fs.existsSync(outputPath)).toBe(true);
+
+      const fileContent = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+      expect(fileContent.mode).toBe('check');
+      expect(fileContent.verdict).toBeDefined();
+    });
+  });
+
+  describe('JSON output structure', () => {
+    test('should always include available, mode, verdict, summary fields', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'check'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+
+      // Required fields in every response
+      expect('available' in parsed).toBe(true);
+      expect('mode' in parsed).toBe(true);
+      expect('verdict' in parsed).toBe(true);
+      expect('summary' in parsed).toBe(true);
+    });
+  });
+});

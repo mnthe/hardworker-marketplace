@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CodexVerifyOutput",
+  "description": "JSON Schema for codex-verify.js structured output",
+  "type": "object",
+  "required": ["available", "mode", "verdict", "summary"],
+  "properties": {
+    "available": {
+      "type": "boolean",
+      "description": "Whether the Codex CLI is available on the system"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["check", "review", "exec", "full"],
+      "description": "The verification mode that was executed"
+    },
+    "codex_version": {
+      "type": ["string", "null"],
+      "description": "Version of the Codex CLI (check mode only)"
+    },
+    "codex_path": {
+      "type": ["string", "null"],
+      "description": "Path to the Codex CLI binary (check mode only)"
+    },
+    "review": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["exit_code", "output", "issues"],
+          "properties": {
+            "exit_code": {
+              "type": "integer",
+              "description": "Exit code from codex review command"
+            },
+            "output": {
+              "type": "string",
+              "description": "Raw output from codex review"
+            },
+            "issues": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "List of issues found during review"
+            }
+          }
+        },
+        { "type": "null" }
+      ],
+      "description": "Results from codex review (review/full modes)"
+    },
+    "exec": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["exit_code", "output", "criteria_results"],
+          "properties": {
+            "exit_code": {
+              "type": "integer",
+              "description": "Exit code from codex exec command"
+            },
+            "output": {
+              "type": "string",
+              "description": "Raw output from codex exec"
+            },
+            "criteria_results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["criterion", "result", "explanation"],
+                "properties": {
+                  "criterion": {
+                    "type": "string",
+                    "description": "The success criterion being verified"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": ["PASS", "FAIL"],
+                    "description": "Verification result for this criterion"
+                  },
+                  "explanation": {
+                    "type": "string",
+                    "description": "Brief explanation of the verification result"
+                  }
+                }
+              },
+              "description": "Per-criterion verification results"
+            }
+          }
+        },
+        { "type": "null" }
+      ],
+      "description": "Results from codex exec verification (exec/full modes)"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "SKIP"],
+      "description": "Overall verification verdict"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Human-readable summary of the verification results"
+    }
+  },
+  "additionalProperties": false
+}
