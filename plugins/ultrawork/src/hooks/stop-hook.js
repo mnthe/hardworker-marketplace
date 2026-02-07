@@ -28,6 +28,7 @@ const {
 /**
  * @typedef {Object} HookInput
  * @property {string} [session_id]
+ * @property {boolean} [stop_hook_active]
  */
 
 /**
@@ -158,6 +159,14 @@ async function main() {
   const input = await readStdin();
   /** @type {HookInput} */
   const hookInput = JSON.parse(input);
+
+  // Prevent infinite stop hook loops
+  // When stop_hook_active is true, a previous stop hook already blocked
+  // Don't block again to avoid infinite loops
+  if (hookInput.stop_hook_active) {
+    outputAndExit(createStopResponse());
+    return;
+  }
 
   // Extract session_id
   const sessionId = hookInput.session_id;
