@@ -31,6 +31,9 @@ const {
  * @typedef {Object} HookInput
  * @property {string} [session_id]
  * @property {string} [agent_id]
+ * @property {string} [agent_type]
+ * @property {string} [agent_transcript_path]
+ * @property {boolean} [stop_hook_active]
  * @property {string} [output]
  * @property {string} [task_id]
  */
@@ -149,8 +152,24 @@ async function main() {
 
     // Parse hook input fields
     const agentId = hookInput.agent_id || '';
+    const agentType = hookInput.agent_type || '';
+    const agentTranscriptPath = hookInput.agent_transcript_path || '';
     const agentOutput = hookInput.output || '';
     let taskId = hookInput.task_id || '';
+
+    // Early exit: stop hook already active (prevent infinite loops)
+    if (hookInput.stop_hook_active) {
+      console.log(JSON.stringify(outputResponse()));
+      process.exit(0);
+      return;
+    }
+
+    // Early exit: not an ultrawork agent
+    if (agentType && !agentType.startsWith('ultrawork:')) {
+      console.log(JSON.stringify(outputResponse()));
+      process.exit(0);
+      return;
+    }
 
     // Get session ID from input
     const sessionId = hookInput.session_id;
@@ -175,8 +194,12 @@ async function main() {
     /** @type {SessionWithWorkers} */
     const session = JSON.parse(content);
 
-    // Check if this agent is tracked as an ultrawork worker
-    const isWorker = isTrackedWorker(session, agentId);
+    // Use agent_type for role detection (primary)
+    const agentRole = agentType ? agentType.split(':')[1] : ''; // 'worker', 'explorer', 'verifier'
+    const isUltraworkAgent = agentType && agentType.startsWith('ultrawork:');
+
+    // Fall back to session.workers[] for backward compatibility
+    const isWorker = isUltraworkAgent || isTrackedWorker(session, agentId);
 
     if (!isWorker) {
       // Check if this task_id exists in our session
@@ -259,6 +282,7 @@ async function main() {
             ...evidence,
             status,
             summary,
+            agent_type: agentType,
           };
 
           return {
