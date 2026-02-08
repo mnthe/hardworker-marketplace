@@ -124,11 +124,13 @@ bun "{SCRIPTS_PATH}/codex-verify.js" \
   --criteria "criterion1|criterion2|criterion3" \
   --goal "${GOAL}" \
   --design "${DESIGN_DOC}" \
+  --enable collab \
   --output /tmp/codex-${CLAUDE_SESSION_ID}.json \
   run_in_background=True
 ```
 
 **Important**:
+- `--enable` accepts comma-separated feature flags (e.g., `--enable collab,doc-review`)
 - Use `run_in_background=True` parameter in Bash tool
 - Store background task reference for Phase 4.5
 - Codex runs in parallel while Phase 1-4 execute

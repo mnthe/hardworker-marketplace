@@ -106,7 +106,7 @@ All scripts use Bun runtime with flag-based parameters.
 | **task-summary.js**       | Generate AI-friendly task markdown                          | `--session <ID>` `--task <ID>` `--save`                                                                               |
 | **evidence-summary.js**   | Generate AI-friendly evidence index                         | `--session <ID>` `--save` `--format md\|json`                                                                         |
 | **evidence-query.js**     | Query evidence with filters                                 | `--session <ID>` `--type test_result` `--last 5` `--search "npm"` `--task 1`                                          |
-| **codex-verify.js**       | Run Codex CLI as auxiliary verifier (dual gate)             | `--mode check\|review\|exec\|full` `--working-dir <dir>` `--criteria "c1\|c2"` `--output <file>`                      |
+| **codex-verify.js**       | Run Codex CLI as auxiliary verifier (dual gate)             | `--mode check\|review\|exec\|full` `--working-dir <dir>` `--criteria "c1\|c2"` `--output <file>` `--enable <features>` |
 
 **Supporting files:**
 - `codex-output-schema.json` - JSON schema for Codex verification output format

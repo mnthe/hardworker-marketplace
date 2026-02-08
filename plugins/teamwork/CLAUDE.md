@@ -77,7 +77,7 @@ All scripts use Bun runtime with flag-based parameters. Project scripts use `--p
 | **project-get.js** | Get project metadata | `--project <name>` `--team <name>` |
 | **project-clean.js** | Clean project state | `--project <name>` `--team <name>` |
 | **project-status.js** | Get project dashboard status | `--project <name>` `--team <name>` `[--format json|table]` `[--field <path>]` `[--verbose]` |
-| **codex-verify.js** | Run Codex CLI as auxiliary verifier (dual gate) | `--mode check\|review\|exec\|full` `--working-dir <dir>` `--criteria "c1\|c2"` `--output <file>` |
+| **codex-verify.js** | Run Codex CLI as auxiliary verifier (dual gate) | `--mode check\|review\|exec\|full` `--working-dir <dir>` `--criteria "c1\|c2"` `--output <file>` `--enable <features>` |
 
 **Supporting files:**
 - `codex-output-schema.json` - JSON schema for Codex verification output format

@@ -55,6 +55,7 @@ bash -c "bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/codex-verify.js \
   --criteria 'All tasks completed|Build succeeds|Tests pass|No blocked patterns' \
   --goal '${PROJECT_GOAL}' \
   ${DESIGN_DOC:+--design '${DESIGN_DOC}'} \
+  --enable collab \
   --output /tmp/codex-teamwork-$(date +%s).json" &
 
 CODEX_PID=$!
