@@ -28,7 +28,8 @@ plugins/teamwork/
 │   │   ├── project-utils.js   # Project and task path utilities
 │   │   ├── args.js            # Common argument parsing
 │   │   ├── blocked-patterns.js # Blocked pattern detection
-│   │   └── domain-config.js   # Domain configuration
+│   │   ├── field-utils.js     # Nested field extraction with dot notation + array indexing
+│   │   └── json-ops.js        # Atomic JSON read/write operations
 │   ├── scripts/               # CLI scripts (6 files)
 │   │   ├── setup-teamwork.js  # Initialize teamwork environment
 │   │   ├── project-create.js  # Create new project with metadata

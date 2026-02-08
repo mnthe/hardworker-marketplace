@@ -32,7 +32,9 @@ plugins/ultrawork/
 │   │   ├── session-utils.js   # Session management utilities
 │   │   ├── hook-utils.js      # Hook utilities (stdin, output helpers, error handling)
 │   │   ├── args.js            # Command-line argument parsing utility
-│   │   └── blocked-patterns.js # Blocked pattern detection for verification
+│   │   ├── blocked-patterns.js # Blocked pattern detection for verification
+│   │   ├── field-utils.js     # Nested field extraction with dot notation + array indexing
+│   │   └── json-ops.js        # Atomic JSON read/write operations
 │   ├── scripts/               # CLI scripts (19 files)
 │   │   ├── setup-ultrawork.js
 │   │   ├── session-get.js
