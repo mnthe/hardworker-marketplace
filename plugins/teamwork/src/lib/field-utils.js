@@ -20,25 +20,27 @@ function getNestedField(obj, fieldPath) {
   let current = obj;
 
   for (const part of parts) {
-    if (current === null || current === undefined) {
+    if (current === null || current === undefined || typeof current !== 'object') {
       return undefined;
     }
 
-    // Handle array access: field[0]
+    // Handle array index notation: field[0]
     const match = part.match(/^(.+)\[(\d+)\]$/);
     if (match) {
       const [, fieldName, index] = match;
+      if (!(fieldName in current)) {
+        return undefined;
+      }
       current = current[fieldName];
-      if (!current || !Array.isArray(current)) {
+      if (!Array.isArray(current)) {
         return undefined;
       }
       current = current[parseInt(index, 10)];
     } else {
+      if (!(part in current)) {
+        return undefined;
+      }
       current = current[part];
-    }
-
-    if (current === undefined) {
-      return undefined;
     }
   }
 
