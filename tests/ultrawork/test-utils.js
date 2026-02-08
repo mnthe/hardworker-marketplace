@@ -9,7 +9,11 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { spawn } = require('child_process');
+const {
+  assertHelpText,
+  assertJsonSchema: rootAssertJsonSchema,
+  runScriptAsync
+} = require('../test-utils.js');
 
 // Test-specific path functions (isolated from real user data)
 const TEST_BASE_DIR = path.join(os.tmpdir(), 'ultrawork-test');
@@ -141,38 +145,14 @@ function createMockTask(sessionId, taskId, options = {}) {
  * @returns {Promise<{stdout: string, stderr: string, exitCode: number}>}
  */
 async function runScript(scriptPath, args = []) {
-  return new Promise((resolve) => {
-    const proc = spawn('bun', [scriptPath, ...args], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: {
-        ...process.env,
-        ULTRAWORK_TEST_BASE_DIR: TEST_BASE_DIR  // Isolate tests from real user data
-      }
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    proc.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-
-    proc.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    proc.on('close', (exitCode) => {
-      resolve({
-        stdout: stdout.trim(),
-        stderr: stderr.trim(),
-        exitCode: exitCode || 0
-      });
-    });
+  return runScriptAsync(scriptPath, args, {
+    env: { ULTRAWORK_TEST_BASE_DIR: TEST_BASE_DIR }
   });
 }
 
 /**
  * Assert that output matches JSON schema structure
+ * Parses JSON string then delegates to root assertJsonSchema
  * @param {string} output - Output string to validate
  * @param {Object} schema - Expected schema structure
  * @returns {Object} Parsed JSON object
@@ -185,43 +165,8 @@ function assertJsonSchema(output, schema) {
     throw new Error(`Invalid JSON output: ${e.message}\nOutput: ${output}`);
   }
 
-  // Check required fields
-  for (const [key, type] of Object.entries(schema)) {
-    if (!(key in parsed)) {
-      throw new Error(`Missing required field: ${key}`);
-    }
-
-    const actualType = Array.isArray(parsed[key]) ? 'array' : typeof parsed[key];
-    if (actualType !== type && parsed[key] !== null) {
-      throw new Error(`Field ${key} has wrong type: expected ${type}, got ${actualType}`);
-    }
-  }
-
+  rootAssertJsonSchema(parsed, schema);
   return parsed;
-}
-
-/**
- * Parse help text and check for required elements
- * @param {string} helpText - Help text output
- * @param {string[]} requiredFlags - Required flags that must appear
- * @returns {boolean}
- */
-function assertHelpText(helpText, requiredFlags = []) {
-  if (!helpText.includes('Usage:')) {
-    throw new Error('Help text missing "Usage:" section');
-  }
-
-  if (!helpText.includes('Options:')) {
-    throw new Error('Help text missing "Options:" section');
-  }
-
-  for (const flag of requiredFlags) {
-    if (!helpText.includes(flag)) {
-      throw new Error(`Help text missing required flag: ${flag}`);
-    }
-  }
-
-  return true;
 }
 
 /**

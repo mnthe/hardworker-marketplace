@@ -7,7 +7,7 @@
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
-const { spawnSync } = require('child_process');
+const { spawnSync, spawn } = require('child_process');
 
 // ============================================================================
 // Type Definitions
@@ -361,6 +361,77 @@ function assertJsonSchema(data, schema) {
 }
 
 // ============================================================================
+// Help Text Assertion
+// ============================================================================
+
+/**
+ * Parse help text and check for required elements
+ * @param {string} helpText - Help text output
+ * @param {string[]} requiredFlags - Required flags that must appear
+ * @returns {boolean}
+ */
+function assertHelpText(helpText, requiredFlags = []) {
+  if (!helpText.includes('Usage:')) {
+    throw new Error('Help text missing "Usage:" section');
+  }
+
+  if (!helpText.includes('Options:')) {
+    throw new Error('Help text missing "Options:" section');
+  }
+
+  for (const flag of requiredFlags) {
+    if (!helpText.includes(flag)) {
+      throw new Error(`Help text missing required flag: ${flag}`);
+    }
+  }
+
+  return true;
+}
+
+// ============================================================================
+// Async Script Execution Helper
+// ============================================================================
+
+/**
+ * Run a script asynchronously and capture output
+ * @param {string} scriptPath - Path to script
+ * @param {string[]} args - Script arguments
+ * @param {Object} [options] - Additional options
+ * @param {Object} [options.env] - Additional environment variables (merged with process.env)
+ * @returns {Promise<{stdout: string, stderr: string, exitCode: number}>}
+ */
+async function runScriptAsync(scriptPath, args = [], options = {}) {
+  return new Promise((resolve) => {
+    const proc = spawn('bun', [scriptPath, ...args], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        ...(options.env || {})
+      }
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    proc.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    proc.on('close', (exitCode) => {
+      resolve({
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+        exitCode: exitCode || 0
+      });
+    });
+  });
+}
+
+// ============================================================================
 // Exports
 // ============================================================================
 
@@ -370,6 +441,8 @@ module.exports = {
   mockProject,
   runScript,
   assertJsonSchema,
+  assertHelpText,
+  runScriptAsync,
   // Test isolation constants
   TEAMWORK_TEST_BASE_DIR
 };
