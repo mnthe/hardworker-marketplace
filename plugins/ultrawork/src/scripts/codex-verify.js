@@ -29,6 +29,7 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  * @property {string} [output]
  * @property {string} [model]
  * @property {string} [goal]
+ * @property {string} [enableFeatures]
  * @property {boolean} [help]
  */
 
@@ -41,6 +42,7 @@ const ARG_SPEC = {
   '--goal': { key: 'goal', aliases: ['-g'] },
   '--base': { key: 'base', aliases: ['-b'] },
   '--design': { key: 'design', aliases: ['-d'] },
+  '--enable': { key: 'enableFeatures', aliases: ['-e'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
@@ -239,14 +241,19 @@ function buildVerificationPrompt(criteria, goal, designPath) {
  * @param {string} [goal] - Optional project goal
  * @param {string} [model] - Optional model override
  * @param {string} [designPath] - Optional path to design document
+ * @param {string[]} [enableFeatures=[]] - Optional features to enable via --enable flags
  * @returns {{ exit_code: number, output: string, criteria_results: Array }}
  */
-function runCodexExec(workingDir, criteria, goal, model, designPath) {
+function runCodexExec(workingDir, criteria, goal, model, designPath, enableFeatures = []) {
   const prompt = buildVerificationPrompt(criteria, goal, designPath);
 
   try {
     const effectiveModel = model || DEFAULT_MODEL;
-    const args = ['exec', '--sandbox', 'read-only', '-m', effectiveModel, prompt];
+    const enableArgs = [];
+    for (const feature of enableFeatures) {
+      enableArgs.push('--enable', feature);
+    }
+    const args = ['exec', '--sandbox', 'read-only', ...enableArgs, '-m', effectiveModel, prompt];
 
     const output = execFileSync('codex', args, {
       cwd: workingDir,
@@ -380,9 +387,10 @@ function parseDocReviewOutput(output) {
  * @param {string} designPath - Path to design document
  * @param {string} [goal] - Optional project goal
  * @param {string} [model] - Optional model override
+ * @param {string[]} [enableFeatures=[]] - Optional features to enable via --enable flags
  * @returns {{ exit_code: number, output: string, doc_issues: Array, verdict: string }}
  */
-function runCodexDocReview(designPath, goal, model) {
+function runCodexDocReview(designPath, goal, model, enableFeatures = []) {
   // Validate design file exists before building prompt
   if (!fs.existsSync(designPath)) {
     return {
@@ -397,7 +405,11 @@ function runCodexDocReview(designPath, goal, model) {
 
   try {
     const effectiveModel = model || DEFAULT_MODEL;
-    const args = ['exec', '--sandbox', 'read-only', '-m', effectiveModel, prompt];
+    const enableArgs = [];
+    for (const feature of enableFeatures) {
+      enableArgs.push('--enable', feature);
+    }
+    const args = ['exec', '--sandbox', 'read-only', ...enableArgs, '-m', effectiveModel, prompt];
 
     const output = execFileSync('codex', args, {
       encoding: 'utf-8',
@@ -568,6 +580,11 @@ function main() {
   const args = parseArgs(ARG_SPEC);
   validateModeArgs(args);
 
+  // Parse enable features from comma-separated string
+  const enableFeatures = args.enableFeatures
+    ? args.enableFeatures.split(',').map(f => f.trim()).filter(Boolean)
+    : [];
+
   // Check codex availability
   const availability = checkCodexAvailability();
 
@@ -597,7 +614,7 @@ function main() {
   }
 
   if (args.mode === 'doc-review') {
-    docReviewResult = runCodexDocReview(args.design, args.goal, args.model);
+    docReviewResult = runCodexDocReview(args.design, args.goal, args.model, enableFeatures);
   }
 
   if (args.mode === 'review' || args.mode === 'full') {
@@ -606,11 +623,11 @@ function main() {
 
   if (args.mode === 'exec' || args.mode === 'full') {
     const criteria = parseCriteria(args.criteria);
-    execResult = runCodexExec(args.workingDir, criteria, args.goal, args.model, args.design);
+    execResult = runCodexExec(args.workingDir, criteria, args.goal, args.model, args.design, enableFeatures);
   }
 
   if (args.mode === 'full' && args.design) {
-    docReviewResult = runCodexDocReview(args.design, args.goal, args.model);
+    docReviewResult = runCodexDocReview(args.design, args.goal, args.model, enableFeatures);
   }
 
   const verdict = determineVerdict(reviewResult, execResult, docReviewResult);
