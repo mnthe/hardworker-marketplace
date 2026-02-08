@@ -215,6 +215,16 @@ function buildFileEvidence(operation, filePath) {
   return evidence;
 }
 
+// Ultrawork script patterns to exclude from evidence recording
+const NOISE_PATTERNS = [
+  'session-update', 'session-get', 'session-field',
+  'task-update', 'task-create', 'task-list', 'task-get', 'task-summary',
+  'setup-ultrawork', 'ultrawork-status', 'ultrawork-evidence', 'ultrawork-clean',
+  'context-init', 'context-add', 'context-get',
+  'evidence-summary', 'evidence-query',
+  'scope-set', 'codex-verify'
+];
+
 // ============================================================================
 // Main Hook Logic
 // ============================================================================
@@ -271,6 +281,11 @@ async function main() {
       // Extract command and output
       const command = hookInput.tool_input?.command;
       if (!command) break;
+
+      // Skip ultrawork infrastructure commands (noise)
+      if (NOISE_PATTERNS.some(pattern => command.includes(pattern))) {
+        break;
+      }
 
       const response = toolResponseToString(hookInput.tool_response);
       const exitCode = hookInput.tool_response &&

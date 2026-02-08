@@ -120,10 +120,10 @@ function countActiveTasks(sessionDir) {
 
 /**
  * Check for blocked phrases in recent evidence
- * @param {Session} session
+ * @param {Array<{type: string, output_preview?: string}>} entries
  * @returns {string | null}
  */
-function checkBlockedPhrases(session) {
+function checkBlockedPhrases(entries) {
   const blockedPhrases = [
     'should work',
     'probably works',
@@ -133,13 +133,10 @@ function checkBlockedPhrases(session) {
     'you can extend'
   ];
 
-  // Check last 5 evidence entries
-  const recentEvidence = session.evidence_log.slice(-5);
+  const recentEvidence = entries.slice(-5);
 
   for (const evidence of recentEvidence) {
-    // Check output_preview field if it exists
-    const output = /** @type {{ output_preview?: string }} */ (evidence).output_preview || '';
-
+    const output = evidence.output_preview || '';
     for (const phrase of blockedPhrases) {
       if (output.toLowerCase().includes(phrase.toLowerCase())) {
         return phrase;
@@ -148,6 +145,22 @@ function checkBlockedPhrases(session) {
   }
 
   return null;
+}
+
+/**
+ * Read evidence entries from log.jsonl
+ * @param {string} sessionId
+ * @returns {{ total: number, entries: Array<{type: string, output_preview?: string}> }}
+ */
+function readEvidenceFromLog(sessionId) {
+  const sessionDir = getSessionDir(sessionId);
+  const evidenceLog = path.join(sessionDir, 'evidence', 'log.jsonl');
+  if (!fs.existsSync(evidenceLog)) return { total: 0, entries: [] };
+
+  const content = fs.readFileSync(evidenceLog, 'utf-8');
+  const lines = content.trim().split('\n').filter(l => l.length > 0);
+  const entries = lines.map(l => JSON.parse(l));
+  return { total: entries.length, entries };
 }
 
 // ============================================================================
@@ -165,7 +178,6 @@ async function main() {
 
     const phase = session.phase || 'unknown';
     const goal = session.goal || 'unknown';
-    const skipVerify = session.options?.skip_verify || false;
     const planOnly = session.options?.plan_only || false;
     const autoMode = session.options?.auto_mode || false;
 
@@ -183,17 +195,6 @@ async function main() {
       return;
     }
 
-    // Skip-verify mode - allow exit after execution if tasks done
-    if (skipVerify && phase === 'EXECUTION') {
-      const sessionDir = getSessionDir(sessionId);
-      const { pending, inProgress } = countActiveTasks(sessionDir);
-
-      if (pending === 0 && inProgress === 0) {
-        outputAndExit(createStopResponse());
-        return;
-      }
-    }
-
     // Interactive mode planning - orchestrator does planning inline, don't block
     if (phase === 'PLANNING' && !autoMode) {
       outputAndExit(createStopResponse());
@@ -201,7 +202,8 @@ async function main() {
     }
 
     // Check for blocked phrases in recent evidence
-    const blockedPhrase = checkBlockedPhrases(session);
+    const { total: evidenceCount, entries: evidenceEntries } = readEvidenceFromLog(sessionId);
+    const blockedPhrase = checkBlockedPhrases(evidenceEntries);
     if (blockedPhrase) {
       outputAndExit(createStopResponse({
         decision: 'block',
@@ -232,7 +234,7 @@ Commands:
     if (phase === 'EXECUTION') {
       const sessionDir = getSessionDir(sessionId);
       const completedTasks = countCompletedTasks(sessionDir);
-      const evidenceCount = session.evidence_log.length;
+      // evidenceCount already computed above from readEvidenceFromLog
 
       // Require at least 1 evidence entry per completed task
       if (completedTasks > 0 && evidenceCount < completedTasks) {
@@ -257,6 +259,20 @@ Commands:
   /ultrawork-evidence - View evidence
   /ultrawork-clean   - Cancel session`,
           systemMessage: `⚠️ ULTRAWORK [${sessionId}]: Insufficient evidence`
+        }));
+        return;
+      }
+    }
+
+    // If all tasks are done but verifier hasn't run, guide to VERIFICATION
+    if (phase === 'EXECUTION') {
+      const sessionDir = getSessionDir(sessionId);
+      const { pending, inProgress } = countActiveTasks(sessionDir);
+      if (pending === 0 && inProgress === 0 && !session.verifier_passed) {
+        outputAndExit(createStopResponse({
+          decision: 'block',
+          reason: `VERIFICATION REQUIRED\n\nSession ID: ${sessionId}\nGoal: ${goal}\n\nAll tasks are resolved but Verifier has not run.\nYou MUST enter VERIFICATION phase and spawn the Verifier agent.\n\nCommands:\n  /ultrawork-status   - Check progress`,
+          systemMessage: `⚠️ ULTRAWORK [${sessionId}]: Verifier required before completion`
         }));
         return;
       }
@@ -288,8 +304,6 @@ Commands:
         systemMsg = `⚠️ ULTRAWORK [${sessionId}]: Session active for '${goal}'`;
         break;
     }
-
-    const evidenceCount = session.evidence_log.length;
 
     outputAndExit(createStopResponse({
       decision: 'block',

@@ -246,14 +246,47 @@ async function main() {
 
   // Extract tool name
   const toolName = hookInput.tool_name || '';
-
-  // Only process Edit and Write tools
-  if (toolName !== 'Edit' && toolName !== 'Write') {
-    outputAndExit(createPreToolUseAllow());
-  }
+  const toolNameLower = toolName.toLowerCase();
 
   // Extract session ID
   const sessionId = hookInput.session_id;
+
+  // =========================================================================
+  // Session file tamper protection (all phases)
+  // =========================================================================
+  if (toolNameLower === 'bash') {
+    const command = hookInput.tool_input?.command || '';
+
+    if (sessionId && command) {
+      const sessionDir = getSessionDir(sessionId);
+      const protectedPatterns = [
+        path.join(sessionDir, 'session.json'),
+        path.join(sessionDir, 'evidence', 'log.jsonl'),
+        path.join(sessionDir, 'tasks'),
+      ];
+
+      const isProtectedAccess = protectedPatterns.some(p => command.includes(p));
+
+      if (isProtectedAccess) {
+        // Allow read-only commands (cat, head, tail, wc, grep, less, jq with no redirect)
+        const readOnlyPattern = /^(cat|head|tail|wc|grep|less|jq)\s/;
+        const hasWriteRedirect = /[>|].*(?:tee|>>|>)/.test(command) || />\s/.test(command);
+
+        if (!readOnlyPattern.test(command.trim()) || hasWriteRedirect) {
+          outputAndExit(createPreToolUseBlock(
+            'Direct modification of session files is not allowed.',
+            `Direct modification of session files is not allowed.\nUse the provided scripts instead:\n  - session-update.js for session state\n  - task-update.js for task state\n  - Evidence is collected automatically by hooks.`
+          ));
+          return;
+        }
+      }
+    }
+  }
+
+  // Only process Edit and Write tools for remaining checks
+  if (toolName !== 'Edit' && toolName !== 'Write') {
+    outputAndExit(createPreToolUseAllow());
+  }
 
   // No session - allow
   if (!sessionId) {

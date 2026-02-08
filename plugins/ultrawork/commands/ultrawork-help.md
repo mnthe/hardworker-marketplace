@@ -49,7 +49,6 @@ Ultrawork is a **strict verification-first development mode** that enforces rigo
 | Option | Description |
 |--------|-------------|
 | `--max-workers N` | Limit parallel workers |
-| `--skip-verify` | Skip verification phase (fast mode) |
 | `--plan-only` | Only run planner, don't execute |
 | `--force` | Force start even if session exists |
 | `--resume` | Resume cancelled/failed session |
@@ -117,9 +116,6 @@ These phrases **BLOCK** completion:
 
 # Plan only (dry run)
 /ultrawork --plan-only refactor database queries
-
-# Fast mode
-/ultrawork --skip-verify fix typo in README
 
 # Resume session
 /ultrawork --resume

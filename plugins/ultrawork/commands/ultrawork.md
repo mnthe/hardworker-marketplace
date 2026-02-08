@@ -1,7 +1,7 @@
 ---
 name: ultrawork
 description: "Start ultrawork session with strict verification mode"
-argument-hint: "[--auto] [--max-workers N] [--max-iterations N] [--skip-verify] [--plan-only] [--worktree [--branch NAME]] <goal> | --help"
+argument-hint: "[--auto] [--max-workers N] [--max-iterations N] [--plan-only] [--worktree [--branch NAME]] <goal> | --help"
 allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/setup-ultrawork.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/*.js:*)", "Task", "TaskOutput", "Read", "Write", "Edit", "AskUserQuestion", "Glob", "Grep", "mcp__plugin_serena_serena__activate_project"]
 ---
 
@@ -154,7 +154,7 @@ SESSION_DIR=~/.claude/ultrawork/sessions/${CLAUDE_SESSION_ID}
 
 Parse the setup output to get:
 - Goal
-- Options (max_workers, skip_verify, plan_only, auto_mode)
+- Options (max_workers, plan_only, auto_mode)
 
 ---
 
@@ -579,7 +579,6 @@ $WORKING_DIR/
 | `--auto`             | Skip user interaction, auto-decide everything            |
 | `--max-workers N`    | Limit concurrent workers (0 = unlimited)                 |
 | `--max-iterations N` | Max execute→verify loops (default: 5)                    |
-| `--skip-verify`      | Skip verification phase                                  |
 | `--plan-only`        | Stop after planning, don't execute                       |
 | `--worktree`         | Create isolated git worktree for development             |
 | `--branch NAME`      | Custom branch name (default: ultrawork/{date}-{brief})   |
@@ -594,4 +593,4 @@ Before ANY completion claim:
 - No blocked phrases ("should work", "basic implementation", "TODO", etc.)
 - Evidence exists for all criteria
 - All tasks resolved
-- Verifier passed (unless --skip-verify)
+- Verifier passed (mandatory for all sessions)

@@ -78,7 +78,9 @@ describe('session-update.js', () => {
       await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'EXECUTION']);
       // Then move to VERIFICATION (valid from EXECUTION)
       await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'VERIFICATION']);
-      // Then move to COMPLETE (valid from VERIFICATION)
+      // Set verifier approval (required for COMPLETE transition)
+      await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--verifier-passed']);
+      // Then move to COMPLETE (valid from VERIFICATION with verifier_passed)
       const result = await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'COMPLETE']);
 
       expect(result.exitCode).toBe(0);
@@ -200,12 +202,11 @@ describe('session-update.js', () => {
   });
 
   describe('phase transition validation', () => {
-    test('should reject EXECUTION to COMPLETE when skip_verify is false', async () => {
-      // Create session in EXECUTION phase with skip_verify=false (default)
+    test('should reject EXECUTION to COMPLETE (VERIFICATION required)', async () => {
+      // Create session in EXECUTION phase
       session.cleanup();
       session = createMockSession('test-session-update', {
-        phase: 'EXECUTION',
-        skip_verify: false
+        phase: 'EXECUTION'
       });
 
       const result = await runScript(SCRIPT_PATH, [
@@ -223,8 +224,7 @@ describe('session-update.js', () => {
     test('should include valid alternatives in error message', async () => {
       session.cleanup();
       session = createMockSession('test-session-update', {
-        phase: 'EXECUTION',
-        skip_verify: false
+        phase: 'EXECUTION'
       });
 
       const result = await runScript(SCRIPT_PATH, [
@@ -235,45 +235,8 @@ describe('session-update.js', () => {
       expect(result.exitCode).toBe(1);
       // Error should mention VERIFICATION as the required step
       expect(result.stderr).toContain('VERIFICATION');
-      // Error should mention --force as override option
-      expect(result.stderr).toContain('--force');
-    });
-
-    test('should allow EXECUTION to COMPLETE with --force flag and print warning', async () => {
-      session.cleanup();
-      session = createMockSession('test-session-update', {
-        phase: 'EXECUTION',
-        skip_verify: false
-      });
-
-      const result = await runScript(SCRIPT_PATH, [
-        '--session', session.sessionId,
-        '--phase', 'COMPLETE',
-        '--force'
-      ]);
-
-      expect(result.exitCode).toBe(0);
-      expect(result.stderr).toContain('WARNING');
-      // Phase should be updated despite validation failure
-      const updated = readSession(session.sessionId);
-      expect(updated.phase).toBe('COMPLETE');
-    });
-
-    test('should allow EXECUTION to COMPLETE when skip_verify is true', async () => {
-      session.cleanup();
-      session = createMockSession('test-session-update', {
-        phase: 'EXECUTION',
-        skip_verify: true
-      });
-
-      const result = await runScript(SCRIPT_PATH, [
-        '--session', session.sessionId,
-        '--phase', 'COMPLETE'
-      ]);
-
-      expect(result.exitCode).toBe(0);
-      const updated = readSession(session.sessionId);
-      expect(updated.phase).toBe('COMPLETE');
+      // Error should suggest transitioning to VERIFICATION first
+      expect(result.stderr).toContain('Transition to VERIFICATION first');
     });
 
     test('should allow valid transition PLANNING to EXECUTION', async () => {
@@ -307,7 +270,8 @@ describe('session-update.js', () => {
     test('should allow valid transition VERIFICATION to COMPLETE', async () => {
       session.cleanup();
       session = createMockSession('test-session-update', {
-        phase: 'VERIFICATION'
+        phase: 'VERIFICATION',
+        verifier_passed: true
       });
 
       const result = await runScript(SCRIPT_PATH, [
@@ -359,6 +323,53 @@ describe('session-update.js', () => {
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('terminal');
+    });
+
+    test('should set verifier_passed when --verifier-passed flag is used during VERIFICATION phase', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'VERIFICATION'
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--verifier-passed'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const updated = readSession(session.sessionId);
+      expect(updated.verifier_passed).toBe(true);
+    });
+
+    test('should reject --verifier-passed during EXECUTION phase', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'EXECUTION'
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--verifier-passed'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('VERIFICATION');
+    });
+
+    test('should reject COMPLETE transition without verifier_passed', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'VERIFICATION',
+        verifier_passed: false
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'COMPLETE'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('verifier approval');
     });
   });
 });

@@ -21,7 +21,7 @@ const ARG_SPEC = {
   '--design-doc': { key: 'designDoc', aliases: ['-d'] },
   '--exploration-stage': { key: 'explorationStage', aliases: ['-e'] },
   '--iteration': { key: 'iteration', aliases: ['-i'] },
-  '--force': { key: 'force', aliases: ['-f'], flag: true },
+  '--verifier-passed': { key: 'verifierPassed', aliases: [], flag: true },
   '--quiet': { key: 'quiet', aliases: ['-q'], flag: true },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
@@ -106,6 +106,15 @@ async function main() {
       args.phase = normalizePhase(args.phase);
     }
 
+    // --verifier-passed validation: only allowed during VERIFICATION phase
+    if (args.verifierPassed) {
+      const currentSession = readSession(args.sessionId);
+      if (currentSession.phase !== 'VERIFICATION') {
+        console.error(`Error: --verifier-passed can only be set during VERIFICATION phase (current: ${currentSession.phase}).`);
+        process.exit(1);
+      }
+    }
+
     // Phase transition validation
     if (args.phase) {
       const currentSession = readSession(args.sessionId);
@@ -113,15 +122,45 @@ async function main() {
 
       // Skip validation if phase isn't changing
       if (currentPhase !== args.phase) {
-        const result = validatePhaseTransition(currentPhase, args.phase, {
-          skip_verify: currentSession.options?.skip_verify || false
-        });
+        const result = validatePhaseTransition(currentPhase, args.phase);
 
         if (!result.allowed) {
-          if (args.force) {
-            console.error(`WARNING: ${result.reason} (overridden with --force)`);
-          } else {
-            console.error(`Error: ${result.reason}`);
+          console.error(`Error: ${result.reason}`);
+          process.exit(1);
+        }
+
+        // Additional gate: COMPLETE requires verifier_passed + sufficient evidence
+        if (args.phase === 'COMPLETE') {
+          if (!currentSession.verifier_passed) {
+            console.error('Error: Cannot transition to COMPLETE without verifier approval.');
+            console.error('Run the Verifier agent first: session-update.js --phase VERIFICATION');
+            process.exit(1);
+          }
+
+          // Check evidence from log.jsonl
+          const path = require('path');
+          const fs = require('fs');
+          const sessionDir = require('../lib/session-utils.js').getSessionDir(args.sessionId);
+          const evidenceLog = path.join(sessionDir, 'evidence', 'log.jsonl');
+          let evidenceCount = 0;
+          if (fs.existsSync(evidenceLog)) {
+            evidenceCount = fs.readFileSync(evidenceLog, 'utf-8').trim().split('\n').filter(l => l.length > 0).length;
+          }
+
+          const tasksDir = path.join(sessionDir, 'tasks');
+          let resolvedTasks = 0;
+          if (fs.existsSync(tasksDir)) {
+            for (const f of fs.readdirSync(tasksDir)) {
+              if (!f.endsWith('.json')) continue;
+              try {
+                const task = JSON.parse(fs.readFileSync(path.join(tasksDir, f), 'utf-8'));
+                if (task.status === 'resolved') resolvedTasks++;
+              } catch { /* skip invalid */ }
+            }
+          }
+
+          if (resolvedTasks > 0 && evidenceCount < resolvedTasks) {
+            console.error(`Error: Insufficient evidence. ${evidenceCount} evidence entries for ${resolvedTasks} resolved tasks.`);
             process.exit(1);
           }
         }
@@ -153,6 +192,11 @@ async function main() {
       // Update iteration if provided
       if (args.iteration !== undefined) {
         session.iteration = args.iteration;
+      }
+
+      // Set verifier_passed if provided
+      if (args.verifierPassed) {
+        session.verifier_passed = true;
       }
 
       return session;

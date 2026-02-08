@@ -388,12 +388,7 @@ const ACTIVE_PHASES = new Set(['PLANNING', 'EXECUTION', 'VERIFICATION']);
  * @param {{ skip_verify?: boolean, force?: boolean }} [options]
  * @returns {{ allowed: boolean, reason?: string }}
  */
-function validatePhaseTransition(currentPhase, newPhase, options = {}) {
-  // Force override allows any transition
-  if (options.force) {
-    return { allowed: true };
-  }
-
+function validatePhaseTransition(currentPhase, newPhase) {
   // Same phase (no-op) is always allowed
   if (currentPhase === newPhase) {
     return { allowed: true };
@@ -438,14 +433,11 @@ function validatePhaseTransition(currentPhase, newPhase, options = {}) {
     return { allowed: true };
   }
 
-  // EXECUTION -> COMPLETE (only if skip_verify=true)
+  // EXECUTION -> COMPLETE (always blocked: must go through VERIFICATION)
   if (currentPhase === 'EXECUTION' && newPhase === 'COMPLETE') {
-    if (options.skip_verify) {
-      return { allowed: true };
-    }
     return {
       allowed: false,
-      reason: `Phase transition ${currentPhase} \u2192 ${newPhase} blocked: VERIFICATION phase required before completion. Transition to VERIFICATION first, or use --skip-verify. Use --force to override.`
+      reason: `Phase transition ${currentPhase} \u2192 ${newPhase} blocked: VERIFICATION phase required before completion. Transition to VERIFICATION first.`
     };
   }
 

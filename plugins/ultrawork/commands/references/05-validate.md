@@ -279,19 +279,10 @@ fi
 
 ---
 
-## Skip Verification Mode
+## Verification Is Mandatory
 
-**When `--skip-verify` flag is used:**
-
-```bash
-# NO verifier spawn
-# Orchestrator marks complete after all tasks resolved
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
-```
-
-**Use cases**:
-- Rapid prototyping (trust worker evidence)
-- Non-critical changes
+Verification cannot be skipped. The `--skip-verify` option has been removed in v1.0.0.
+Every session must go through the VERIFICATION phase before completion.
 - Manual verification preferred
 - Time-sensitive work
 
@@ -331,7 +322,7 @@ Provide detailed feedback.
 | Speed | Fast (~1-2 min) | Slow (~5-10 min) |
 | Depth | Evidence-based | Code-reading |
 | Focus | Criteria met? | Quality, security, edge cases |
-| When | Always (unless --skip-verify) | Optional, high-stakes only |
+| When | Always (mandatory) | Optional, high-stakes only |
 
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: ultrawork-exec
 description: "Execute ultrawork plan with automatic retry loop"
-argument-hint: "[--session <id>] [--max-iterations N] [--skip-verify] | --help"
+argument-hint: "[--session <id>] [--max-iterations N] | --help"
 allowed-tools: ["Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/*.js:*)", "Task", "TaskOutput", "Read", "Edit", "mcp__plugin_serena_serena__activate_project"]
 ---
 
@@ -151,11 +151,7 @@ while iteration <= max_iterations:
     if execution_result == "CANCELLED":
         return
 
-    # Skip verify if requested
-    if skip_verify:
-        Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE')
-        print("## Execution Complete (verification skipped)")
-        return
+    # Verification is mandatory - proceed to VERIFICATION phase
 
     # Run verification phase
     verification_result = run_verification_phase(SESSION_ID)
@@ -394,7 +390,6 @@ Session ID: {session_id}
 | -------------------- | ------------------------------------------ |
 | `--session <id>`     | Session ID to execute                      |
 | `--max-iterations N` | Override max retry iterations (default: 5) |
-| `--skip-verify`      | Skip verification phase                    |
 
 ---
 
@@ -422,5 +417,5 @@ Before ANY completion claim:
 - No blocked phrases ("should work", "basic implementation")
 - Evidence exists for all criteria
 - All tasks resolved
-- Verifier passed (unless --skip-verify)
+- Verifier passed (mandatory)
 - Retry loop exhausted only after genuine attempts

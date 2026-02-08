@@ -63,11 +63,10 @@ function createMockSession(sessionId, options = {}) {
     options: {
       max_workers: options.max_workers || 0,
       max_iterations: options.max_iterations || 5,
-      skip_verify: options.skip_verify || false,
       plan_only: options.plan_only || false,
       auto_mode: options.auto_mode || false
     },
-    evidence_log: options.evidence_log || [],
+    verifier_passed: options.verifier_passed || false,
     cancelled_at: options.cancelled_at || null
   };
 

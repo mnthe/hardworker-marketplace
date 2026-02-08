@@ -31,7 +31,6 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
  * @property {string} goal
  * @property {number} maxWorkers
  * @property {number} maxIterations
- * @property {boolean} skipVerify
  * @property {boolean} planOnly
  * @property {boolean} autoMode
  * @property {boolean} force
@@ -46,7 +45,6 @@ const ARG_SPEC = {
   '--goal': { key: 'goal', aliases: ['-g'] },
   '--max-workers': { key: 'maxWorkers', aliases: ['-w'], default: 0 },
   '--max-iterations': { key: 'maxIterations', aliases: ['-i'], default: 5 },
-  '--skip-verify': { key: 'skipVerify', aliases: ['-V'], flag: true },
   '--plan-only': { key: 'planOnly', aliases: ['-p'], flag: true },
   '--auto': { key: 'autoMode', aliases: ['-a'], flag: true },
   '--force': { key: 'force', aliases: ['-f'], flag: true },
@@ -78,7 +76,6 @@ function parseCliArgs(argv) {
     '--goal', '-g',
     '--max-workers', '-w',
     '--max-iterations', '-i',
-    '--skip-verify', '-V',
     '--plan-only', '-p',
     '--auto', '-a',
     '--force', '-f',
@@ -94,7 +91,7 @@ function parseCliArgs(argv) {
     // Skip known flags
     if (knownFlags.has(arg)) {
       // Skip flag and its value (if not a boolean flag)
-      if (!['--skip-verify', '-V', '--plan-only', '-p', '--auto', '-a', '--force', '-f', '--resume', '-r', '--worktree', '-W', '--help', '-h'].includes(arg)) {
+      if (!['--plan-only', '-p', '--auto', '-a', '--force', '-f', '--resume', '-r', '--worktree', '-W', '--help', '-h'].includes(arg)) {
         i++; // Skip next arg (the value)
       }
       continue;
@@ -410,7 +407,7 @@ function detectPlanningTier(goal) {
  * @returns {void}
  */
 function createSession(args) {
-  const { sessionId, goal, maxWorkers, maxIterations, skipVerify, planOnly, autoMode, force, worktree, branch } =
+  const { sessionId, goal, maxWorkers, maxIterations, planOnly, autoMode, force, worktree, branch } =
     args;
 
   const sessionFile = getSessionFile(sessionId);
@@ -472,7 +469,7 @@ function createSession(args) {
   // Create session.json
   /** @type {Session} */
   const session = {
-    version: '6.2',
+    version: '7.0',
     session_id: sessionId,
     working_dir: workingDir,
     original_dir: worktreeInfo ? originalDir : null,
@@ -491,7 +488,6 @@ function createSession(args) {
     options: {
       max_workers: maxWorkers,
       max_iterations: maxIterations,
-      skip_verify: skipVerify,
       plan_only: planOnly,
       auto_mode: autoMode,
     },
@@ -501,7 +497,7 @@ function createSession(args) {
       path: worktreeInfo.worktreePath,
       created_at: timestamp,
     } : null,
-    evidence_log: [],
+    verifier_passed: false,
     cancelled_at: null,
   };
 
@@ -544,7 +540,7 @@ function createSession(args) {
   // Output setup message
   const maxWorkersDisplay = maxWorkers > 0 ? maxWorkers.toString() : 'unlimited';
   const executionIcon = planOnly ? '[⊘]' : '[ ]';
-  const verificationIcon = skipVerify || planOnly ? '[⊘]' : '[ ]';
+  const verificationIcon = planOnly ? '[⊘]' : '[ ]';
 
   // Worktree section (only shown if enabled)
   const worktreeSection = worktreeInfo ? `
@@ -575,7 +571,6 @@ function createSession(args) {
 
  Max workers:    ${maxWorkersDisplay}
  Max iterations: ${maxIterations}
- Skip verify:    ${skipVerify}
  Plan only:      ${planOnly}
  Auto mode:      ${autoMode}
  Worktree:       ${worktree}

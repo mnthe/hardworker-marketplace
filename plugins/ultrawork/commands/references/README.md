@@ -132,7 +132,7 @@ This directory contains phase-based reference documentation following progressiv
 - Final test execution and exit code verification
 - PASS determination criteria
 - FAIL determination and Ralph Loop (create fix tasks, increment iteration)
-- Skip verification mode (--skip-verify)
+- Mandatory verification (v1.0.0+)
 - Reviewer agent (optional deep verification)
 - Verification checklist
 

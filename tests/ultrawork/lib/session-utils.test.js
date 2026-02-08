@@ -58,11 +58,10 @@ function createMockSession(sessionId, phase = 'PLANNING') {
     options: {
       max_workers: 0,
       max_iterations: 5,
-      skip_verify: false,
       plan_only: false,
       auto_mode: false
     },
-    evidence_log: [],
+    verifier_passed: false,
     cancelled_at: null
   };
 
@@ -429,11 +428,6 @@ describe('session-utils.js', () => {
       expect(result.allowed).toBe(true);
     });
 
-    test('should allow EXECUTION -> COMPLETE when skip_verify=true', () => {
-      const result = validatePhaseTransition('EXECUTION', 'COMPLETE', { skip_verify: true });
-      expect(result.allowed).toBe(true);
-    });
-
     test('should allow VERIFICATION -> COMPLETE', () => {
       const result = validatePhaseTransition('VERIFICATION', 'COMPLETE');
       expect(result.allowed).toBe(true);
@@ -474,17 +468,17 @@ describe('session-utils.js', () => {
     // Blocked transitions
     // ================================================================
 
-    test('should block EXECUTION -> COMPLETE without skip_verify', () => {
+    test('should block EXECUTION -> COMPLETE (VERIFICATION required)', () => {
       const result = validatePhaseTransition('EXECUTION', 'COMPLETE');
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('VERIFICATION phase required');
-      expect(result.reason).toContain('--force');
     });
 
-    test('should block EXECUTION -> COMPLETE with skip_verify=false', () => {
-      const result = validatePhaseTransition('EXECUTION', 'COMPLETE', { skip_verify: false });
+    test('should block EXECUTION -> COMPLETE always (no bypass)', () => {
+      const result = validatePhaseTransition('EXECUTION', 'COMPLETE');
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('VERIFICATION phase required');
+      expect(result.reason).toContain('Transition to VERIFICATION first');
     });
 
     test('should block PLANNING -> COMPLETE', () => {
@@ -529,26 +523,6 @@ describe('session-utils.js', () => {
     });
 
     // ================================================================
-    // Force override
-    // ================================================================
-
-    test('should allow any transition with force=true', () => {
-      // Test a normally blocked transition
-      const result = validatePhaseTransition('COMPLETE', 'PLANNING', { force: true });
-      expect(result.allowed).toBe(true);
-    });
-
-    test('should allow EXECUTION -> COMPLETE with force=true (no skip_verify needed)', () => {
-      const result = validatePhaseTransition('EXECUTION', 'COMPLETE', { force: true });
-      expect(result.allowed).toBe(true);
-    });
-
-    test('should allow PLANNING -> VERIFICATION with force=true', () => {
-      const result = validatePhaseTransition('PLANNING', 'VERIFICATION', { force: true });
-      expect(result.allowed).toBe(true);
-    });
-
-    // ================================================================
     // Edge cases
     // ================================================================
 
@@ -557,8 +531,10 @@ describe('session-utils.js', () => {
       expect(result.allowed).toBe(true);
     });
 
-    test('should handle empty options object', () => {
-      const result = validatePhaseTransition('PLANNING', 'EXECUTION', {});
+    test('validatePhaseTransition should work with exactly 2 arguments', () => {
+      // Function signature changed: no options parameter
+      expect(validatePhaseTransition.length).toBe(2);
+      const result = validatePhaseTransition('PLANNING', 'EXECUTION');
       expect(result.allowed).toBe(true);
     });
 

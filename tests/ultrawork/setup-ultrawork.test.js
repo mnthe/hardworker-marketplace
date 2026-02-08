@@ -95,15 +95,14 @@ describe('setup-ultrawork.js', () => {
         '--goal', 'Options test',
         '--max-workers', '3',
         '--max-iterations', '10',
-        '--skip-verify',
         '--auto'
       ]);
 
       const session = readSession(testSessionId);
       expect(parseInt(session.options.max_workers, 10)).toBe(3);
       expect(parseInt(session.options.max_iterations, 10)).toBe(10);
-      expect(session.options.skip_verify).toBe(true);
       expect(session.options.auto_mode).toBe(true);
+      expect(session.verifier_passed).toBe(false);
     });
 
     test('should set plan-only mode', async () => {

@@ -208,6 +208,25 @@ async function main() {
     // Timestamp
     const timestamp = new Date().toISOString();
 
+    // Build evidence entry (hoisted for use in both session update and log file)
+    const outputLines = agentOutput.split('\n');
+    const summary = outputLines.slice(0, 3).join(' ');
+
+    /** @type {EvidenceEntry} */
+    const evidence = {
+      type: 'agent_completed',
+      timestamp,
+      agent_id: agentId,
+      task_id: taskId,
+    };
+
+    const completedEvidence = {
+      ...evidence,
+      status,
+      summary,
+      agent_type: agentType,
+    };
+
     // Update worker status and task status in session
     if (taskId) {
       try {
@@ -239,26 +258,6 @@ async function main() {
             });
           }
 
-          // Add evidence log entry
-          const outputLines = agentOutput.split('\n');
-          const summary = outputLines.slice(0, 3).join(' ');
-
-          /** @type {EvidenceEntry} */
-          const evidence = {
-            type: 'agent_completed',
-            timestamp,
-            agent_id: agentId,
-            task_id: taskId,
-          };
-
-          // Add custom fields
-          const completedEvidence = {
-            ...evidence,
-            status,
-            summary,
-            agent_type: agentType,
-          };
-
           // Remove from active_agents
           const activeAgents = (sessionWithWorkers.active_agents || [])
             .filter((a) => a.agent_id !== agentId);
@@ -270,6 +269,19 @@ async function main() {
             active_agents: activeAgents,
           };
         });
+
+        // Also append to evidence/log.jsonl (append-only evidence log)
+        try {
+          const evidenceDir = path.join(getSessionDir(sessionId), 'evidence');
+          const evidenceLogFile = path.join(evidenceDir, 'log.jsonl');
+          if (!fs.existsSync(evidenceDir)) {
+            fs.mkdirSync(evidenceDir, { recursive: true });
+          }
+          const logLine = JSON.stringify(completedEvidence) + '\n';
+          fs.appendFileSync(evidenceLogFile, logLine, 'utf-8');
+        } catch (logErr) {
+          console.error(`Failed to append to evidence log:`, logErr);
+        }
 
         // Log completion for debugging
         console.error(

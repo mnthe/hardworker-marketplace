@@ -19,7 +19,6 @@
  * @typedef {Object} SessionOptions
  * @property {number} max_workers
  * @property {number} max_iterations
- * @property {boolean} skip_verify
  * @property {boolean} plan_only
  * @property {boolean} auto_mode
  */
@@ -48,7 +47,7 @@
  * @property {{ approved_at: string | null }} plan
  * @property {SessionOptions} options
  * @property {WorktreeInfo | null} [worktree] - Worktree info when enabled
- * @property {EvidenceEntry[]} evidence_log
+ * @property {boolean} verifier_passed - Whether verifier has approved completion
  * @property {string | null} cancelled_at
  */
 

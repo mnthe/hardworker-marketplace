@@ -310,6 +310,7 @@ bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
   --add-evidence "VERDICT: PASS" \
   --add-evidence "All tasks verified with evidence"
 
+bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --verifier-passed
 bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
 ```
 
