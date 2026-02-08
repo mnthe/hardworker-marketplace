@@ -14,6 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { parseHookInput, passesGuards } = require('../lib/hook-utils.js');
 
 // ============================================================================
 // Types (based on Claude Code hook input schema)
@@ -38,18 +39,8 @@ const os = require('os');
 
 async function main() {
   /** @type {TaskCompletedInput} */
-  let input = {};
-  try {
-    const raw = await Bun.stdin.text();
-    if (raw && raw.trim()) {
-      input = JSON.parse(raw);
-    }
-  } catch {
-    process.exit(0);
-  }
-
-  // Guard: stop_hook_active prevents infinite loops
-  if (input.stop_hook_active) {
+  const input = await parseHookInput();
+  if (!passesGuards(input)) {
     process.exit(0);
   }
 

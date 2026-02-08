@@ -27,6 +27,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { parseHookInput, passesGuards } = require('../lib/hook-utils.js');
 
 // ============================================================================
 // Main
@@ -34,22 +35,12 @@ const os = require('os');
 
 async function main() {
   /** @type {SubagentStopInput} */
-  let input = {};
-  try {
-    const raw = await Bun.stdin.text();
-    if (raw && raw.trim()) {
-      input = JSON.parse(raw);
-    }
-  } catch {
+  const input = await parseHookInput();
+  if (!passesGuards(input)) {
     process.exit(0);
   }
 
-  const { agent_type, agent_id, agent_transcript_path, stop_hook_active } = input;
-
-  // Guard: stop_hook_active prevents infinite loops
-  if (stop_hook_active) {
-    process.exit(0);
-  }
+  const { agent_type, agent_id, agent_transcript_path } = input;
 
   // Guard: only handle teamwork orchestrator
   if (agent_type !== 'teamwork:orchestrator') {
