@@ -50,6 +50,7 @@ const ARG_SPEC = {
 };
 
 const VALID_MODES = ['check', 'review', 'exec', 'full', 'doc-review'];
+const DEFAULT_ENABLE_FEATURES = ['collab'];
 const DEFAULT_MODEL = 'gpt-5.3-codex';
 
 // ============================================================================
@@ -573,10 +574,11 @@ function main() {
   const args = parseArgs(ARG_SPEC);
   validateModeArgs(args);
 
-  // Parse enable features into array
-  const enableFeatures = args.enableFeatures
+  // Parse enable features into array; collab is always enabled
+  const userFeatures = args.enableFeatures
     ? args.enableFeatures.split(',').map(f => f.trim()).filter(Boolean)
     : [];
+  const enableFeatures = [...new Set([...DEFAULT_ENABLE_FEATURES, ...userFeatures])];
 
   // Check codex availability
   const availability = checkCodexAvailability();

@@ -120,10 +120,21 @@ describe('codex-verify.js', () => {
 
   describe('ARG_SPEC --enable entry', () => {
     test('should have enableFeatures key in ARG_SPEC', async () => {
-      // Read the source file and verify the ARG_SPEC structure
       const source = fs.readFileSync(SCRIPT_PATH, 'utf-8');
       expect(source).toContain("'--enable'");
       expect(source).toContain("enableFeatures");
+    });
+  });
+
+  describe('collab always enabled', () => {
+    test('DEFAULT_ENABLE_FEATURES includes collab', async () => {
+      const source = fs.readFileSync(SCRIPT_PATH, 'utf-8');
+      expect(source).toContain("DEFAULT_ENABLE_FEATURES = ['collab']");
+    });
+
+    test('user features are merged with defaults, not replacing', async () => {
+      const source = fs.readFileSync(SCRIPT_PATH, 'utf-8');
+      expect(source).toContain('...DEFAULT_ENABLE_FEATURES');
     });
   });
 

@@ -389,7 +389,15 @@ describe('codex-verify.js', () => {
       }
     });
 
-    test('works without --enable (backward compat)', async () => {
+    test('collab is always enabled even without --enable flag', async () => {
+      const fs = require('fs');
+      const source = fs.readFileSync(SCRIPT_PATH, 'utf-8');
+      expect(source).toContain("DEFAULT_ENABLE_FEATURES = ['collab']");
+      // Verify merge logic: user features are merged with defaults, not replacing them
+      expect(source).toContain('...DEFAULT_ENABLE_FEATURES');
+    });
+
+    test('works without --enable (collab still active)', async () => {
       const result = await runScript(SCRIPT_PATH, [
         '--mode', 'exec',
         '--working-dir', '/tmp/test',
