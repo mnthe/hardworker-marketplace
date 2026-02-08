@@ -12,6 +12,7 @@ const {
   readSession,
 } = require('../lib/session-utils.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
+const { getNestedField } = require('../lib/field-utils.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -41,27 +42,6 @@ const ARG_SPEC = {
 // ============================================================================
 // Main Logic
 // ============================================================================
-
-/**
- * Get field value from nested object
- * @param {any} obj - Object to query
- * @param {string} fieldPath - Dot-separated field path
- * @returns {any} Field value or null
- */
-function getFieldValue(obj, fieldPath) {
-  const parts = fieldPath.split('.');
-  let value = obj;
-
-  for (const part of parts) {
-    if (value && typeof value === 'object' && part in value) {
-      value = value[part];
-    } else {
-      return null;
-    }
-  }
-
-  return value;
-}
 
 /**
  * Main execution function
@@ -97,7 +77,7 @@ function main() {
     // Get specific field or entire session
     if (args.field) {
       const session = readSession(args.sessionId);
-      const value = getFieldValue(session, args.field);
+      const value = getNestedField(session, args.field);
 
       if (value === null || value === undefined) {
         console.error(`Error: Field '${args.field}' not found in session`);

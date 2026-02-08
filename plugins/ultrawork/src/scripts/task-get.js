@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const { getSessionDir } = require('../lib/session-utils.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
+const { getNestedField } = require('../lib/field-utils.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -32,43 +33,6 @@ const ARG_SPEC = {
   '--field': { key: 'field', aliases: ['-f'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
-
-// ============================================================================
-// Field Extraction
-// ============================================================================
-
-/**
- * Extract nested field from object using dot notation
- * Example: "status" or "evidence[0].type"
- * @param {any} obj - Object to query
- * @param {string} fieldPath - Dot-separated field path
- * @returns {any} Field value or undefined
- */
-function getNestedField(obj, fieldPath) {
-  const parts = fieldPath.split('.');
-  let current = obj;
-
-  for (const part of parts) {
-    // Handle array access: field[0]
-    const match = part.match(/^(.+)\[(\d+)\]$/);
-    if (match) {
-      const [, fieldName, index] = match;
-      current = current[fieldName];
-      if (!current || !Array.isArray(current)) {
-        return undefined;
-      }
-      current = current[parseInt(index, 10)];
-    } else {
-      current = current[part];
-    }
-
-    if (current === undefined) {
-      return undefined;
-    }
-  }
-
-  return current;
-}
 
 // ============================================================================
 // Main Function

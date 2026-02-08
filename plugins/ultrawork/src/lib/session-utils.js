@@ -7,6 +7,7 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs');
 const { acquireLock, releaseLock } = require('./file-lock');
+const { writeJsonAtomically } = require('./json-ops');
 
 // Import types for JSDoc
 /**
@@ -255,9 +256,7 @@ async function updateSession(sessionId, updater) {
     updated.updated_at = new Date().toISOString();
 
     // Write atomically using temp file
-    const tmpFile = `${sessionFile}.tmp`;
-    fs.writeFileSync(tmpFile, JSON.stringify(updated, null, 2), 'utf-8');
-    fs.renameSync(tmpFile, sessionFile);
+    writeJsonAtomically(sessionFile, updated);
   } finally {
     releaseLock(sessionFile);
   }

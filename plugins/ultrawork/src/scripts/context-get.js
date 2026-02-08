@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const { getSessionDir } = require('../lib/session-utils.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
+const { getNestedField } = require('../lib/field-utils.js');
 
 // ============================================================================
 // Types
@@ -47,41 +48,6 @@ const ARG_SPEC = {
 // ============================================================================
 // Helper Functions
 // ============================================================================
-
-/**
- * Get field value from nested object using dot notation
- * @param {any} obj - Object to query
- * @param {string} fieldPath - Dot-separated field path (e.g., "scopeExpansion.detectedLayers")
- * @returns {any} Field value or null
- */
-function getFieldValue(obj, fieldPath) {
-  const parts = fieldPath.split('.');
-  let value = obj;
-
-  for (const part of parts) {
-    // Handle array index notation: explorers[0]
-    const arrayMatch = part.match(/^(\w+)\[(\d+)\]$/);
-    if (arrayMatch) {
-      const [, key, index] = arrayMatch;
-      if (value && typeof value === 'object' && key in value) {
-        value = value[key];
-        if (Array.isArray(value)) {
-          value = value[parseInt(index, 10)];
-        } else {
-          return null;
-        }
-      } else {
-        return null;
-      }
-    } else if (value && typeof value === 'object' && part in value) {
-      value = value[part];
-    } else {
-      return null;
-    }
-  }
-
-  return value;
-}
 
 /**
  * Generate AI-friendly summary of context
@@ -199,7 +165,7 @@ function main() {
 
     // Get specific field
     if (field) {
-      const value = getFieldValue(context, field);
+      const value = getNestedField(context, field);
 
       if (value === null || value === undefined) {
         console.error(`Error: Field '${field}' not found in context`);
@@ -232,4 +198,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { getFieldValue, generateSummary };
+module.exports = { getNestedField, generateSummary };

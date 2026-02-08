@@ -12,6 +12,7 @@ const { getSessionDir, resolveSessionId } = require('../lib/session-utils.js');
 const { acquireLock, releaseLock } = require('../lib/file-lock.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
 const { scanForBlockedPatterns, shouldBlockCompletion } = require('../lib/blocked-patterns.js');
+const { writeJsonAtomically } = require('../lib/json-ops.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -143,9 +144,7 @@ async function main() {
       task.updated_at = new Date().toISOString();
 
       // Write back atomically
-      const tmpFile = `${taskFile}.tmp`;
-      fs.writeFileSync(tmpFile, JSON.stringify(task, null, 2), 'utf-8');
-      fs.renameSync(tmpFile, taskFile);
+      writeJsonAtomically(taskFile, task);
 
       // Output success message and updated task
       console.log(`OK: Task ${args.id} updated`);

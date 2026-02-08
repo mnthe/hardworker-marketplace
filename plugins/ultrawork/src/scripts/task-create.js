@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const { getSessionDir } = require('../lib/session-utils.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
+const { writeJsonAtomically } = require('../lib/json-ops.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -135,11 +136,6 @@ function createTask(args) {
   const tasksDir = path.join(sessionDir, 'tasks');
   const taskFile = path.join(tasksDir, `${args.id}.json`);
 
-  // Create tasks directory if needed
-  if (!fs.existsSync(tasksDir)) {
-    fs.mkdirSync(tasksDir, { recursive: true });
-  }
-
   // Check if task already exists
   if (fs.existsSync(taskFile)) {
     console.error(`Error: Task ${args.id} already exists`);
@@ -174,7 +170,7 @@ function createTask(args) {
   }
 
   // Write task JSON
-  fs.writeFileSync(taskFile, JSON.stringify(task, null, 2), 'utf-8');
+  writeJsonAtomically(taskFile, task, { ensureDir: true });
 
   // Output success message and task JSON
   console.log(`OK: Task ${args.id} created`);
