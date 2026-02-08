@@ -8,7 +8,8 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { readStdin, createSessionStart, runHook } = require('../lib/hook-utils.js');
+const { createSessionStart, runHook } = require('../lib/hook-utils.js');
+const { parseHookInput } = require('../lib/hook-guards.js');
 
 /**
  * @typedef {Object} HookInput
@@ -80,13 +81,11 @@ function cleanupOldSessions() {
  * @returns {Promise<void>}
  */
 async function main() {
-  // Read stdin JSON
-  const input = await readStdin();
   /** @type {HookInput} */
-  const hookInput = JSON.parse(input);
+  const hookInput = await parseHookInput();
 
   // Extract session_id
-  const sessionId = hookInput.session_id;
+  const sessionId = hookInput?.session_id;
 
   // Cleanup old sessions
   cleanupOldSessions();

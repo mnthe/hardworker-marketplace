@@ -8,13 +8,13 @@
 
 const fs = require('fs');
 const path = require('path');
-const { getSessionDir, getSessionFile } = require('../lib/session-utils.js');
+const { getSessionDir } = require('../lib/session-utils.js');
 const {
-  readStdin,
   createStopResponse,
   outputAndExit,
   runHook
 } = require('../lib/hook-utils.js');
+const { parseHookInput, guardSession } = require('../lib/hook-guards.js');
 
 /**
  * @typedef {import('../lib/types.js').Session} Session
@@ -155,41 +155,13 @@ function checkBlockedPhrases(session) {
 // ============================================================================
 
 async function main() {
-  // Read stdin JSON
-  const input = await readStdin();
-  /** @type {HookInput} */
-  const hookInput = JSON.parse(input);
-
-  // Prevent infinite stop hook loops
-  // When stop_hook_active is true, a previous stop hook already blocked
-  // Don't block again to avoid infinite loops
-  if (hookInput.stop_hook_active) {
+  const hookInput = await parseHookInput();
+  const ctx = guardSession(hookInput);
+  if (!ctx) {
     outputAndExit(createStopResponse());
     return;
   }
-
-  // Extract session_id
-  const sessionId = hookInput.session_id;
-
-  // No session_id - allow exit
-  if (!sessionId) {
-    outputAndExit(createStopResponse());
-    return;
-  }
-
-    // Get session file
-    const sessionFile = getSessionFile(sessionId);
-
-  // Session file doesn't exist - not an ultrawork session, allow exit
-  if (!fs.existsSync(sessionFile)) {
-    outputAndExit(createStopResponse());
-    return;
-  }
-
-    // Parse session state
-    const content = fs.readFileSync(sessionFile, 'utf-8');
-    /** @type {Session} */
-    const session = JSON.parse(content);
+  const { session, sessionId } = ctx;
 
     const phase = session.phase || 'unknown';
     const goal = session.goal || 'unknown';

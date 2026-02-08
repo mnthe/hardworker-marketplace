@@ -8,12 +8,12 @@
 
 const fs = require('fs');
 const path = require('path');
-const { getSessionDir, getSessionFile, isSessionActive, updateSession } = require('../lib/session-utils.js');
+const { getSessionDir, updateSession } = require('../lib/session-utils.js');
 const {
-  readStdin,
   createPostToolUse,
   runHook
 } = require('../lib/hook-utils.js');
+const { parseHookInput, guardSession } = require('../lib/hook-guards.js');
 
 /**
  * @typedef {import('../lib/types.js').Session} Session
@@ -65,13 +65,10 @@ function isExplorerTask(hookInput) {
  * @returns {Promise<void>}
  */
 async function main() {
-  // Read stdin JSON
-  const input = await readStdin();
-  /** @type {HookInput} */
-  const hookInput = JSON.parse(input);
+  const hookInput = await parseHookInput();
 
     // Extract tool name
-    const toolName = hookInput.tool_name || '';
+    const toolName = hookInput?.tool_name || '';
 
     // Only process Task tool completions
     if (toolName !== 'Task' && toolName !== 'task') {
@@ -80,38 +77,14 @@ async function main() {
       return;
     }
 
-    // Extract session ID
-    const sessionId = hookInput.session_id;
-
-    // No session - exit
-    if (!sessionId) {
+    const ctx = guardSession(hookInput);
+    if (!ctx) {
       console.log(JSON.stringify(createPostToolUse()));
       process.exit(0);
       return;
     }
-
-    // Get session directory and file
+    const { session, sessionId } = ctx;
     const sessionDir = getSessionDir(sessionId);
-    const sessionFile = getSessionFile(sessionId);
-
-    // Session file doesn't exist - exit
-    if (!fs.existsSync(sessionFile)) {
-      console.log(JSON.stringify(createPostToolUse()));
-      process.exit(0);
-      return;
-    }
-
-    // Read session data
-    /** @type {Session} */
-    let session;
-    try {
-      const content = fs.readFileSync(sessionFile, 'utf-8');
-      session = JSON.parse(content);
-    } catch {
-      console.log(JSON.stringify(createPostToolUse()));
-      process.exit(0);
-      return;
-    }
 
     const phase = session.phase || '';
     const explorationStage = session.exploration_stage || 'not_started';

@@ -12,11 +12,11 @@ const {
   readSessionField,
 } = require('../lib/session-utils.js');
 const {
-  readStdin,
   createPostToolUse,
   outputAndExit,
   runHook
 } = require('../lib/hook-utils.js');
+const { parseHookInput } = require('../lib/hook-guards.js');
 
 /**
  * @typedef {import('../lib/types.js').EvidenceEntry} EvidenceEntry
@@ -220,16 +220,9 @@ function buildFileEvidence(operation, filePath) {
 // ============================================================================
 
 async function main() {
-  // Read stdin
-  const stdinContent = await readStdin();
-
-  // Parse hook input
   /** @type {HookInput} */
-  let hookInput;
-  try {
-    hookInput = JSON.parse(stdinContent);
-  } catch {
-    // Invalid JSON - exit silently
+  const hookInput = await parseHookInput();
+  if (!hookInput) {
     outputAndExit(createPostToolUse());
   }
 

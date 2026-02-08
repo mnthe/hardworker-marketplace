@@ -8,8 +8,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const { getSessionDir, getSessionFile } = require('../lib/session-utils.js');
-const { readStdin, createSessionStart, runHook } = require('../lib/hook-utils.js');
+const { getSessionDir } = require('../lib/session-utils.js');
+const { createSessionStart, runHook } = require('../lib/hook-utils.js');
+const { parseHookInput, guardSession } = require('../lib/hook-guards.js');
 
 /**
  * @typedef {import('../lib/types.js').Session} Session
@@ -327,33 +328,13 @@ NEVER use Read on session.json - always use scripts.
  * @returns {Promise<void>}
  */
 async function main() {
-  // Read stdin JSON
-  const input = await readStdin();
-  /** @type {HookInput} */
-  const hookInput = JSON.parse(input);
-
-  // Extract session_id
-  const sessionId = hookInput.session_id;
-
-  // No session_id - no injection needed
-  if (!sessionId) {
+  const hookInput = await parseHookInput();
+  const ctx = guardSession(hookInput);
+  if (!ctx) {
     console.log(JSON.stringify(createSessionStart()));
     return process.exit(0);
   }
-
-  // Get session file
-  const sessionFile = getSessionFile(sessionId);
-
-  // Session doesn't exist - no injection needed
-  if (!fs.existsSync(sessionFile)) {
-    console.log(JSON.stringify(createSessionStart()));
-    return process.exit(0);
-  }
-
-  // Parse session state
-  const sessionContent = fs.readFileSync(sessionFile, 'utf-8');
-  /** @type {Session} */
-  const session = JSON.parse(sessionContent);
+  const { session, sessionId } = ctx;
 
   const phase = session.phase || 'unknown';
   const explorationStage = session.exploration_stage || 'not_started';

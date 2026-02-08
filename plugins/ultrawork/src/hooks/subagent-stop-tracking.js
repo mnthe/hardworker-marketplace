@@ -9,14 +9,13 @@
 const fs = require('fs');
 const path = require('path');
 const {
-  getSessionFile,
   getSessionDir,
   updateSession,
 } = require('../lib/session-utils.js');
 const {
-  readStdin,
   runHook
 } = require('../lib/hook-utils.js');
+const { parseHookInput, guardSession } = require('../lib/hook-guards.js');
 
 /**
  * @typedef {import('../lib/types.js').Session} Session
@@ -145,23 +144,13 @@ function extractTaskId(output) {
 // ============================================================================
 
 async function main() {
-  // Read stdin JSON
-  const input = await readStdin();
-  /** @type {HookInput} */
-  const hookInput = JSON.parse(input);
+  const hookInput = await parseHookInput();
 
     // Parse hook input fields
-    const agentId = hookInput.agent_id || '';
-    const agentType = hookInput.agent_type || '';
-    const agentOutput = hookInput.output || '';
-    let taskId = hookInput.task_id || '';
-
-    // Early exit: stop hook already active (prevent infinite loops)
-    if (hookInput.stop_hook_active) {
-      console.log(JSON.stringify(outputResponse()));
-      process.exit(0);
-      return;
-    }
+    const agentId = hookInput?.agent_id || '';
+    const agentType = hookInput?.agent_type || '';
+    const agentOutput = hookInput?.output || '';
+    let taskId = hookInput?.task_id || '';
 
     // Early exit: not an ultrawork agent
     if (agentType && !agentType.startsWith('ultrawork:')) {
@@ -170,28 +159,15 @@ async function main() {
       return;
     }
 
-    // Get session ID from input
-    const sessionId = hookInput.session_id;
-
-    // No active ultrawork session - not an ultrawork worker
-    if (!sessionId) {
+    const ctx = guardSession(hookInput);
+    if (!ctx) {
       console.log(JSON.stringify(outputResponse()));
       process.exit(0);
       return;
     }
-
-    // Check if session file exists
-    const sessionFile = getSessionFile(sessionId);
-    if (!fs.existsSync(sessionFile)) {
-      console.log(JSON.stringify(outputResponse()));
-      process.exit(0);
-      return;
-    }
-
-    // Read session
-    const content = fs.readFileSync(sessionFile, 'utf-8');
+    const { sessionId } = ctx;
     /** @type {SessionWithWorkers} */
-    const session = JSON.parse(content);
+    const session = /** @type {SessionWithWorkers} */ (ctx.session);
 
     // Use agent_type for detection (primary)
     const isUltraworkAgent = agentType && agentType.startsWith('ultrawork:');

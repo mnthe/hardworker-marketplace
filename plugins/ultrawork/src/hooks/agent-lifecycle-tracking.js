@@ -6,17 +6,14 @@
  * v1.0: JavaScript version with JSDoc types
  */
 
-const fs = require('fs');
 const {
-  getSessionFile,
   updateSession,
-  getClaudeSessionId,
 } = require('../lib/session-utils.js');
 const {
-  readStdin,
   createPreToolUsePermission,
   runHook
 } = require('../lib/hook-utils.js');
+const { parseHookInput, guardSession } = require('../lib/hook-guards.js');
 
 /**
  * @typedef {import('../lib/types.js').Session} Session
@@ -54,13 +51,10 @@ function outputAllow() {
 // ============================================================================
 
 async function main() {
-  // Read stdin JSON
-  const input = await readStdin();
-  /** @type {HookInput} */
-  const hookInput = JSON.parse(input);
+  const hookInput = await parseHookInput();
 
   // Parse tool name
-  const toolName = hookInput.tool_name || '';
+  const toolName = hookInput?.tool_name || '';
 
   // Only process Task tool usage - exit silently for other tools
   if (toolName !== 'Task') {
@@ -69,28 +63,13 @@ async function main() {
     return;
   }
 
-  // Get session ID from input
-  const sessionId = hookInput.session_id;
-
-  // No active ultrawork session - allow without tracking
-  if (!sessionId) {
+  const ctx = guardSession(hookInput);
+  if (!ctx) {
     console.log(JSON.stringify(outputAllow()));
     process.exit(0);
     return;
   }
-
-  // Check if session file exists
-  const sessionFile = getSessionFile(sessionId);
-  if (!fs.existsSync(sessionFile)) {
-    console.log(JSON.stringify(outputAllow()));
-    process.exit(0);
-    return;
-  }
-
-  // Read session phase
-  const content = fs.readFileSync(sessionFile, 'utf-8');
-  /** @type {Session} */
-  const session = JSON.parse(content);
+  const { session, sessionId } = ctx;
   const phase = session.phase || 'unknown';
 
   // Track during active phases (PLANNING, EXECUTION, VERIFICATION)

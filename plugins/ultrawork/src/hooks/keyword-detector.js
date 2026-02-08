@@ -18,10 +18,10 @@ const fs = require('fs');
 const path = require('path');
 const { getSessionFile } = require('../lib/session-utils.js');
 const {
-  readStdin,
   createUserPromptSubmit,
   runHook
 } = require('../lib/hook-utils.js');
+const { parseHookInput } = require('../lib/hook-guards.js');
 
 /**
  * @typedef {Object} HookInput
@@ -129,9 +129,13 @@ function buildCommand(mode, goal) {
  * Main hook logic
  */
 async function main() {
-  const input = await readStdin();
   /** @type {HookInput} */
-  const hookInput = JSON.parse(input);
+  const hookInput = await parseHookInput();
+  if (!hookInput) {
+    console.log(JSON.stringify(createUserPromptSubmit()));
+    process.exit(0);
+    return;
+  }
 
   const prompt = hookInput.user_prompt || '';
   const sessionId = hookInput.session_id;

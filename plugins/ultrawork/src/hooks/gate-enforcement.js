@@ -12,11 +12,11 @@ const fs = require('fs');
 const path = require('path');
 const { isSessionActive, readSessionField, getSessionDir } = require('../lib/session-utils.js');
 const {
-  readStdin,
   createPreToolUseAllow,
   createPreToolUseBlock,
   runHook
 } = require('../lib/hook-utils.js');
+const { parseHookInput } = require('../lib/hook-guards.js');
 
 /**
  * @typedef {import('../lib/types.js').Session} Session
@@ -239,10 +239,10 @@ async function main() {
   const { getSessionFile } = require('../lib/session-utils.js');
   const { outputAndExit } = require('../lib/hook-utils.js');
 
-  // Read stdin JSON
-  const input = await readStdin();
-  /** @type {HookInput} */
-  const hookInput = JSON.parse(input);
+  const hookInput = await parseHookInput();
+  if (!hookInput) {
+    outputAndExit(createPreToolUseAllow());
+  }
 
   // Extract tool name
   const toolName = hookInput.tool_name || '';

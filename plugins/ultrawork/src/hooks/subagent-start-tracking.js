@@ -6,15 +6,13 @@
  * Tracks active agents in session.active_agents[]
  */
 
-const fs = require('fs');
 const {
-  getSessionFile,
   updateSession,
 } = require('../lib/session-utils.js');
 const {
-  readStdin,
   runHook
 } = require('../lib/hook-utils.js');
+const { parseHookInput, guardSession } = require('../lib/hook-guards.js');
 
 /**
  * @typedef {Object} HookInput
@@ -35,28 +33,17 @@ function outputResponse() {
 }
 
 async function main() {
-  const input = await readStdin();
-  /** @type {HookInput} */
-  const hookInput = JSON.parse(input);
+  const hookInput = await parseHookInput();
+  const agentId = hookInput?.agent_id || '';
+  const agentType = hookInput?.agent_type || '';
 
-  const sessionId = hookInput.session_id;
-  const agentId = hookInput.agent_id || '';
-  const agentType = hookInput.agent_type || '';
-
-  // No session - not ultrawork
-  if (!sessionId) {
+  const ctx = guardSession(hookInput);
+  if (!ctx) {
     console.log(JSON.stringify(outputResponse()));
     process.exit(0);
     return;
   }
-
-  // Check session exists
-  const sessionFile = getSessionFile(sessionId);
-  if (!fs.existsSync(sessionFile)) {
-    console.log(JSON.stringify(outputResponse()));
-    process.exit(0);
-    return;
-  }
+  const { sessionId } = ctx;
 
   // Record active agent
   try {
