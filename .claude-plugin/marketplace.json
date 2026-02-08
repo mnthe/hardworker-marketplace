@@ -8,7 +8,7 @@
       "name": "ultrawork",
       "source": "./plugins/ultrawork",
       "description": "Bun cross-platform version of ultrawork - strict verification-first development with TDD support and token-optimized state management",
-      "version": "0.32.1",
+      "version": "0.32.2",
       "author": {
         "name": "mnthe"
       },
@@ -26,7 +26,7 @@
       "name": "teamwork",
       "source": "./plugins/teamwork",
       "description": "Native teammate-based collaboration plugin with role-based workers, event-driven coordination, and Claude Code agent teams",
-      "version": "3.3.1",
+      "version": "3.3.2",
       "author": {
         "name": "mnthe"
       },
