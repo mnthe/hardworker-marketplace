@@ -8,14 +8,26 @@
  */
 
 /**
+ * Read all data from stdin as a string.
+ * Uses process.stdin async iterator for portability across runtimes.
+ * @returns {Promise<string>}
+ */
+async function readStdin() {
+  const chunks = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk);
+  }
+  return chunks.join('');
+}
+
+/**
  * Read hook input from stdin and parse as JSON.
- * Uses Bun.stdin.text() for consistency with existing hook patterns.
  * Returns parsed object on success, empty object on empty input, null on parse error.
  * @returns {Promise<Object|null>}
  */
 async function parseHookInput() {
   try {
-    const raw = await Bun.stdin.text();
+    const raw = await readStdin();
     if (raw && raw.trim()) {
       return JSON.parse(raw);
     }
