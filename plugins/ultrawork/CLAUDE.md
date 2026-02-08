@@ -578,6 +578,15 @@ Ultrawork integrates with Codex CLI as an auxiliary verifier running in parallel
             "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/session-start-hook.js"
           }
         ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/hooks/compact-recovery-hook.js"
+          }
+        ]
       }
     ],
     "PreToolUse": [

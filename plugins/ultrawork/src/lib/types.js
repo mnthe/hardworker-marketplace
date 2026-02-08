@@ -66,16 +66,8 @@
 
 /**
  * @typedef {'standard' | 'tdd'} TaskApproach
- * - standard: Implement first, then add tests (default)
- * - tdd: Test-Driven Development - write test first, then implement
- */
-
-/**
- * @typedef {Object} TaskEvidence
- * @property {string} type
- * @property {string} description
- * @property {string} timestamp
- * @property {Record<string, unknown>} [data]
+ * - standard: Implement first, then add tests
+ * - tdd: Test-Driven Development - write test first, then implement (default)
  */
 
 /**
@@ -87,7 +79,7 @@
  * @property {TaskStatus} status
  * @property {string[]} blocked_by
  * @property {string[]} criteria
- * @property {TaskEvidence[]} evidence
+ * @property {string[]} evidence - Evidence entries (plain text descriptions)
  * @property {string} created_at
  * @property {string} updated_at
  * @property {string} [started_at]

@@ -86,9 +86,6 @@ async function main() {
 
       // Add evidence BEFORE status check (so new evidence is included in pattern scan)
       if (args.addEvidence) {
-        // Match bash behavior: add as string to evidence array
-        // Note: This matches the bash implementation even though the type
-        // definition suggests evidence should be TaskEvidence objects
         task.evidence.push(args.addEvidence);
       }
 
