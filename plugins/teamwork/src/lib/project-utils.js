@@ -8,6 +8,7 @@
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
+const { readJsonSafe, writeJsonAtomically } = require('./json-ops.js');
 
 // Import types for JSDoc
 /**
@@ -179,20 +180,7 @@ function readTask(project, team, taskId) {
  */
 function writeTask(project, team, taskId, taskData) {
   const taskFile = getTaskFile(project, team, taskId);
-  const tasksDir = getTasksDir(project, team);
-
-  // Ensure tasks directory exists
-  if (!fs.existsSync(tasksDir)) {
-    fs.mkdirSync(tasksDir, { recursive: true });
-  }
-
-  // Update timestamp
-  taskData.updated_at = new Date().toISOString();
-
-  // Write atomically using temp file
-  const tmpFile = `${taskFile}.tmp`;
-  fs.writeFileSync(tmpFile, JSON.stringify(taskData, null, 2), 'utf-8');
-  fs.renameSync(tmpFile, taskFile);
+  writeJsonAtomically(taskFile, taskData, { autoTimestamp: true, ensureDir: true });
 }
 
 /**
@@ -204,20 +192,7 @@ function writeTask(project, team, taskId, taskData) {
  */
 function writeProject(project, team, projectData) {
   const projectFile = getProjectFile(project, team);
-  const projectDir = getProjectDir(project, team);
-
-  // Ensure project directory exists
-  if (!fs.existsSync(projectDir)) {
-    fs.mkdirSync(projectDir, { recursive: true });
-  }
-
-  // Update timestamp
-  projectData.updated_at = new Date().toISOString();
-
-  // Write atomically using temp file
-  const tmpFile = `${projectFile}.tmp`;
-  fs.writeFileSync(tmpFile, JSON.stringify(projectData, null, 2), 'utf-8');
-  fs.renameSync(tmpFile, projectFile);
+  writeJsonAtomically(projectFile, projectData, { autoTimestamp: true, ensureDir: true });
 }
 
 /**
@@ -314,17 +289,7 @@ function getSwarmWorkerFile(project, team, workerId) {
  */
 function readSwarmWorker(project, team, workerId) {
   const workerFile = getSwarmWorkerFile(project, team, workerId);
-
-  if (!fs.existsSync(workerFile)) {
-    return null;
-  }
-
-  try {
-    const content = fs.readFileSync(workerFile, 'utf-8');
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
+  return readJsonSafe(workerFile);
 }
 
 /**
@@ -336,17 +301,7 @@ function readSwarmWorker(project, team, workerId) {
  */
 function writeSwarmWorker(project, team, workerId, workerData) {
   const workerFile = getSwarmWorkerFile(project, team, workerId);
-  const workersDir = getSwarmWorkersDir(project, team);
-
-  // Ensure workers directory exists
-  if (!fs.existsSync(workersDir)) {
-    fs.mkdirSync(workersDir, { recursive: true });
-  }
-
-  // Write atomically
-  const tmpFile = `${workerFile}.tmp`;
-  fs.writeFileSync(tmpFile, JSON.stringify(workerData, null, 2), 'utf-8');
-  fs.renameSync(tmpFile, workerFile);
+  writeJsonAtomically(workerFile, workerData, { ensureDir: true });
 }
 
 /**

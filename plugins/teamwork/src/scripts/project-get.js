@@ -9,6 +9,7 @@
 const fs = require('fs');
 const { parseArgs, generateHelp } = require('../lib/args.js');
 const { getProjectFile } = require('../lib/project-utils.js');
+const { getNestedField } = require('../lib/field-utils.js');
 
 // ============================================================================
 // CLI Arguments Parsing
@@ -27,43 +28,6 @@ const ARG_SPEC = {
   '--field': { key: 'field', aliases: ['-f'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
-
-// ============================================================================
-// Field Extraction
-// ============================================================================
-
-/**
- * Extract nested field from object using dot notation
- * Example: "status" or "stats.total"
- * @param {any} obj - Object to query
- * @param {string} fieldPath - Dot-separated field path
- * @returns {any} Field value or undefined
- */
-function getNestedField(obj, fieldPath) {
-  const parts = fieldPath.split('.');
-  let current = obj;
-
-  for (const part of parts) {
-    // Handle array access: field[0]
-    const match = part.match(/^(.+)\[(\d+)\]$/);
-    if (match) {
-      const [, fieldName, index] = match;
-      current = current[fieldName];
-      if (!current || !Array.isArray(current)) {
-        return undefined;
-      }
-      current = current[parseInt(index, 10)];
-    } else {
-      current = current[part];
-    }
-
-    if (current === undefined) {
-      return undefined;
-    }
-  }
-
-  return current;
-}
 
 // ============================================================================
 // Main Entry Point

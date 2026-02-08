@@ -10,7 +10,8 @@
 
 const fs = require('fs');
 const { parseArgs, generateHelp } = require('../lib/args.js');
-const { getProjectDir, getProjectFile } = require('../lib/project-utils.js');
+const { getProjectFile } = require('../lib/project-utils.js');
+const { getNestedField } = require('../lib/field-utils.js');
 
 // ============================================================================
 // CLI Arguments Parsing
@@ -23,34 +24,6 @@ const ARG_SPEC = {
   '--field': { key: 'field', aliases: [] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
-
-// ============================================================================
-// Field Query
-// ============================================================================
-
-/**
- * Query field from data object using dot-separated path
- * @param {Object} data - Data object
- * @param {string} fieldPath - Dot-separated field path
- * @returns {any} Field value
- */
-function queryField(data, fieldPath) {
-  const parts = fieldPath.split('.');
-  let value = data;
-
-  for (const part of parts) {
-    if (value === null || value === undefined) {
-      throw new Error(`Field not found: ${fieldPath}`);
-    }
-    value = value[part];
-  }
-
-  if (value === undefined) {
-    throw new Error(`Field not found: ${fieldPath}`);
-  }
-
-  return value;
-}
 
 // ============================================================================
 // Output Formatting
@@ -122,7 +95,10 @@ function main() {
   // Field query mode
   if (args.field) {
     try {
-      const value = queryField(projectData, args.field);
+      const value = getNestedField(projectData, args.field);
+      if (value === undefined) {
+        throw new Error(`Field not found: ${args.field}`);
+      }
       console.log(JSON.stringify(value));
     } catch (error) {
       console.error(`Error: ${error.message}`);
