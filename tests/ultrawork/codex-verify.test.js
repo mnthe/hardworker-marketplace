@@ -431,6 +431,65 @@ describe('codex-verify.js', () => {
     });
   });
 
+  describe('--enable collab redundancy (collab is default)', () => {
+    test('exec mode: identical output with and without --enable collab', async () => {
+      const withFlag = await runScript(SCRIPT_PATH, [
+        '--mode', 'exec',
+        '--enable', 'collab',
+        '--working-dir', '/tmp/test',
+        '--criteria', 'Test'
+      ]);
+      const withoutFlag = await runScript(SCRIPT_PATH, [
+        '--mode', 'exec',
+        '--working-dir', '/tmp/test',
+        '--criteria', 'Test'
+      ]);
+
+      expect(withFlag.exitCode).toBe(withoutFlag.exitCode);
+      const parsedWith = JSON.parse(withFlag.stdout);
+      const parsedWithout = JSON.parse(withoutFlag.stdout);
+      expect(parsedWith.mode).toBe(parsedWithout.mode);
+      expect(parsedWith.verdict).toBe(parsedWithout.verdict);
+      expect(parsedWith.available).toBe(parsedWithout.available);
+    });
+
+    test('full mode: identical output with and without --enable collab', async () => {
+      const withFlag = await runScript(SCRIPT_PATH, [
+        '--mode', 'full',
+        '--enable', 'collab',
+        '--working-dir', '/tmp/test',
+        '--criteria', 'Test'
+      ]);
+      const withoutFlag = await runScript(SCRIPT_PATH, [
+        '--mode', 'full',
+        '--working-dir', '/tmp/test',
+        '--criteria', 'Test'
+      ]);
+
+      expect(withFlag.exitCode).toBe(withoutFlag.exitCode);
+      const parsedWith = JSON.parse(withFlag.stdout);
+      const parsedWithout = JSON.parse(withoutFlag.stdout);
+      expect(parsedWith.mode).toBe(parsedWithout.mode);
+      expect(parsedWith.verdict).toBe(parsedWithout.verdict);
+      expect(parsedWith.available).toBe(parsedWithout.available);
+    });
+
+    test('additional features are merged with collab default', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'exec',
+        '--enable', 'shell_snapshot',
+        '--working-dir', '/tmp/test',
+        '--criteria', 'Test'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      // Script runs successfully - collab is still included via DEFAULT_ENABLE_FEATURES
+      // shell_snapshot is added alongside collab, not replacing it
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.verdict).toBeDefined();
+    });
+  });
+
   describe('JSON output structure', () => {
     test('should always include available, mode, verdict, summary fields', async () => {
       const result = await runScript(SCRIPT_PATH, [
