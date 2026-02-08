@@ -347,6 +347,82 @@ describe('codex-verify.js', () => {
     });
   });
 
+  describe('--enable parameter', () => {
+    test('help text includes --enable', async () => {
+      const result = await runScript(SCRIPT_PATH, ['--help']);
+
+      expect(result.exitCode).toBe(0);
+      assertHelpText(result.stdout, ['--enable']);
+    });
+
+    test('--enable parameter accepted with exec mode', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'exec',
+        '--enable', 'collab',
+        '--working-dir', '/tmp/test',
+        '--criteria', 'Test'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.mode).toBe('exec');
+      expect(parsed.verdict).toBeDefined();
+      if (!parsed.available) {
+        expect(parsed.verdict).toBe('SKIP');
+      }
+    });
+
+    test('--enable parameter accepted with full mode', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'full',
+        '--enable', 'collab,shell_snapshot',
+        '--working-dir', '/tmp/test',
+        '--criteria', 'Test'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.mode).toBe('full');
+      expect(parsed.verdict).toBeDefined();
+      if (!parsed.available) {
+        expect(parsed.verdict).toBe('SKIP');
+      }
+    });
+
+    test('works without --enable (backward compat)', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'exec',
+        '--working-dir', '/tmp/test',
+        '--criteria', 'Test'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.mode).toBe('exec');
+      expect(parsed.verdict).toBeDefined();
+      if (!parsed.available) {
+        expect(parsed.verdict).toBe('SKIP');
+        expect(parsed.summary).toBeDefined();
+      }
+    });
+
+    test('--enable with doc-review mode', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'doc-review',
+        '--enable', 'collab',
+        '--design', '/tmp/nonexistent-codex-verify-test-design-99999.md'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.mode).toBe('doc-review');
+      expect(parsed.verdict).toBeDefined();
+      if (!parsed.available) {
+        expect(parsed.verdict).toBe('SKIP');
+      }
+    });
+  });
+
   describe('JSON output structure', () => {
     test('should always include available, mode, verdict, summary fields', async () => {
       const result = await runScript(SCRIPT_PATH, [
