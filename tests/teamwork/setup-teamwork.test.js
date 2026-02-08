@@ -7,7 +7,7 @@ const { test, expect, describe, afterEach } = require('bun:test');
 const path = require('path');
 const fs = require('fs');
 const { spawnSync } = require('child_process');
-const { runScript, mockProject, TEAMWORK_TEST_BASE_DIR } = require('../test-utils.js');
+const { runScript, TEAMWORK_TEST_BASE_DIR } = require('../test-utils.js');
 
 const SCRIPT_PATH = path.join(__dirname, '../../plugins/teamwork/src/scripts/setup-teamwork.js');
 

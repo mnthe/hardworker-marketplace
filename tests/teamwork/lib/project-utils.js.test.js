@@ -5,7 +5,6 @@
  */
 
 const { test, expect, describe, beforeEach, afterEach } = require('bun:test');
-const os = require('os');
 const path = require('path');
 const fs = require('fs');
 const {
@@ -24,7 +23,6 @@ const {
   listTasks,
   updateProjectStats
 } = require('../../../plugins/teamwork/src/lib/project-utils.js');
-const { mockProject } = require('../../test-utils.js');
 
 describe('Path Resolution', () => {
   const base = getTeamworkBase();
@@ -80,7 +78,6 @@ describe('Project Validation', () => {
 });
 
 describe('Task Operations', () => {
-  let mock;
   const projectName = `test-proj-${Date.now()}`;
   const teamName = `test-team-${Date.now()}`;
 

@@ -6,7 +6,7 @@
 const { test, expect, describe, afterEach } = require('bun:test');
 const path = require('path');
 const fs = require('fs');
-const { runScript, mockProject, assertJsonSchema, TEAMWORK_TEST_BASE_DIR } = require('../test-utils.js');
+const { runScript, assertJsonSchema, TEAMWORK_TEST_BASE_DIR } = require('../test-utils.js');
 
 const SCRIPT_PATH = path.join(__dirname, '../../plugins/teamwork/src/scripts/project-status.js');
 
