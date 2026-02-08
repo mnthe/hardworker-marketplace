@@ -55,8 +55,8 @@ claude --plugin-dir /path/to/teamwork
 # Basic status
 /teamwork-status
 
-# Detailed task list
-/teamwork-status --verbose
+# JSON output
+/teamwork-status --format json
 ```
 
 ### Manual Worker (Optional)
@@ -79,7 +79,7 @@ claude --plugin-dir /path/to/teamwork
 | Command | Description | Options |
 |---------|-------------|---------|
 | `/teamwork <goal>` | Start coordination session | `--project NAME`, `--team NAME`, `--plans FILE...` |
-| `/teamwork-status` | View dashboard with progress | `--project NAME`, `--team NAME`, `--verbose` |
+| `/teamwork-status` | View dashboard with progress | `--project NAME`, `--team NAME` |
 | `/teamwork-worker` | Manual task execution | `--role ROLE`, `--project NAME`, `--team NAME` |
 | `/teamwork-verify` | Trigger manual verification | `--final`, `--project NAME`, `--team NAME` |
 | `/teamwork-clean` | Clean project state | `--project NAME`, `--team NAME` |
@@ -90,16 +90,16 @@ claude --plugin-dir /path/to/teamwork
 |-------|-------|---------|
 | **orchestrator** | opus | Planning, worker spawning, task assignment, coordination |
 | **final-verifier** | opus | Project-level build/test verification |
-| **worker** | dynamic | General purpose task execution |
-| **frontend** | dynamic | UI components, styling, state management |
-| **backend** | dynamic | API endpoints, services, database |
-| **test** | dynamic | Unit tests, integration tests |
-| **devops** | dynamic | CI/CD, deployment, infrastructure |
-| **docs** | dynamic | Documentation, README, examples |
-| **security** | dynamic | Authentication, authorization, validation |
-| **review** | dynamic | Code review, refactoring |
+| **worker** | inherit | General purpose task execution |
+| **frontend** | inherit | UI components, styling, state management |
+| **backend** | inherit | API endpoints, services, database |
+| **test** | inherit | Unit tests, integration tests |
+| **devops** | inherit | CI/CD, deployment, infrastructure |
+| **docs** | inherit | Documentation, README, examples |
+| **security** | inherit | Authentication, authorization, validation |
+| **review** | inherit | Code review, refactoring |
 
-Dynamic model selection: `simple` -> haiku, `standard` -> sonnet, `complex` -> opus.
+Specialist agents use `model: inherit` -- they inherit the model from the parent agent (orchestrator) that spawns them.
 
 ## How It Works
 
@@ -172,7 +172,7 @@ The orchestrator uses Claude Code's native API for all coordination:
 | `--project` | Git repo name | Override project name |
 | `--team` | Git branch name | Override team name |
 | `--role` | none (all roles) | Filter tasks by role |
-| `--verbose` | false | Show detailed task information |
+| `--format` | table | Output format (`json` or `table`) |
 
 ### Role Assignment
 
@@ -193,7 +193,7 @@ The orchestrator uses Claude Code's native API for all coordination:
 
 ```bash
 # Check if tasks exist
-/teamwork-status --verbose
+/teamwork-status --format json
 
 # Verify project and team names match
 /teamwork-status --project myapp --team feature-123

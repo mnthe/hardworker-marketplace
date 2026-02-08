@@ -78,8 +78,8 @@ All scripts use Bun runtime with flag-based parameters. Project scripts use `--p
 | **project-create.js** | Create new project with metadata | `--project <name>` `--team <name>` `--goal "..."` |
 | **project-get.js** | Get project metadata | `--project <name>` `--team <name>` |
 | **project-clean.js** | Clean project state | `--project <name>` `--team <name>` |
-| **project-status.js** | Get project dashboard status | `--project <name>` `--team <name>` `[--format json|table]` `[--field <path>]` `[--verbose]` |
-| **codex-verify.js** | Run Codex CLI as auxiliary verifier (dual gate) | `--mode check\|review\|exec\|full` `--working-dir <dir>` `--criteria "c1\|c2"` `--output <file>` `--enable <features>` |
+| **project-status.js** | Get project dashboard status | `--project <name>` `--team <name>` `[--format json|table]` `[--field <path>]` |
+| **codex-verify.js** | Run Codex CLI as auxiliary verifier (dual gate) | `--mode check\|review\|exec\|full\|doc-review` `--working-dir <dir>` `--criteria "c1\|c2"` `--output <file>` `--base <ref>` `--design <path>` `--model <model>` `--goal "..."` `--enable <features>` |
 
 **Supporting files:**
 - `codex-output-schema.json` - JSON schema for Codex verification output format
@@ -115,22 +115,16 @@ Hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 |-------|-------|------|---------------------|
 | **orchestrator** | opus | Planning and coordination (delegate mode) | Codebase exploration, task decomposition via TaskCreate, spawn workers as teammates, assign tasks via TaskUpdate, coordinate via SendMessage |
 | **final-verifier** | opus | Project-level verification | Full build/test, evidence completeness, blocked pattern scanning |
-| **worker** | dynamic* | General purpose task execution | Receive task assignment, implement, collect structured evidence, mark resolved |
-| **frontend** | dynamic* | Frontend specialist | UI components, styling, state management, accessibility |
-| **backend** | dynamic* | Backend specialist | API endpoints, services, database, business logic |
-| **devops** | dynamic* | DevOps specialist | CI/CD, deployment, infrastructure |
-| **test** | dynamic* | Testing specialist | Unit tests, integration tests, fixtures, mocks |
-| **docs** | dynamic* | Documentation specialist | README, API docs, examples |
-| **security** | dynamic* | Security specialist | Authentication, authorization, input validation |
-| **review** | dynamic* | Code review specialist | Code quality, refactoring, best practices |
+| **worker** | inherit | General purpose task execution | Receive task assignment, implement, collect structured evidence, mark resolved |
+| **frontend** | inherit | Frontend specialist | UI components, styling, state management, accessibility |
+| **backend** | inherit | Backend specialist | API endpoints, services, database, business logic |
+| **devops** | inherit | DevOps specialist | CI/CD, deployment, infrastructure |
+| **test** | inherit | Testing specialist | Unit tests, integration tests, fixtures, mocks |
+| **docs** | inherit | Documentation specialist | README, API docs, examples |
+| **security** | inherit | Security specialist | Authentication, authorization, input validation |
+| **review** | inherit | Code review specialist | Code quality, refactoring, best practices |
 
-**\*Dynamic model selection based on task complexity:**
-
-| Complexity | Model | When to Use |
-|------------|-------|-------------|
-| `simple` | haiku | Single file, <10 lines, config updates |
-| `standard` | sonnet | 1-3 files, typical CRUD |
-| `complex` | opus | 5+ files, architecture changes |
+**Note:** Specialist agents use `model: inherit`, meaning they inherit the model from the parent agent (orchestrator) that spawns them.
 
 ## State Management
 
@@ -156,19 +150,14 @@ Hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
   "project": "my-app",
   "team": "auth-team",
   "goal": "Implement user authentication system",
-  "phase": "EXECUTION",
   "created_at": "2026-01-12T10:00:00Z",
-  "updated_at": "2026-01-12T10:05:00Z",
-  "stats": {
-    "total": 5,
-    "open": 2,
-    "in_progress": 1,
-    "resolved": 2
-  }
+  "options": {}
 }
 ```
 
-**Phase values**: `PLANNING` | `EXECUTION` | `VERIFICATION` | `COMPLETE`
+**Fields created by `project-create.js`:** `project`, `team`, `goal`, `created_at`, and optionally `options` (arbitrary JSON via `--options` flag).
+
+**Note:** Additional fields (`phase`, `updated_at`, `stats`) may be added by hooks or the orchestrator during execution.
 
 ### Task State Format
 
@@ -181,8 +170,9 @@ Hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
   "description": "Add JWT-based authentication middleware",
   "role": "backend",
   "complexity": "complex",
+  "domain": "core",
   "status": "open",
-  "blocked_by": [],
+  "version": 0,
   "created_at": "2026-01-12T10:00:00Z",
   "updated_at": "2026-01-12T10:05:00Z",
   "claimed_by": null,
@@ -195,6 +185,10 @@ Hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 **Task status values**: `open` | `in_progress` | `resolved`
 
 **Role values**: `frontend` | `backend` | `devops` | `test` | `docs` | `security` | `review` | `worker`
+
+**Optional fields**: `complexity` (default: `standard`), `domain`, `version` (default: `0`), `claimed_at`, `completed_at`
+
+**Domain values**: `security` | `core` | `integration` | `quality` | `performance` | `deployment`
 
 ## Architecture (v3)
 
