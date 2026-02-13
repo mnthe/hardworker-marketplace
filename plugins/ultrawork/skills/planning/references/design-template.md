@@ -131,6 +131,25 @@ mkdir -p "$WORKING_DIR/docs/plans"
 - Future feature 1
 - Future feature 2
 
+## Execution Strategy
+
+### Task Overview
+| ID | Task | Complexity | Approach | Blocked By |
+|----|------|-----------|----------|------------|
+| 1  | [Task subject] | standard | standard | - |
+| 2  | [Task subject] | standard | tdd | 1 |
+| verify | [Verification] | complex | - | 1, 2 |
+
+### Execution Waves
+- **Wave 1**: [1] — [Brief rationale]
+- **Wave 2**: [2] — [Brief rationale]
+- **Wave 3**: [verify] — Final verification
+
+### Key Criteria
+[List 2-3 most critical success criteria across all tasks]
+- [ ] [Critical criterion 1]
+- [ ] [Critical criterion 2]
+
 ## Assumptions
 1. [Assumption 1]
 2. [Assumption 2]

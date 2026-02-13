@@ -175,6 +175,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **worker**         | inherit | Task implementation  | Execute ONE task, collect evidence, update task file. Supports standard and TDD approaches                      |
 | **verifier**       | inherit | Quality gatekeeper   | Audit evidence, scan for blocked patterns, run final tests, PASS/FAIL determination, trigger Ralph loop on fail |
 | **reviewer**       | inherit | Code review          | Deep verification, read actual code, check edge cases, detect security issues, provide specific feedback        |
+| **documenter**       | haiku   | Documentation | Transform design doc from planning artifact to implementation record after verification PASS                    |
 | **scope-analyzer** | haiku   | Dependency detection | Analyze cross-layer deps, output to context.json scopeExpansion                                                 |
 
 ## State Management
@@ -489,8 +490,12 @@ EXECUTION → VERIFICATION
   Trigger: All non-verify tasks resolved
   Script: session-update.js --phase VERIFICATION
 
-VERIFICATION → COMPLETE (success)
-  Trigger: Verifier PASS verdict
+VERIFICATION → DOCUMENTATION (success, design doc exists)
+  Trigger: Verifier PASS verdict + design doc exists
+  Agent: documenter transforms design doc into implementation record
+
+DOCUMENTATION → COMPLETE
+  Trigger: Documenter completes (or skipped if no design doc)
   Script: session-update.js --phase COMPLETE
 
 VERIFICATION → EXECUTION (failure - Ralph Loop)
@@ -669,7 +674,19 @@ verifier -> audit evidence -> run tests -> PASS/FAIL
 - Output: Updated verify task, session.json
 - Updates: session.phase → COMPLETE (PASS) or EXECUTION (FAIL)
 
-### 6. Session Complete
+### 6. Documentation Phase (if design doc exists)
+
+```bash
+# Orchestrator spawns documenter after PASS
+documenter -> read evidence + tasks -> transform design doc
+```
+
+- Agent: documenter (haiku model)
+- Input: Design document, task evidence, git diff
+- Output: Updated design document (planning artifact → implementation record)
+- Runs only if design doc exists in session
+
+### 7. Session Complete
 
 ```bash
 /ultrawork-status --session {ID}

@@ -226,10 +226,9 @@ Exit code: 0
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js" --session ${CLAUDE_SESSION_ID} --task-id "verify" \
   --status resolved \
   --add-evidence "✅ PASS: All criteria met with verified evidence"
-
-# Mark session complete
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
 ```
+
+After PASS, the orchestrator runs the **Documentation phase** (if design doc exists) to transform the design document into an implementation record, then marks session COMPLETE. See [Documentation Phase Reference](06-document.md).
 
 ---
 

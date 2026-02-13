@@ -29,6 +29,7 @@ The orchestrator MUST delegate work to sub-agents. Direct execution is prohibite
 | Planning (auto)      | ALWAYS via `Task(subagent_type="ultrawork:planner")`  | NEVER                                                      |
 | Execution            | ALWAYS via `Task(subagent_type="ultrawork:worker")`   | NEVER                                                      |
 | Verification         | ALWAYS via `Task(subagent_type="ultrawork:verifier")` | NEVER                                                      |
+| Documentation               | ALWAYS via `Task(subagent_type="ultrawork:documenter")` | NEVER                                                      |
 
 **Why**: Sub-agents are optimized for their specific tasks with proper tool access and context. Direct execution bypasses these optimizations and may produce incomplete results.
 
@@ -519,12 +520,33 @@ Verify all criteria...
 
 **5d. Completion or Ralph Loop**
 ```bash
-# PASS → COMPLETE
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
-
 # FAIL → EXECUTION (next iteration)
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION --iteration $next_iteration
 ```
+
+```python
+# PASS → Documentation → COMPLETE
+# Transform design doc into implementation record (if design doc exists)
+design_doc = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field plan.design_doc')
+working_dir = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field working_dir')
+
+if design_doc and design_doc != "null":
+    Task(
+        subagent_type="ultrawork:documenter",
+        model="haiku",
+        prompt=f"""
+CLAUDE_SESSION_ID: {SESSION_ID}
+SCRIPTS_PATH: {CLAUDE_PLUGIN_ROOT}/src/scripts
+WORKING_DIR: {working_dir}
+DESIGN_DOC: {design_doc}
+"""
+    )
+
+# Then mark complete
+Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase COMPLETE')
+```
+
+📖 **Detailed guide**: See [Documentation Phase Reference](references/06-document.md)
 
 ---
 

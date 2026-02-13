@@ -1,6 +1,6 @@
 {
   "name": "ultrawork",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Strict verification-first development mode with Session ID-based isolation (Bun cross-platform version).",
   "author": {
     "name": "mnthe"
@@ -23,7 +23,8 @@
     "./agents/reviewer/AGENT.md",
     "./agents/scope-analyzer/AGENT.md",
     "./agents/verifier/AGENT.md",
-    "./agents/worker/AGENT.md"
+    "./agents/worker/AGENT.md",
+    "./agents/documenter/AGENT.md"
   ],
   "skills": "./skills/"
 }

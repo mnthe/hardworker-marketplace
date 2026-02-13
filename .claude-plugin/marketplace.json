@@ -8,7 +8,7 @@
       "name": "ultrawork",
       "source": "./plugins/ultrawork",
       "description": "Bun cross-platform version of ultrawork - strict verification-first development with TDD support and token-optimized state management",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "mnthe"
       },

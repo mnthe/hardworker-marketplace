@@ -94,6 +94,7 @@ Write comprehensive design.md including:
 - Error handling strategy
 - Testing strategy
 - Scope (in/out)
+- **Execution strategy** (task overview, waves, key criteria)
 
 See `references/design-template.md` for complete template.
 

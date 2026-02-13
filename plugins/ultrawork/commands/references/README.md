@@ -14,6 +14,7 @@ This directory contains phase-based reference documentation following progressiv
 | **03-interview.md** | Interview | ultrawork-plan (interactive) | Deep clarification through AskUserQuestion |
 | **04-execute.md** | Execute | ultrawork, ultrawork-exec | Worker spawning, parallel execution, TDD |
 | **05-validate.md** | Validate | ultrawork, ultrawork-exec | Evidence audit, zero tolerance, PASS/FAIL |
+| **06-document.md** | Documentation | ultrawork, ultrawork-exec | Transform design doc into implementation record |
 
 ---
 
@@ -27,6 +28,7 @@ This directory contains phase-based reference documentation following progressiv
 | 03-interview | - | ✓ (interactive only) | - |
 | 04-execute | ✓ | - | ✓ |
 | 05-validate | ✓ | - | ✓ |
+| 06-document | ✓ | - | ✓ |
 
 ---
 
@@ -139,6 +141,22 @@ This directory contains phase-based reference documentation following progressiv
 **Used by**:
 - `ultrawork.md`: Full workflow includes verification
 - `ultrawork-exec.md`: Execute-only workflow includes verification
+
+---
+
+### 06-document.md (Documentation Phase)
+
+**Purpose**: Transform the design document from a planning artifact into a permanent implementation record.
+
+**Content**:
+- When to run (after PASS, if design doc exists)
+- Documenter agent spawning
+- Document transformation rules (keep/remove/add)
+- Before/after example
+
+**Used by**:
+- `ultrawork.md`: Full workflow includes documentation after verification
+- `ultrawork-exec.md`: Execute-only workflow includes documentation after verification
 
 ---
 
