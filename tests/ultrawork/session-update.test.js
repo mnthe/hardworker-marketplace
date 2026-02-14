@@ -73,14 +73,18 @@ describe('session-update.js', () => {
       expect(updated.phase).toBe('VERIFICATION');
     });
 
-    test('should update phase to COMPLETE from VERIFICATION', async () => {
-      // First move to EXECUTION (valid from PLANNING)
+    test('should update phase to COMPLETE through full lifecycle', async () => {
+      // PLANNING -> EXECUTION
       await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'EXECUTION']);
-      // Then move to VERIFICATION (valid from EXECUTION)
+      // EXECUTION -> VERIFICATION
       await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'VERIFICATION']);
-      // Set verifier approval (required for COMPLETE transition)
+      // Set verifier approval
       await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--verifier-passed']);
-      // Then move to COMPLETE (valid from VERIFICATION with verifier_passed)
+      // VERIFICATION -> DOCUMENTATION
+      await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'DOCUMENTATION']);
+      // Set documenter completion
+      await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--documenter-completed']);
+      // DOCUMENTATION -> COMPLETE
       const result = await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'COMPLETE']);
 
       expect(result.exitCode).toBe(0);
@@ -267,7 +271,7 @@ describe('session-update.js', () => {
       expect(updated.phase).toBe('VERIFICATION');
     });
 
-    test('should allow valid transition VERIFICATION to COMPLETE', async () => {
+    test('should reject VERIFICATION to COMPLETE (DOCUMENTATION required)', async () => {
       session.cleanup();
       session = createMockSession('test-session-update', {
         phase: 'VERIFICATION',
@@ -279,9 +283,24 @@ describe('session-update.js', () => {
         '--phase', 'COMPLETE'
       ]);
 
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('DOCUMENTATION');
+    });
+
+    test('should allow valid transition VERIFICATION to DOCUMENTATION', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'VERIFICATION'
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'DOCUMENTATION'
+      ]);
+
       expect(result.exitCode).toBe(0);
       const updated = readSession(session.sessionId);
-      expect(updated.phase).toBe('COMPLETE');
+      expect(updated.phase).toBe('DOCUMENTATION');
     });
 
     test('should reject PLANNING to COMPLETE', async () => {
@@ -356,12 +375,18 @@ describe('session-update.js', () => {
       expect(result.stderr).toContain('VERIFICATION');
     });
 
-    test('should reject COMPLETE transition without verifier_passed', async () => {
+    test('should reject COMPLETE transition without verifier_passed (from DOCUMENTATION)', async () => {
       session.cleanup();
       session = createMockSession('test-session-update', {
-        phase: 'VERIFICATION',
+        phase: 'DOCUMENTATION',
         verifier_passed: false
       });
+
+      // Set documenter_completed
+      await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--documenter-completed'
+      ]);
 
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
@@ -370,6 +395,142 @@ describe('session-update.js', () => {
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('verifier approval');
+    });
+  });
+
+  describe('DOCUMENTATION phase support', () => {
+    test('should accept DOCUMENTATION as a valid phase', async () => {
+      // Move to EXECUTION first, then VERIFICATION, then DOCUMENTATION
+      await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'EXECUTION']);
+      await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'VERIFICATION']);
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'DOCUMENTATION'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const updated = readSession(session.sessionId);
+      expect(updated.phase).toBe('DOCUMENTATION');
+    });
+
+    test('should normalize DOCUMENTATION phase input', async () => {
+      await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'EXECUTION']);
+      await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'VERIFICATION']);
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'documentation'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const updated = readSession(session.sessionId);
+      expect(updated.phase).toBe('DOCUMENTATION');
+    });
+  });
+
+  describe('--documenter-completed flag', () => {
+    test('should set documenter_completed during DOCUMENTATION phase', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'DOCUMENTATION'
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--documenter-completed'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const updated = readSession(session.sessionId);
+      expect(updated.documenter_completed).toBe(true);
+    });
+
+    test('should reject --documenter-completed during EXECUTION phase', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'EXECUTION'
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--documenter-completed'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('DOCUMENTATION');
+    });
+
+    test('should reject --documenter-completed during VERIFICATION phase', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'VERIFICATION'
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--documenter-completed'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('DOCUMENTATION');
+    });
+  });
+
+  describe('COMPLETE gate with documenter_completed', () => {
+    test('should reject COMPLETE transition from DOCUMENTATION without documenter_completed', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'DOCUMENTATION',
+        verifier_passed: true
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'COMPLETE'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('documenter completion');
+    });
+
+    test('should allow COMPLETE transition from DOCUMENTATION with documenter_completed', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'DOCUMENTATION',
+        verifier_passed: true
+      });
+
+      // Set documenter_completed first
+      await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--documenter-completed'
+      ]);
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'COMPLETE'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const updated = readSession(session.sessionId);
+      expect(updated.phase).toBe('COMPLETE');
+    });
+
+    test('should reject COMPLETE from VERIFICATION (DOCUMENTATION required in new workflow)', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'VERIFICATION',
+        verifier_passed: true
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'COMPLETE'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('DOCUMENTATION');
     });
   });
 });
