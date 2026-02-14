@@ -165,6 +165,15 @@ describe('session-utils.js', () => {
       expect(active).toBe(true);
     });
 
+    test('should return true for DOCUMENTATION phase', () => {
+      const sessionData = JSON.parse(fs.readFileSync(session.sessionFile, 'utf-8'));
+      sessionData.phase = 'DOCUMENTATION';
+      fs.writeFileSync(session.sessionFile, JSON.stringify(sessionData, null, 2));
+
+      const active = isSessionActive(session.sessionId);
+      expect(active).toBe(true);
+    });
+
     test('should return false for COMPLETE phase', () => {
       const sessionData = JSON.parse(fs.readFileSync(session.sessionFile, 'utf-8'));
       sessionData.phase = 'COMPLETE';
@@ -438,8 +447,18 @@ describe('session-utils.js', () => {
       expect(result.allowed).toBe(true);
     });
 
+    test('should allow VERIFICATION -> DOCUMENTATION', () => {
+      const result = validatePhaseTransition('VERIFICATION', 'DOCUMENTATION');
+      expect(result.allowed).toBe(true);
+    });
+
+    test('should allow DOCUMENTATION -> COMPLETE', () => {
+      const result = validatePhaseTransition('DOCUMENTATION', 'COMPLETE');
+      expect(result.allowed).toBe(true);
+    });
+
     test('should allow same -> same (no-op)', () => {
-      const phases = ['PLANNING', 'EXECUTION', 'VERIFICATION', 'COMPLETE', 'CANCELLED', 'FAILED'];
+      const phases = ['PLANNING', 'EXECUTION', 'VERIFICATION', 'DOCUMENTATION', 'COMPLETE', 'CANCELLED', 'FAILED'];
       for (const phase of phases) {
         const result = validatePhaseTransition(phase, phase);
         expect(result.allowed).toBe(true);

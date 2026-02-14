@@ -89,6 +89,16 @@ describe('setup-ultrawork.js', () => {
       expect(fs.existsSync(path.join(sessionDir, 'context.json'))).toBe(true);
     });
 
+    test('should initialize documenter_completed as false', async () => {
+      await runScript(SCRIPT_PATH, [
+        '--session', testSessionId,
+        '--goal', 'Documenter completed test'
+      ]);
+
+      const session = readSession(testSessionId);
+      expect(session.documenter_completed).toBe(false);
+    });
+
     test('should set options from flags', async () => {
       await runScript(SCRIPT_PATH, [
         '--session', testSessionId,

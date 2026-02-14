@@ -111,7 +111,7 @@ function isSessionActive(sessionId) {
 
     // Active phases
     /** @type {Phase[]} */
-    const activePhases = ['PLANNING', 'EXECUTION', 'VERIFICATION'];
+    const activePhases = ['PLANNING', 'EXECUTION', 'VERIFICATION', 'DOCUMENTATION'];
     return activePhases.includes(phase);
   } catch {
     return false;
@@ -379,7 +379,7 @@ function cleanupOldSessions(days = 7) {
 const TERMINAL_PHASES = new Set(['COMPLETE', 'CANCELLED', 'FAILED']);
 
 /** @type {Set<Phase>} */
-const ACTIVE_PHASES = new Set(['PLANNING', 'EXECUTION', 'VERIFICATION']);
+const ACTIVE_PHASES = new Set(['PLANNING', 'EXECUTION', 'VERIFICATION', 'DOCUMENTATION']);
 
 /**
  * Validate a phase transition
@@ -446,8 +446,18 @@ function validatePhaseTransition(currentPhase, newPhase) {
     return { allowed: true };
   }
 
+  // VERIFICATION -> DOCUMENTATION (allowed after verification pass)
+  if (currentPhase === 'VERIFICATION' && newPhase === 'DOCUMENTATION') {
+    return { allowed: true };
+  }
+
   // VERIFICATION -> EXECUTION (Ralph loop)
   if (currentPhase === 'VERIFICATION' && newPhase === 'EXECUTION') {
+    return { allowed: true };
+  }
+
+  // DOCUMENTATION -> COMPLETE (always allowed)
+  if (currentPhase === 'DOCUMENTATION' && newPhase === 'COMPLETE') {
     return { allowed: true };
   }
 

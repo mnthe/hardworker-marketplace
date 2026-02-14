@@ -498,6 +498,7 @@ function createSession(args) {
       created_at: timestamp,
     } : null,
     verifier_passed: false,
+    documenter_completed: false,
     cancelled_at: null,
   };
 

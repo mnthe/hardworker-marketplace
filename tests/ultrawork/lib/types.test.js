@@ -4,7 +4,11 @@
  */
 
 const { describe, test, expect } = require('bun:test');
+const fs = require('fs');
+const path = require('path');
 const types = require('../../../plugins/ultrawork/src/lib/types.js');
+
+const TYPES_FILE = path.join(__dirname, '../../../plugins/ultrawork/src/lib/types.js');
 
 describe('types.js', () => {
   describe('module exports', () => {
@@ -35,8 +39,11 @@ describe('types.js', () => {
       expect(phase).toBe('PLANNING');
 
       // Valid phase values
-      const validPhases = ['PLANNING', 'EXECUTION', 'VERIFICATION', 'COMPLETE', 'CANCELLED', 'FAILED', 'unknown'];
+      const validPhases = ['PLANNING', 'EXECUTION', 'VERIFICATION', 'DOCUMENTATION', 'COMPLETE', 'CANCELLED', 'FAILED', 'unknown'];
       expect(validPhases).toContain(phase);
+
+      // DOCUMENTATION must be present in valid phases
+      expect(validPhases).toContain('DOCUMENTATION');
     });
 
     test('should support ExplorationStage typedef', () => {
@@ -93,6 +100,16 @@ describe('types.js', () => {
       // Valid approach values
       const validApproaches = ['standard', 'tdd'];
       expect(validApproaches).toContain(approach);
+    });
+  });
+
+  describe('Phase typedef includes DOCUMENTATION', () => {
+    test('Phase typedef in source should include DOCUMENTATION', () => {
+      const source = fs.readFileSync(TYPES_FILE, 'utf-8');
+      // Find the Phase typedef line
+      const phaseTypedef = source.match(/@typedef\s*\{[^}]*\}\s*Phase/);
+      expect(phaseTypedef).toBeTruthy();
+      expect(phaseTypedef[0]).toContain('DOCUMENTATION');
     });
   });
 

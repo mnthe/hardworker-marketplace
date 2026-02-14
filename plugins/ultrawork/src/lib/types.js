@@ -8,7 +8,7 @@
 // ============================================================================
 
 /**
- * @typedef {'PLANNING' | 'EXECUTION' | 'VERIFICATION' | 'COMPLETE' | 'CANCELLED' | 'FAILED' | 'unknown'} Phase
+ * @typedef {'PLANNING' | 'EXECUTION' | 'VERIFICATION' | 'DOCUMENTATION' | 'COMPLETE' | 'CANCELLED' | 'FAILED' | 'unknown'} Phase
  */
 
 /**
