@@ -70,7 +70,8 @@ The workflow follows these phases:
 2. **Review**: You review the plan (in interactive mode)
 3. **Execution**: Worker agents execute tasks in dependency order
 4. **Verification**: Verifier agent checks all criteria with evidence
-5. **Completion**: Session ends when all criteria pass
+5. **Documentation**: Documenter agent creates architecture decision record (ADR) and updates permanent documentation
+6. **Completion**: Session ends when all criteria pass and documentation is complete
 
 ### Understanding the Output
 
@@ -95,7 +96,7 @@ Monitor session progress:
 
 Output shows:
 
-- Current phase (planning, executing, verifying, complete)
+- Current phase (planning, executing, verifying, documenting, complete)
 - Task completion status (resolved/open/blocked)
 - Evidence collected per task
 - Time elapsed since session start
@@ -153,7 +154,7 @@ See [Workflow Guide](workflow-guide.md) for evidence collection best practices.
 If verification fails, ultrawork retries execution automatically:
 
 ```
-EXECUTION → VERIFICATION → (fail) → EXECUTION → VERIFICATION → (pass) → COMPLETE
+EXECUTION → VERIFICATION → (fail) → EXECUTION → VERIFICATION → (pass) → DOCUMENTATION → COMPLETE
 ```
 
 Default maximum: 5 iterations. Configure with `--max-iterations`:

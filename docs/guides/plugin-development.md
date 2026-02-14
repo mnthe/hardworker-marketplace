@@ -361,7 +361,7 @@ File: `session.json`
   "version": "1",
   "id": "uuid",
   "goal": "user goal",
-  "phase": "planning|executing|verifying|complete",
+  "phase": "planning|executing|verifying|documenting|complete",
   "created_at": "ISO8601 timestamp",
   "updated_at": "ISO8601 timestamp",
   "data": {
