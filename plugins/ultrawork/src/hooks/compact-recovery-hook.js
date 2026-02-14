@@ -143,6 +143,7 @@ function buildDelegationRules() {
 | Exploration | Task(subagent_type="ultrawork:explorer", ...)  |
 | Execution   | Task(subagent_type="ultrawork:worker", ...)    |
 | Verification| Task(subagent_type="ultrawork:verifier", ...)  |
+| Documentation | Task(subagent_type="ultrawork:documenter", ...) |
 
 ╔═══════════════════════════════════════════════════════════╗
 ║ ⛔ CRITICAL: YOU ARE THE ORCHESTRATOR, NOT A WORKER       ║
@@ -223,6 +224,11 @@ Wait for all explorers to complete before planning.`;
       return `1. Spawn verifier: Task(subagent_type="ultrawork:verifier", ...)
 2. Verifier will check evidence and run tests
 3. PASS → phase=COMPLETE, FAIL → phase=EXECUTION (Ralph loop)`;
+
+    case 'DOCUMENTATION':
+      return `1. Spawn documenter: Task(subagent_type="ultrawork:documenter", ...)
+2. Documenter creates ADR, updates permanent docs, deletes plan
+3. After documenter completes: session-update.js --phase COMPLETE`;
 
     case 'COMPLETE':
       return `Session complete. Review results with /ultrawork-status`;

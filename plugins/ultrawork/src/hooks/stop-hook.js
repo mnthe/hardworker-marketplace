@@ -299,6 +299,11 @@ Commands:
         systemMsg = `⚠️ ULTRAWORK [${sessionId}]: Verification in progress for '${goal}'`;
         break;
 
+      case 'DOCUMENTATION':
+        reason = 'Documenter is processing documents. Wait for documentation to complete or use /ultrawork-clean.';
+        systemMsg = `⚠️ ULTRAWORK [${sessionId}]: Documentation in progress for '${goal}'`;
+        break;
+
       default:
         reason = `Ultrawork session is active (phase: ${phase}). Complete the session or use /ultrawork-clean.`;
         systemMsg = `⚠️ ULTRAWORK [${sessionId}]: Session active for '${goal}'`;
