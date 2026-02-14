@@ -287,7 +287,7 @@ describe('session-update.js', () => {
       expect(result.stderr).toContain('DOCUMENTATION');
     });
 
-    test('should allow valid transition VERIFICATION to DOCUMENTATION', async () => {
+    test('should allow valid transition VERIFICATION to DOCUMENTATION with --verifier-passed', async () => {
       session.cleanup();
       session = createMockSession('test-session-update', {
         phase: 'VERIFICATION'
@@ -295,6 +295,7 @@ describe('session-update.js', () => {
 
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
+        '--verifier-passed',
         '--phase', 'DOCUMENTATION'
       ]);
 
@@ -400,12 +401,13 @@ describe('session-update.js', () => {
 
   describe('DOCUMENTATION phase support', () => {
     test('should accept DOCUMENTATION as a valid phase', async () => {
-      // Move to EXECUTION first, then VERIFICATION, then DOCUMENTATION
+      // Move to EXECUTION first, then VERIFICATION, then DOCUMENTATION (with --verifier-passed)
       await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'EXECUTION']);
       await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'VERIFICATION']);
 
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
+        '--verifier-passed',
         '--phase', 'DOCUMENTATION'
       ]);
 
@@ -418,9 +420,11 @@ describe('session-update.js', () => {
       await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'EXECUTION']);
       await runScript(SCRIPT_PATH, ['--session', session.sessionId, '--phase', 'VERIFICATION']);
 
+      // VERIFICATION → DOCUMENTATION requires --verifier-passed flag
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
-        '--phase', 'documentation'
+        '--phase', 'documentation',
+        '--verifier-passed'
       ]);
 
       expect(result.exitCode).toBe(0);
@@ -491,7 +495,7 @@ describe('session-update.js', () => {
       ]);
 
       expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain('documenter completion');
+      expect(result.stderr).toContain('--documenter-completed flag');
     });
 
     test('should allow COMPLETE transition from DOCUMENTATION with documenter_completed', async () => {
@@ -531,6 +535,93 @@ describe('session-update.js', () => {
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('DOCUMENTATION');
+    });
+
+    test('should allow COMPLETE with --documenter-completed in same call', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'DOCUMENTATION',
+        verifier_passed: true
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--documenter-completed',
+        '--phase', 'COMPLETE'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const updated = readSession(session.sessionId);
+      expect(updated.phase).toBe('COMPLETE');
+      expect(updated.documenter_completed).toBe(true);
+    });
+  });
+
+  describe('Phase transition guardrails', () => {
+    test('should reject VERIFICATION → DOCUMENTATION without --verifier-passed', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'VERIFICATION'
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'DOCUMENTATION'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--verifier-passed');
+    });
+
+    test('should allow VERIFICATION → DOCUMENTATION with --verifier-passed', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'VERIFICATION'
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--verifier-passed',
+        '--phase', 'DOCUMENTATION'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const updated = readSession(session.sessionId);
+      expect(updated.phase).toBe('DOCUMENTATION');
+      expect(updated.verifier_passed).toBe(true);
+    });
+
+    test('should allow VERIFICATION → DOCUMENTATION if verifier_passed already set', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'VERIFICATION',
+        verifier_passed: true
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'DOCUMENTATION'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const updated = readSession(session.sessionId);
+      expect(updated.phase).toBe('DOCUMENTATION');
+    });
+
+    test('should reject DOCUMENTATION → COMPLETE without --documenter-completed', async () => {
+      session.cleanup();
+      session = createMockSession('test-session-update', {
+        phase: 'DOCUMENTATION',
+        verifier_passed: true
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'COMPLETE'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--documenter-completed');
     });
   });
 });

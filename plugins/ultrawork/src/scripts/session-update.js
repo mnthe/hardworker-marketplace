@@ -140,7 +140,16 @@ async function main() {
           process.exit(1);
         }
 
-        // Additional gate: COMPLETE requires verifier_passed + sufficient evidence
+        // Gate: VERIFICATION → DOCUMENTATION requires --verifier-passed flag
+        if (args.phase === 'DOCUMENTATION' && currentPhase === 'VERIFICATION') {
+          if (!currentSession.verifier_passed && !args.verifierPassed) {
+            console.error('Error: VERIFICATION → DOCUMENTATION requires --verifier-passed flag.');
+            console.error('Only the Verifier agent should perform this transition.');
+            process.exit(1);
+          }
+        }
+
+        // Gate: COMPLETE requires verifier_passed + documenter_completed + sufficient evidence
         if (args.phase === 'COMPLETE') {
           if (!currentSession.verifier_passed) {
             console.error('Error: Cannot transition to COMPLETE without verifier approval.');
@@ -148,10 +157,10 @@ async function main() {
             process.exit(1);
           }
 
-          // When transitioning from DOCUMENTATION, require documenter_completed
-          if (currentPhase === 'DOCUMENTATION' && !currentSession.documenter_completed) {
-            console.error('Error: Cannot transition to COMPLETE without documenter completion.');
-            console.error('Set --documenter-completed during DOCUMENTATION phase first.');
+          // Require documenter_completed (from session OR being set in this call)
+          if (currentPhase === 'DOCUMENTATION' && !currentSession.documenter_completed && !args.documenterCompleted) {
+            console.error('Error: DOCUMENTATION → COMPLETE requires --documenter-completed flag.');
+            console.error('Only the Documenter agent should perform this transition.');
             process.exit(1);
           }
 
