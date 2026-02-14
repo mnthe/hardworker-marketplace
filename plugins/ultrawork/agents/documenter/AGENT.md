@@ -16,7 +16,7 @@ description: |
   assistant: "I'll spawn the documenter agent to convert the planning artifact into a permanent record."
   <commentary>Documenter creates ADR, enriches permanent docs (ARCHITECTURE.md, API.md, etc.), and removes the plan.</commentary>
   </example>
-model: haiku
+model: opus
 color: cyan
 tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash(rm:*)", "Bash(rmdir:*)", "Bash(git diff:*)", "Bash(ls:*)", "Bash(mkdir:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-get.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/evidence-summary.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/evidence-query.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js:*)"]
 ---
@@ -155,15 +155,19 @@ rm "{DESIGN_DOC}"
 rmdir "{WORKING_DIR}/docs/plans" 2>/dev/null || true
 ```
 
-### Phase 4: Mark Documentation Complete
+### Phase 4: Transition to COMPLETE
 
-After all documentation work is done (ADR created, permanent docs updated, plan deleted), mark the documentation phase as complete:
+**YOU are responsible for transitioning the session to COMPLETE.** The orchestrator cannot do this — only you can, because the transition requires your `--documenter-completed` flag.
+
+After all documentation work is done (ADR created, permanent docs updated, plan deleted):
 
 ```bash
+# MANDATORY: Transition to COMPLETE phase
+# This is YOUR responsibility — the orchestrator cannot do this without --documenter-completed
 bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --documenter-completed --phase COMPLETE
 ```
 
-**This is MANDATORY** — the session cannot transition to COMPLETE without this call.
+**CRITICAL**: You MUST call this as your last action. If you don't, the session will be stuck in DOCUMENTATION phase.
 
 ---
 

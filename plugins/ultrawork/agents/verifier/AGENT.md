@@ -17,7 +17,7 @@ description: |
   assistant: "I'll spawn the verifier agent to validate all criteria and scan for blocked patterns."
   <commentary>Verifier checks every criterion, runs verification commands, and makes PASS/FAIL determination.</commentary>
   </example>
-model: inherit
+model: opus
 color: magenta
 tools: ["Read", "Edit", "Bash", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-*.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-*.js:*)", "Glob", "Grep", "mcp__plugin_serena_serena__find_referencing_symbols", "mcp__plugin_serena_serena__search_for_pattern", "mcp__plugin_playwright_playwright__browser_navigate", "mcp__plugin_playwright_playwright__browser_snapshot", "mcp__plugin_playwright_playwright__browser_take_screenshot", "mcp__plugin_playwright_playwright__browser_click"]
 ---
@@ -300,35 +300,43 @@ Parse Codex result JSON:
 | **Command failure** | Create task: "Fix failing tests" |
 | **Codex found issues** | Create task: "Fix Codex-identified issue: [detail]" |
 
-### Phase 6: Update Files
+### Phase 6: Update Files and Transition Phase
+
+**YOU are responsible for transitioning the session phase.** The orchestrator does NOT do this — only you can, because the transition requires your `--verifier-passed` flag.
 
 **On PASS:**
 
 ```bash
+# 1. Update verify task
 bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
   --status resolved \
   --add-evidence "VERDICT: PASS" \
   --add-evidence "All tasks verified with evidence"
 
+# 2. MANDATORY: Transition to DOCUMENTATION phase
+# This is YOUR responsibility — the orchestrator cannot do this without --verifier-passed
 bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --verifier-passed --phase DOCUMENTATION
 ```
 
 **On FAIL (Ralph Loop):**
 
 ```bash
-# Create fix tasks
+# 1. Create fix tasks
 bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
   --subject "Fix: [Specific issue]" \
   --description "Verification failed: [reason]. Action: [fix]." \
   --criteria '["Issue resolved with evidence"]'
 
-# Update verify task
+# 2. Update verify task
 bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
   --add-evidence "VERDICT: FAIL - Created fix tasks"
 
-# Return to EXECUTION phase
+# 3. MANDATORY: Return to EXECUTION phase (Ralph Loop)
+# This is YOUR responsibility — triggers re-execution of failed tasks
 bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
 ```
+
+**CRITICAL**: You MUST call `session-update.js` with the appropriate phase transition as your last action. If you don't, the session will be stuck in VERIFICATION phase.
 
 ---
 

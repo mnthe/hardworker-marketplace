@@ -173,9 +173,9 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **explorer**       | haiku   | Codebase discovery   | Fast exploration, write findings to `exploration/*.md`, update `context.json` with summary                      |
 | **planner**        | inherit | Task decomposition   | Read explorer context, make design decisions (auto mode), create task graph, write design doc to `docs/plans/`  |
 | **worker**         | inherit | Task implementation  | Execute ONE task, collect evidence, update task file. Supports standard and TDD approaches                      |
-| **verifier**       | inherit | Quality gatekeeper   | Audit evidence, scan for blocked patterns, run final tests, PASS/FAIL determination, trigger Ralph loop on fail |
+| **verifier**       | opus    | Quality gatekeeper   | Audit evidence, scan for blocked patterns, run final tests, PASS/FAIL determination, trigger Ralph loop on fail. Transitions to DOCUMENTATION (PASS) or EXECUTION (FAIL). |
 | **reviewer**       | inherit | Code review          | Deep verification, read actual code, check edge cases, detect security issues, provide specific feedback        |
-| **documenter**       | haiku   | Documentation | Create ADR, update permanent docs, delete plan doc. Transitions session to COMPLETE. |
+| **documenter**       | opus    | Documentation | Create ADR, update permanent docs, delete plan doc. Transitions session to COMPLETE. |
 | **scope-analyzer** | haiku   | Dependency detection | Analyze cross-layer deps, output to context.json scopeExpansion                                                 |
 
 ## State Management
