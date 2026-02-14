@@ -4,6 +4,7 @@
  * Usage: session-update.js --session <ID> [--phase PHASE] [--exploration-stage STAGE] [--iteration N]
  */
 
+const fs = require('fs');
 const { updateSession, resolveSessionId, readSession, validatePhaseTransition } = require('../lib/session-utils.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
 
@@ -199,6 +200,11 @@ async function main() {
       // Update phase if provided
       if (args.phase) {
         session.phase = args.phase;
+
+        // Reset verification state on EXECUTION transition (Ralph loop)
+        if (args.phase === 'EXECUTION') {
+          session.verifier_passed = false;
+        }
       }
 
       // Update plan approval if provided
@@ -233,6 +239,12 @@ async function main() {
 
       return session;
     });
+
+    // Clean up Codex result file on EXECUTION transition (Ralph loop)
+    if (args.phase === 'EXECUTION') {
+      const codexResultPath = `/tmp/codex-${args.sessionId}.json`;
+      try { fs.unlinkSync(codexResultPath); } catch { /* file may not exist */ }
+    }
 
     // Read and output updated session
     const updatedSession = readSession(args.sessionId);

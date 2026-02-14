@@ -222,7 +222,10 @@ echo "EXIT_CODE: $?"
 
 Record ALL outputs as final evidence.
 
-### Phase 4.5: Join Codex Result
+### Phase 4.5: Join Codex Result (MANDATORY — hook-enforced)
+
+> **⚠️ BLOCKING GATE**: A PreToolUse hook blocks `--verifier-passed` unless the Codex result file exists.
+> If you skip this step, the phase transition will be rejected. You MUST wait for Codex.
 
 Await the background Codex verification result:
 

@@ -159,7 +159,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **session-context-hook.js**     | UserPromptSubmit        | Inject session variables into context           | Adds SESSION_ID and CLAUDE_PLUGIN_ROOT to agent prompts                                                                                                            |
 | **agent-lifecycle-tracking.js** | PreToolUse              | Track agent execution for evidence              | Records which agents are active (for subagent tracking)                                                                                                            |
 | **post-tool-use-evidence.js**   | PostToolUse             | Collect evidence from tool usage                | Records command execution (Bash), file operations (Write/Edit), test results                                                                                       |
-| **gate-enforcement.js**         | PreToolUse (Edit/Write) | Enforce phase restrictions and TDD order        | Blocks code edits during PLANNING; blocks implementation before tests in TDD tasks                                                                                 |
+| **gate-enforcement.js**         | PreToolUse (Edit/Write/Bash) | Enforce phase restrictions, TDD order, and Codex gate | Blocks code edits during PLANNING; blocks implementation before tests in TDD; blocks `--verifier-passed` without Codex result file                                |
 | **gate-status-notification.js** | PostToolUse (Task)      | Notify about gate enforcement status            | Displays session phase and gate rules after Task tool usage                                                                                                        |
 | **subagent-start-tracking.js**  | SubagentStart (ultrawork:.*) | Track subagent spawn                        | Records agent_id, agent_type to session.active_agents[]                                                                                                            |
 | **subagent-stop-tracking.js**   | SubagentStop            | Track subagent completion                       | Uses agent_type for filtering, removes from active_agents[], records completion with agent_type in evidence                                                        |
@@ -503,6 +503,7 @@ VERIFICATION → EXECUTION (failure - Ralph Loop)
   Trigger: Verifier FAIL verdict, creates fix tasks
   Owner: Verifier agent
   Script: session-update.js --phase EXECUTION
+  Side effects: Resets verifier_passed=false, deletes /tmp/codex-{session}.json
 
 DOCUMENTATION → COMPLETE
   Trigger: Documenter completes (ADR created, docs updated, plan deleted)
