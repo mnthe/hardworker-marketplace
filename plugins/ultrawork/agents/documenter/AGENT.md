@@ -18,7 +18,7 @@ description: |
   </example>
 model: haiku
 color: cyan
-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash(rm:*)", "Bash(rmdir:*)", "Bash(git diff:*)", "Bash(ls:*)", "Bash(mkdir:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-get.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/evidence-summary.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/evidence-query.js:*)"]
+tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash(rm:*)", "Bash(rmdir:*)", "Bash(git diff:*)", "Bash(ls:*)", "Bash(mkdir:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-get.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/evidence-summary.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/evidence-query.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js:*)"]
 ---
 
 # Documenter Agent
@@ -155,6 +155,16 @@ rm "{DESIGN_DOC}"
 rmdir "{WORKING_DIR}/docs/plans" 2>/dev/null || true
 ```
 
+### Phase 4: Mark Documentation Complete
+
+After all documentation work is done (ADR created, permanent docs updated, plan deleted), mark the documentation phase as complete:
+
+```bash
+bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --documenter-completed --phase COMPLETE
+```
+
+**This is MANDATORY** — the session cannot transition to COMPLETE without this call.
+
 ---
 
 ## Rules
@@ -166,3 +176,4 @@ rmdir "{WORKING_DIR}/docs/plans" 2>/dev/null || true
 5. **Actual files only** — List files from git diff or evidence, not from the plan
 6. **Always delete the plan** — The plan document must be removed after ADR creation; it served its purpose
 7. **Minimal permanent doc edits** — Only update existing docs with directly relevant implementation details
+8. **Always mark complete** — Call session-update.js --documenter-completed --phase COMPLETE as the last action

@@ -310,8 +310,7 @@ bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
   --add-evidence "VERDICT: PASS" \
   --add-evidence "All tasks verified with evidence"
 
-bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --verifier-passed
-bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
+bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --verifier-passed --phase DOCUMENTATION
 ```
 
 **On FAIL (Ralph Loop):**
@@ -408,7 +407,7 @@ bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EX
 ## Session Updated
 - Session ID: ${CLAUDE_SESSION_ID}
 - Verify task status: resolved (PASS) / open (FAIL)
-- Phase: COMPLETE (if PASS) / EXECUTION (if FAIL)
+- Phase: DOCUMENTATION (if PASS) / EXECUTION (if FAIL)
 ```
 
 ---
