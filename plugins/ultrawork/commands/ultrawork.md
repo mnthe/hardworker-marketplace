@@ -371,6 +371,14 @@ mkdir -p "$WORKING_DIR/docs/plans"
 
 # Write design document to PROJECT directory
 # Format: YYYY-MM-DD-{goal-slug}-design.md
+DESIGN_PATH="$WORKING_DIR/docs/plans/$(date +%Y-%m-%d)-{goal-slug}-design.md"
+```
+
+**After writing, store design doc path in session state (required for documentation phase):**
+
+```bash
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} \
+  --design-doc "$DESIGN_PATH"
 ```
 
 See `skills/planning/SKILL.md` Phase 4 for template.

@@ -2,7 +2,7 @@
 
 **Used by**: `ultrawork.md`, `ultrawork-exec.md`
 
-**Purpose**: Transform the design document from a planning artifact into a permanent implementation record after verification passes.
+**Purpose**: Create an ADR from the design document, update permanent project docs, and delete the plan file after verification passes.
 
 ---
 
@@ -20,7 +20,20 @@ VERIFICATION (PASS) → DOCUMENTATION → COMPLETE
 
 - **Always** after verification PASS (if a design document exists)
 - **Skip** if no design document was created (e.g., trivial tasks without planning)
-- **Skip** if `--auto` mode and no design doc path in session
+- **Skip** if `plan.design_doc` is `null` in session state
+
+---
+
+## Prerequisite: Design Doc Path in Session State
+
+The documentation phase depends on `plan.design_doc` being set in session state. This is stored during the planning phase:
+
+```bash
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} \
+  --design-doc "$DESIGN_PATH"
+```
+
+**If this step was missed during planning, the documentation phase will be skipped.**
 
 ---
 
@@ -47,39 +60,62 @@ DESIGN_DOC: {design_doc}
 
 ---
 
-## What Changes in the Design Document
+## What the Documenter Does
 
-### Removed/Condensed
+### Phase 1: Gather
 
-| Section | Action | Reason |
-|---------|--------|--------|
-| Unselected options in Approach Selection | Condense to one-line | No longer relevant for record |
-| Risks & Mitigations | Remove speculative risks | Only keep encountered risks |
-| Fallback Strategies | Remove if unused | Speculative content |
-| Documentation plan | Remove | Was a todo list |
+Collect evidence, task results, and git diff — same as before.
 
-### Kept (ADR Value)
+### Phase 2: Create ADR + Update Permanent Docs
 
-| Section | Action | Reason |
-|---------|--------|--------|
-| Overview | Update if scope changed | Core context |
-| Approach Selection (selected) | Keep with rationale | ADR core |
-| Decisions | Keep all with rationale | ADR core |
-| Architecture | Update to match reality | Reference value |
+#### 2a. Create ADR
 
-### Added
+| Aspect | Detail |
+|--------|--------|
+| Location | `docs/adr/YYYY-MM-DD-{slug}.md` |
+| Source | Design doc decisions + task evidence + git diff |
+| Format | Standard ADR (Status, Context, Decision, Outcome) |
 
-| Section | Content | Source |
-|---------|---------|--------|
-| Outcome | Status, date, iterations, files changed, test results | Evidence + git diff |
-| Execution Summary | Task table with status and key evidence | Task JSON |
-| Delta from Plan | What differed from original plan | Comparison |
+**ADR content extracted from design doc:**
+
+| Design Doc Section | ADR Section | Action |
+|--------------------|-------------|--------|
+| Overview | Context | Brief problem statement |
+| Approach Selection (selected) | Decision | Selected approach with rationale |
+| Decisions | Decision | All key decisions with rationale |
+| — | Outcome | Status, files changed, test results (from evidence) |
+| — | Execution Summary | Task table with evidence |
+| — | Delta from Plan | What differed from original plan |
+
+**Sections NOT included in ADR:**
+- Unselected approach options (condense to "Alternatives considered: X, Y")
+- Speculative risks that didn't materialize
+- Fallback strategies that weren't triggered
+- Documentation plan / todo items
+
+#### 2b. Update Permanent Docs
+
+| Aspect | Detail |
+|--------|--------|
+| Scope | Only docs that **already exist** in `docs/` |
+| Targets | ARCHITECTURE.md, API.md, README.md, etc. |
+| Action | Surgical Edit updates with implementation details |
+| Skip if | No relevant permanent docs exist |
+
+### Phase 3: Cleanup
+
+| Action | Command |
+|--------|---------|
+| Delete plan document | `rm "{DESIGN_DOC}"` |
+| Remove empty plans dir | `rmdir "{WORKING_DIR}/docs/plans" 2>/dev/null \|\| true` |
 
 ---
 
 ## Example Transformation
 
-### Before (Planning Artifact)
+### Before: Plan Document
+
+`docs/plans/2026-02-14-user-auth-design.md`:
 
 ```markdown
 # Design: User Authentication
@@ -111,18 +147,35 @@ Add JWT-based authentication to the API.
 | Key rotation | Medium | Use env vars |
 ```
 
-### After (Implementation Record)
+### After: ADR + Plan Deleted
+
+`docs/adr/2026-02-14-user-auth.md` (created):
 
 ```markdown
-# Design: User Authentication
+# ADR: User Authentication
 
-## Overview
-Added JWT-based authentication to the API.
+## Status
+
+Accepted — 2026-02-14
+
+## Context
+
+The API needed JWT-based authentication for stateless, horizontally scalable auth.
+
+## Decision
+
+**Approach**: JWT with httpOnly cookie storage.
+- **Rationale**: Stateless, scales horizontally, XSS protection via httpOnly cookies.
+- **Alternatives considered**: Session-based, OAuth only.
+
+### Token Storage
+- **Choice**: httpOnly cookies
+- **Rationale**: XSS protection
+- **Asked User**: Yes
 
 ## Outcome
 
-**Status**: PASS
-**Completed**: 2026-02-13
+**Verification**: PASS
 **Iterations**: 1
 
 ### Files Changed
@@ -133,18 +186,6 @@ Added JWT-based authentication to the API.
 ### Test Results
 - 8/8 tests passed, exit code 0
 
-## Approach Selection
-
-### Selected: JWT
-**Rationale**: Stateless, scales horizontally.
-**Alternatives considered**: Session-based, OAuth only
-
-## Decisions
-### Token Storage
-- **Choice**: httpOnly cookies
-- **Rationale**: XSS protection
-- **Asked User**: Yes
-
 ## Execution Summary
 
 | ID | Task | Status | Key Evidence |
@@ -152,13 +193,18 @@ Added JWT-based authentication to the API.
 | 1  | Setup JWT middleware | resolved | auth.ts created, 5/5 tests pass |
 | 2  | Login endpoint | resolved | POST /login returns 200 with token |
 | verify | Verification | resolved | All criteria met |
+
+## Delta from Plan
+
+- Implementation matched plan.
 ```
+
+`docs/plans/2026-02-14-user-auth-design.md` → **deleted**
 
 ---
 
 ## Documenter Agent
 
 - **Model**: haiku (document transformation is lightweight)
-- **Tools**: Read, Edit, Bash (scripts only), Glob, Grep
-- **Output**: Updated design document in-place
-- **Duration**: Fast (~30s)
+- **Tools**: Read, Write, Edit, Bash (rm, rmdir, git diff, mkdir), Glob, Grep, scripts
+- **Output**: ADR file in `docs/adr/`, optional permanent doc updates, plan file deleted

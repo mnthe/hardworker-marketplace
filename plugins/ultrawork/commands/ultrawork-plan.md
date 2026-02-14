@@ -369,6 +369,10 @@ Write(
   file_path=DESIGN_PATH,
   content=design_content
 )
+
+# Store design doc path in session state (required for documentation phase)
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} \
+  --design-doc "$DESIGN_PATH"
 ```
 
 See `skills/planning/SKILL.md` Phase 4 for template.

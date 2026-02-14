@@ -27,10 +27,11 @@ Loop until: PASS or max_iterations reached
 
 The orchestrator MUST delegate work to sub-agents. Direct execution is prohibited.
 
-| Phase        | Delegation                                            | Direct Execution |
-| ------------ | ----------------------------------------------------- | ---------------- |
-| Execution    | ALWAYS via `Task(subagent_type="ultrawork:worker")`   | NEVER            |
-| Verification | ALWAYS via `Task(subagent_type="ultrawork:verifier")` | NEVER            |
+| Phase         | Delegation                                              | Direct Execution |
+| ------------- | ------------------------------------------------------- | ---------------- |
+| Execution     | ALWAYS via `Task(subagent_type="ultrawork:worker")`     | NEVER            |
+| Verification  | ALWAYS via `Task(subagent_type="ultrawork:verifier")`   | NEVER            |
+| Documentation | ALWAYS via `Task(subagent_type="ultrawork:documenter")` | NEVER            |
 
 **Exception**: User explicitly requests direct execution (e.g., "run this directly", "execute without agent").
 
@@ -159,6 +160,22 @@ while iteration <= max_iterations:
     if verification_result == "CANCELLED":
         return
     elif verification_result == "PASS":
+        # Documentation phase - transform design doc into ADR + update permanent docs
+        design_doc = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field plan.design_doc')
+        working_dir = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir')
+
+        if design_doc and design_doc.strip() != "null":
+            Task(
+                subagent_type="ultrawork:documenter",
+                model="haiku",
+                prompt=f"""
+CLAUDE_SESSION_ID: ${CLAUDE_SESSION_ID}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
+WORKING_DIR: {working_dir}
+DESIGN_DOC: {design_doc}
+"""
+            )
+
         Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE')
         print("## Execution Complete - All criteria verified")
         return

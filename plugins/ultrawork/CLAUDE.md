@@ -175,7 +175,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **worker**         | inherit | Task implementation  | Execute ONE task, collect evidence, update task file. Supports standard and TDD approaches                      |
 | **verifier**       | inherit | Quality gatekeeper   | Audit evidence, scan for blocked patterns, run final tests, PASS/FAIL determination, trigger Ralph loop on fail |
 | **reviewer**       | inherit | Code review          | Deep verification, read actual code, check edge cases, detect security issues, provide specific feedback        |
-| **documenter**       | haiku   | Documentation | Transform design doc from planning artifact to implementation record after verification PASS                    |
+| **documenter**       | haiku   | Documentation | Create ADR in docs/adr/, update permanent docs, delete plan doc after verification PASS                         |
 | **scope-analyzer** | haiku   | Dependency detection | Analyze cross-layer deps, output to context.json scopeExpansion                                                 |
 
 ## State Management
@@ -492,7 +492,7 @@ EXECUTION → VERIFICATION
 
 VERIFICATION → DOCUMENTATION (success, design doc exists)
   Trigger: Verifier PASS verdict + design doc exists
-  Agent: documenter transforms design doc into implementation record
+  Agent: documenter creates ADR in docs/adr/, updates permanent docs, deletes plan doc
 
 DOCUMENTATION → COMPLETE
   Trigger: Documenter completes (or skipped if no design doc)

@@ -188,14 +188,16 @@ Write comprehensive design document with:
 - Scope (in/out)
 - Assumptions and risks
 
-After writing the design document, **store the path in session state**:
+### Step: Store Design Doc Path (MANDATORY)
+
+**After writing the design document, you MUST store the path in session state.** This is required for the documentation phase to run after verification.
 
 ```bash
 bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} \
-  --design-doc "$WORKING_DIR/docs/plans/YYYY-MM-DD-design.md"
+  --design-doc "$WORKING_DIR/docs/plans/YYYY-MM-DD-{goal-slug}-design.md"
 ```
 
-This ensures the verifier can reliably find the design doc for this specific session, even when multiple sessions share the same `working_dir`.
+**Why**: Without this step, `plan.design_doc` is `null` and the documentation phase is skipped entirely. The documenter agent needs this path to create the ADR and clean up the plan document.
 
 ### Phase 4: Task Decomposition
 
