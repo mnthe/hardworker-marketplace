@@ -441,9 +441,12 @@ function validatePhaseTransition(currentPhase, newPhase) {
     };
   }
 
-  // VERIFICATION -> COMPLETE (always allowed)
+  // VERIFICATION -> COMPLETE (blocked: must go through DOCUMENTATION)
   if (currentPhase === 'VERIFICATION' && newPhase === 'COMPLETE') {
-    return { allowed: true };
+    return {
+      allowed: false,
+      reason: `Phase transition ${currentPhase} \u2192 ${newPhase} blocked: DOCUMENTATION phase required before completion. Transition to DOCUMENTATION first.`
+    };
   }
 
   // VERIFICATION -> DOCUMENTATION (allowed after verification pass)
@@ -458,6 +461,11 @@ function validatePhaseTransition(currentPhase, newPhase) {
 
   // DOCUMENTATION -> COMPLETE (always allowed)
   if (currentPhase === 'DOCUMENTATION' && newPhase === 'COMPLETE') {
+    return { allowed: true };
+  }
+
+  // DOCUMENTATION -> EXECUTION (Ralph loop from DOCUMENTATION)
+  if (currentPhase === 'DOCUMENTATION' && newPhase === 'EXECUTION') {
     return { allowed: true };
   }
 

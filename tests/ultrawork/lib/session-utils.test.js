@@ -437,9 +437,11 @@ describe('session-utils.js', () => {
       expect(result.allowed).toBe(true);
     });
 
-    test('should allow VERIFICATION -> COMPLETE', () => {
+    test('should block VERIFICATION -> COMPLETE (DOCUMENTATION required)', () => {
       const result = validatePhaseTransition('VERIFICATION', 'COMPLETE');
-      expect(result.allowed).toBe(true);
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('DOCUMENTATION phase required before completion');
+      expect(result.reason).toContain('Transition to DOCUMENTATION first');
     });
 
     test('should allow VERIFICATION -> EXECUTION (Ralph loop)', () => {
@@ -454,6 +456,11 @@ describe('session-utils.js', () => {
 
     test('should allow DOCUMENTATION -> COMPLETE', () => {
       const result = validatePhaseTransition('DOCUMENTATION', 'COMPLETE');
+      expect(result.allowed).toBe(true);
+    });
+
+    test('should allow DOCUMENTATION -> EXECUTION (Ralph loop)', () => {
+      const result = validatePhaseTransition('DOCUMENTATION', 'EXECUTION');
       expect(result.allowed).toBe(true);
     });
 

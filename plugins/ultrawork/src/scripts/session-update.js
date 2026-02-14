@@ -12,7 +12,7 @@ const { parseArgs, generateHelp } = require('../lib/args.js');
 // ============================================================================
 
 /** @type {import('../lib/types.js').Phase[]} */
-const VALID_PHASES = ['PLANNING', 'EXECUTION', 'VERIFICATION', 'COMPLETE', 'CANCELLED', 'FAILED', 'unknown'];
+const VALID_PHASES = ['PLANNING', 'EXECUTION', 'VERIFICATION', 'DOCUMENTATION', 'COMPLETE', 'CANCELLED', 'FAILED', 'unknown'];
 
 const ARG_SPEC = {
   '--session': { key: 'sessionId', aliases: ['-s'], required: true },
@@ -22,6 +22,7 @@ const ARG_SPEC = {
   '--exploration-stage': { key: 'explorationStage', aliases: ['-e'] },
   '--iteration': { key: 'iteration', aliases: ['-i'] },
   '--verifier-passed': { key: 'verifierPassed', aliases: [], flag: true },
+  '--documenter-completed': { key: 'documenterCompleted', aliases: [], flag: true },
   '--quiet': { key: 'quiet', aliases: ['-q'], flag: true },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
@@ -44,6 +45,7 @@ function normalizePhase(phase) {
     'PLANNING': 'PLANNING',
     'EXECUTION': 'EXECUTION',
     'VERIFICATION': 'VERIFICATION',
+    'DOCUMENTATION': 'DOCUMENTATION',
     'FAILED': 'FAILED',
     'UNKNOWN': 'unknown'
   };
@@ -115,6 +117,15 @@ async function main() {
       }
     }
 
+    // --documenter-completed validation: only allowed during DOCUMENTATION phase
+    if (args.documenterCompleted) {
+      const currentSession = readSession(args.sessionId);
+      if (currentSession.phase !== 'DOCUMENTATION') {
+        console.error(`Error: --documenter-completed can only be set during DOCUMENTATION phase (current: ${currentSession.phase}).`);
+        process.exit(1);
+      }
+    }
+
     // Phase transition validation
     if (args.phase) {
       const currentSession = readSession(args.sessionId);
@@ -134,6 +145,13 @@ async function main() {
           if (!currentSession.verifier_passed) {
             console.error('Error: Cannot transition to COMPLETE without verifier approval.');
             console.error('Run the Verifier agent first: session-update.js --phase VERIFICATION');
+            process.exit(1);
+          }
+
+          // When transitioning from DOCUMENTATION, require documenter_completed
+          if (currentPhase === 'DOCUMENTATION' && !currentSession.documenter_completed) {
+            console.error('Error: Cannot transition to COMPLETE without documenter completion.');
+            console.error('Set --documenter-completed during DOCUMENTATION phase first.');
             process.exit(1);
           }
 
@@ -197,6 +215,11 @@ async function main() {
       // Set verifier_passed if provided
       if (args.verifierPassed) {
         session.verifier_passed = true;
+      }
+
+      // Set documenter_completed if provided
+      if (args.documenterCompleted) {
+        session.documenter_completed = true;
       }
 
       return session;
