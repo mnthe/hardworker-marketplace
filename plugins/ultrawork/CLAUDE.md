@@ -175,7 +175,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **worker**         | inherit | Task implementation  | Execute ONE task, collect evidence, update task file. Supports standard and TDD approaches                      |
 | **verifier**       | inherit | Quality gatekeeper   | Audit evidence, scan for blocked patterns, run final tests, PASS/FAIL determination, trigger Ralph loop on fail |
 | **reviewer**       | inherit | Code review          | Deep verification, read actual code, check edge cases, detect security issues, provide specific feedback        |
-| **documenter**       | haiku   | Documentation | Create ADR in docs/adr/, update permanent docs, delete plan doc after verification PASS                         |
+| **documenter**       | haiku   | Documentation | Create ADR, update permanent docs, delete plan doc. Transitions session to COMPLETE. |
 | **scope-analyzer** | haiku   | Dependency detection | Analyze cross-layer deps, output to context.json scopeExpansion                                                 |
 
 ## State Management
@@ -227,6 +227,8 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
     "auto_mode": false
   },
   "worktree": null,
+  "verifier_passed": false,
+  "documenter_completed": false,
   "evidence_log": [],
   "cancelled_at": null
 }
@@ -248,7 +250,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 }
 ```
 
-**Phase values**: `PLANNING` | `EXECUTION` | `VERIFICATION` | `COMPLETE` | `CANCELLED` | `FAILED`
+**Phase values**: `PLANNING` | `EXECUTION` | `VERIFICATION` | `DOCUMENTATION` | `COMPLETE` | `CANCELLED` | `FAILED`
 
 **Exploration stages**: `not_started` | `overview` | `analyzing` | `targeted` | `complete`
 
@@ -484,23 +486,28 @@ bun "{SCRIPTS_PATH}/task-update.js" ...
 ```
 PLANNING → EXECUTION
   Trigger: Planner completes task graph
+  Owner: Orchestrator (interactive) / Planner (auto)
   Script: session-update.js --phase EXECUTION
 
 EXECUTION → VERIFICATION
   Trigger: All non-verify tasks resolved
+  Owner: Orchestrator
   Script: session-update.js --phase VERIFICATION
 
-VERIFICATION → DOCUMENTATION (success, design doc exists)
-  Trigger: Verifier PASS verdict + design doc exists
-  Agent: documenter creates ADR in docs/adr/, updates permanent docs, deletes plan doc
-
-DOCUMENTATION → COMPLETE
-  Trigger: Documenter completes (or skipped if no design doc)
-  Script: session-update.js --phase COMPLETE
+VERIFICATION → DOCUMENTATION (success)
+  Trigger: Verifier PASS verdict
+  Owner: Verifier agent
+  Script: session-update.js --verifier-passed --phase DOCUMENTATION
 
 VERIFICATION → EXECUTION (failure - Ralph Loop)
   Trigger: Verifier FAIL verdict, creates fix tasks
+  Owner: Verifier agent
   Script: session-update.js --phase EXECUTION
+
+DOCUMENTATION → COMPLETE
+  Trigger: Documenter completes (ADR created, docs updated, plan deleted)
+  Owner: Documenter agent
+  Script: session-update.js --documenter-completed --phase COMPLETE
 ```
 
 ### Gate Enforcement Rules
@@ -674,17 +681,19 @@ verifier -> audit evidence -> run tests -> PASS/FAIL
 - Output: Updated verify task, session.json
 - Updates: session.phase → COMPLETE (PASS) or EXECUTION (FAIL)
 
-### 6. Documentation Phase (if design doc exists)
+### 6. Documentation Phase (always runs after verification PASS)
 
 ```bash
-# Orchestrator spawns documenter after PASS
-documenter -> read evidence + tasks -> transform design doc
+# Verifier agent transitions to DOCUMENTATION on PASS
+# Orchestrator spawns documenter
+documenter -> create ADR, update permanent docs, delete plan
+# Documenter marks complete
 ```
 
 - Agent: documenter (haiku model)
 - Input: Design document, task evidence, git diff
-- Output: Updated design document (planning artifact → implementation record)
-- Runs only if design doc exists in session
+- Output: ADR file, updated permanent docs, plan file deleted
+- Phase transition: documenter calls session-update.js --documenter-completed --phase COMPLETE
 
 ### 7. Session Complete
 
