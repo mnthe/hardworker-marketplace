@@ -527,31 +527,41 @@ Verify all criteria...
 ```
 
 **5d. Completion or Ralph Loop**
-```bash
-# FAIL → EXECUTION (next iteration)
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION --iteration $next_iteration
-```
+
+**Key design**: Verifier and Documenter own their own phase transitions. The orchestrator reads the resulting phase and reacts accordingly.
+
+- **Verifier PASS** → Verifier transitions to `DOCUMENTATION` phase via `session-update.js --verifier-passed --phase DOCUMENTATION`
+- **Verifier FAIL** → Verifier transitions to `EXECUTION` phase (Ralph Loop) via `session-update.js --phase EXECUTION`
 
 ```python
-# PASS → Documentation → COMPLETE
-# Transform design doc into implementation record (if design doc exists)
-design_doc = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field plan.design_doc')
-working_dir = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session {SESSION_ID} --field working_dir')
+# After verifier completes, read the phase to determine what happened
+phase = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase')
 
-if design_doc and design_doc != "null":
-    Task(
-        subagent_type="ultrawork:documenter",
-        model="haiku",
-        prompt=f"""
-CLAUDE_SESSION_ID: {SESSION_ID}
-SCRIPTS_PATH: {CLAUDE_PLUGIN_ROOT}/src/scripts
+if phase.strip() == "DOCUMENTATION":
+    # Verifier PASSED and transitioned to DOCUMENTATION
+    # Spawn documenter — it will transition to COMPLETE when done
+    working_dir = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir')
+    design_doc = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field plan.design_doc')
+
+    if design_doc and design_doc.strip() != "null":
+        Task(
+            subagent_type="ultrawork:documenter",
+            model="haiku",
+            prompt=f"""
+CLAUDE_SESSION_ID: ${CLAUDE_SESSION_ID}
+SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 WORKING_DIR: {working_dir}
 DESIGN_DOC: {design_doc}
 """
-    )
+        )
+    # Documenter transitions to COMPLETE automatically via:
+    #   session-update.js --documenter-completed --phase COMPLETE
+    print("## Session Complete")
 
-# Then mark complete
-Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session {SESSION_ID} --phase COMPLETE')
+elif phase.strip() == "EXECUTION":
+    # Verifier FAILED and returned to EXECUTION (Ralph Loop)
+    next_iteration = current_iteration + 1
+    # Continue execution loop
 ```
 
 📖 **Detailed guide**: See [Documentation Phase Reference](references/06-document.md)

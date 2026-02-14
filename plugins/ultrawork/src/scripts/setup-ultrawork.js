@@ -597,10 +597,11 @@ ${worktreeSection}
  WORKFLOW
 ───────────────────────────────────────────────────────────
 
- 1. [→] PLANNING     - Explore and create task graph
- 2. ${executionIcon} EXECUTION    - Workers implementing tasks
- 3. ${verificationIcon} VERIFICATION - Verifier checking evidence
- 4. [ ] COMPLETE     - All criteria met
+ 1. [→] PLANNING      - Explore and create task graph
+ 2. ${executionIcon} EXECUTION     - Workers implementing tasks
+ 3. ${verificationIcon} VERIFICATION  - Verifier checking evidence
+ 4. [ ] DOCUMENTATION - Documenter creating ADR and updating docs
+ 5. [ ] COMPLETE      - All criteria met
 
 ───────────────────────────────────────────────────────────
  ZERO TOLERANCE RULES

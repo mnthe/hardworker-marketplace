@@ -8,11 +8,21 @@
 
 ## Phase Transition
 
-After verifier returns PASS, before marking COMPLETE:
+Verifier triggers the transition to DOCUMENTATION on PASS:
 
+```bash
+# Verifier does this on PASS:
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --verifier-passed --phase DOCUMENTATION
 ```
-VERIFICATION (PASS) → DOCUMENTATION → COMPLETE
+
+Documenter triggers the transition to COMPLETE when done:
+
+```bash
+# Documenter does this when done:
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --documenter-completed --phase COMPLETE
 ```
+
+Flow: `VERIFICATION → (verifier PASS) → DOCUMENTATION → (documenter done) → COMPLETE`
 
 ---
 

@@ -160,23 +160,29 @@ while iteration <= max_iterations:
     if verification_result == "CANCELLED":
         return
     elif verification_result == "PASS":
-        # Documentation phase - transform design doc into ADR + update permanent docs
-        design_doc = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field plan.design_doc')
-        working_dir = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir')
+        # Verifier already transitioned to DOCUMENTATION phase
+        # via: session-update.js --verifier-passed --phase DOCUMENTATION
+        # Read phase to confirm
+        phase = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase')
 
-        if design_doc and design_doc.strip() != "null":
-            Task(
-                subagent_type="ultrawork:documenter",
-                model="haiku",
-                prompt=f"""
+        if phase.strip() == "DOCUMENTATION":
+            # Spawn documenter — it will transition to COMPLETE
+            # via: session-update.js --documenter-completed --phase COMPLETE
+            working_dir = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir')
+            design_doc = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field plan.design_doc')
+
+            if design_doc and design_doc.strip() != "null":
+                Task(
+                    subagent_type="ultrawork:documenter",
+                    model="haiku",
+                    prompt=f"""
 CLAUDE_SESSION_ID: ${CLAUDE_SESSION_ID}
 SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
 WORKING_DIR: {working_dir}
 DESIGN_DOC: {design_doc}
 """
-            )
-
-        Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE')
+                )
+        # Documenter marks COMPLETE automatically
         print("## Execution Complete - All criteria verified")
         return
     else:
