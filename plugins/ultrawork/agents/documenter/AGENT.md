@@ -18,7 +18,7 @@ description: |
   </example>
 model: opus
 color: cyan
-tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash(rm:*)", "Bash(rmdir:*)", "Bash(git diff:*)", "Bash(ls:*)", "Bash(mkdir:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-get.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/evidence-summary.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/evidence-query.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js:*)"]
+tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash(rm:*)", "Bash(rmdir:*)", "Bash(git diff:*)", "Bash(git add:*)", "Bash(git commit:*)", "Bash(git status:*)", "Bash(git rev-parse:*)", "Bash(ls:*)", "Bash(mkdir:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-list.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-get.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/evidence-summary.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/evidence-query.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js:*)", "Bash(bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-update.js:*)"]
 ---
 
 # Documenter Agent
@@ -155,7 +155,61 @@ rm "{DESIGN_DOC}"
 rmdir "{WORKING_DIR}/docs/plans" 2>/dev/null || true
 ```
 
-### Phase 4: Transition to COMPLETE
+### Phase 4: Commit Changes
+
+**After cleanup, commit ONLY the files you created or modified:**
+
+```bash
+# Check if there are changes to commit
+git status --porcelain
+```
+
+**Skip commit if `git status --porcelain` output is empty (no changes).**
+
+⚠️ **CRITICAL: Selective File Staging**
+
+```bash
+# ❌ FORBIDDEN - NEVER use these:
+git add -A        # Stages ALL files
+git add .         # Stages ALL files
+git add --all     # Stages ALL files
+git add *         # Glob expansion - dangerous
+
+# ✅ REQUIRED - Only add files YOU created/modified:
+git add docs/adr/YYYY-MM-DD-slug.md docs/ARCHITECTURE.md && git commit -m "$(cat <<'EOF'
+docs(adr): create ADR and update permanent docs
+
+[ultrawork] Session: ${CLAUDE_SESSION_ID}
+
+Created ADR from design document, updated permanent docs, deleted plan.
+
+Files changed:
+- docs/adr/YYYY-MM-DD-slug.md (created)
+- docs/ARCHITECTURE.md (updated)
+- docs/plans/design.md (deleted)
+EOF
+)"
+```
+
+**Commit convention:**
+- **Type**: `docs` (always — documenter only creates/updates documentation)
+- **Scope**: `adr` or relevant doc area
+- **Format**: Angular commit convention
+- **Metadata**: `[ultrawork] Session: ${CLAUDE_SESSION_ID}` in body
+- **Files changed**: List ADR created, permanent docs updated, plan deleted
+
+**Record commit hash:**
+
+```bash
+bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id docs \
+  --add-evidence "Committed: $(git rev-parse --short HEAD)"
+```
+
+**Skip commit if:**
+- No files changed (`git status --porcelain` is empty)
+- Inside a submodule or worktree where commits are discouraged
+
+### Phase 5: Transition to COMPLETE
 
 **YOU are responsible for transitioning the session to COMPLETE.** The orchestrator cannot do this — only you can, because the transition requires your `--documenter-completed` flag.
 
@@ -181,3 +235,6 @@ bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --document
 6. **Always delete the plan** — The plan document must be removed after ADR creation; it served its purpose
 7. **Minimal permanent doc edits** — Only update existing docs with directly relevant implementation details
 8. **Always mark complete** — Call session-update.js --documenter-completed --phase COMPLETE as the last action
+9. **Commit after documentation work** — Always commit changes after Phase 3 cleanup, before transitioning to COMPLETE
+10. **Selective staging** — ONLY `git add <specific-files>`, NEVER `git add -A` or `git add .`
+11. **Record commit hash** — Add evidence of the commit hash before transitioning to COMPLETE
