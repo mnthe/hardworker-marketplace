@@ -20,6 +20,16 @@ const { isSessionActive, readSessionField, getSessionDir } = require('../lib/ses
 function getCodexResultPath(sessionId) {
   return `/tmp/codex-${sessionId}.json`;
 }
+
+/**
+ * Get the Codex doc-review result file path for a session
+ * @param {string} sessionId
+ * @returns {string}
+ */
+function getCodexDocResultPath(sessionId) {
+  return `/tmp/codex-doc-${sessionId}.json`;
+}
+
 const {
   createPreToolUseAllow,
   createPreToolUseBlock,
@@ -243,6 +253,88 @@ TEST FILE PATTERNS:
   return createPreToolUseBlock(reason, additionalContext);
 }
 
+// ============================================================================
+// Codex Doc-Review Gate
+// ============================================================================
+
+/**
+ * Check if PLANNING->EXECUTION transition should be blocked by doc-review gate.
+ * Returns a block response object if gate fires, or null if gate does not apply (allow).
+ * @param {string} sessionId
+ * @param {string} command - The bash command being executed
+ * @returns {Object|null} Block response or null (allow)
+ */
+function checkCodexDocGate(sessionId, command) {
+  // Only applies to session-update commands targeting EXECUTION phase
+  if (!command.includes('session-update')) return null;
+  if (!/--phase\s+EXECUTION|-p\s+EXECUTION/i.test(command)) return null;
+
+  // Only applies when current phase is PLANNING
+  let currentPhase;
+  try {
+    currentPhase = readSessionField(sessionId, 'phase');
+  } catch {
+    return null; // Session not found - allow
+  }
+  if (currentPhase !== 'PLANNING') return null;
+
+  const resultPath = getCodexDocResultPath(sessionId);
+
+  if (!fs.existsSync(resultPath)) {
+    return createPreToolUseBlock(
+      'Codex doc-review not completed',
+      `⛔ CODEX DOC-REVIEW GATE: doc-review result not found
+
+Expected file: ${resultPath}
+
+The Codex doc-review must complete before transitioning from PLANNING to EXECUTION.
+
+WHAT TO DO:
+1. Run codex doc-review first
+2. Wait for the result file to be created
+3. Retry this command
+
+If doc-review is not applicable, create a SKIP result:
+  echo '{"verdict":"SKIP"}' > ${resultPath}`
+    );
+  }
+
+  try {
+    const result = JSON.parse(fs.readFileSync(resultPath, 'utf-8'));
+
+    if (result.verdict === 'FAIL') {
+      const issues = [];
+      // Check both top-level doc_issues and nested doc_review.doc_issues
+      const docIssues = result.doc_issues || result.doc_review?.doc_issues || [];
+      for (const issue of docIssues) {
+        if (issue.severity === 'error') {
+          issues.push(`[${issue.category}] ${issue.detail}`);
+        }
+      }
+
+      const issueList = issues.length > 0
+        ? '\n\nDoc issues:\n' + issues.map((item, idx) => `  ${idx + 1}. ${item}`).join('\n')
+        : '';
+
+      return createPreToolUseBlock(
+        'Codex doc-review FAIL',
+        `⛔ CODEX DOC-REVIEW GATE: doc-review returned FAIL
+
+Verdict: FAIL
+Summary: ${result.summary || 'No summary'}${issueList}
+
+Fix the documentation issues before transitioning to EXECUTION.`
+      );
+    }
+
+    // PASS or SKIP — allow through
+    return null;
+  } catch {
+    // Corrupt result file — allow (graceful degradation)
+    return null;
+  }
+}
+
 /**
  * Main hook logic
  * @returns {Promise<void>}
@@ -366,6 +458,18 @@ Create fix tasks and transition to EXECUTION instead.`
     }
   }
 
+  // =========================================================================
+  // Codex doc-review gate: block PLANNING→EXECUTION without doc-review result
+  // =========================================================================
+  if (toolNameLower === 'bash' && sessionId) {
+    const command = hookInput.tool_input?.command || '';
+    const docGateResult = checkCodexDocGate(sessionId, command);
+    if (docGateResult) {
+      outputAndExit(docGateResult);
+      return;
+    }
+  }
+
   // Only process Edit and Write tools for remaining checks
   if (toolName !== 'Edit' && toolName !== 'Write') {
     outputAndExit(createPreToolUseAllow());
@@ -439,4 +543,4 @@ if (require.main === module) {
 }
 
 // Export for testing
-module.exports = { getCodexResultPath };
+module.exports = { getCodexResultPath, getCodexDocResultPath, checkCodexDocGate };
