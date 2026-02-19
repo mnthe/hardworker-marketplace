@@ -271,6 +271,8 @@ Options:
 )
 ```
 
+**Note**: The planner agent handles Codex doc-review internally. See planner/AGENT.md for auto-mode doc-review workflow.
+
 Skip to Step 4.
 
 ---
@@ -383,7 +385,58 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 
 See `skills/planning/SKILL.md` Phase 4 for template.
 
-#### 3f. Task Decomposition
+#### 3f. Codex Doc-Review (Gate Requirement)
+
+Run Codex doc-review on the design document. The PLANNING→EXECUTION gate requires this result.
+
+```bash
+# Run Codex doc-review
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/codex-verify.js" \
+  --mode doc-review \
+  --design "$DESIGN_PATH" \
+  --goal "${goal}" \
+  --output /tmp/codex-doc-${CLAUDE_SESSION_ID}.json
+```
+
+**Parse result:**
+
+```python
+# Read result
+result = Read("/tmp/codex-doc-${CLAUDE_SESSION_ID}.json")
+parsed = JSON.parse(result)
+```
+
+**If verdict is SKIP** (Codex not installed):
+- Log: "Codex not available, skipping doc-review"
+- Proceed to task decomposition
+
+**If verdict is PASS**:
+- Log: "Codex doc-review passed"
+- Proceed to task decomposition
+
+**If verdict is FAIL**:
+```python
+# Show issues to user
+AskUserQuestion(questions=[{
+  "question": "Codex doc-review에서 이슈가 발견되었습니다. 수정 방향을 확인해주세요.",
+  "header": "Doc review",
+  "options": [
+    {"label": "자동 수정 후 재리뷰", "description": "발견된 이슈를 바탕으로 문서를 자동 수정"},
+    {"label": "직접 확인", "description": "이슈를 확인하고 직접 수정 방향 지시"}
+  ],
+  "multiSelect": False
+}])
+```
+- Fix the design document based on issues
+- Delete old result: `rm /tmp/codex-doc-${CLAUDE_SESSION_ID}.json`
+- Re-run Codex doc-review
+- Repeat until PASS or SKIP
+
+**If CLI error** (codex-verify.js execution fails):
+- Retry once
+- If retry fails, ask user via AskUserQuestion
+
+#### 3g. Task Decomposition
 
 Decompose design into tasks. Write each task:
 
@@ -398,7 +451,7 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-create.js" --session ${CLAUDE_SESSIO
 
 Always include verify task at end.
 
-#### 3g. Update Session Phase
+#### 3h. Update Session Phase
 
 ```bash
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
