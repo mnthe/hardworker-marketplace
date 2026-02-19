@@ -461,6 +461,8 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 
 ## Step 4: Plan Review & Confirmation
 
+**Note**: Codex doc-review was already completed in Step 3f. At this point the design document has passed quality validation (or Codex was unavailable and gracefully skipped).
+
 **Read the plan:**
 
 ```bash
