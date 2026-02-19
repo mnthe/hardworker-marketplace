@@ -553,33 +553,37 @@ Verifier scans all evidence for these patterns. If found → instant FAIL:
 - "not implemented"
 - "placeholder"
 
-## Codex Dual Gate Verification
+## Codex Dual-Phase Gate Verification
 
-Ultrawork integrates with Codex CLI as an auxiliary verifier running in parallel during the VERIFICATION phase.
+Ultrawork integrates Codex CLI at two phase transition points:
 
-### Planning Phase: Doc-Review Gate
+### Gate 1: PLANNING → EXECUTION (Doc-Review Gate)
 
-Ultrawork requires Codex doc-review before PLANNING → EXECUTION transition.
+**Purpose**: Verify design document quality before implementation begins.
 
-**Workflow:**
-1. Write design document in `docs/plans/`
-2. Run `codex-verify.js --mode doc-review --design <path> --output /tmp/codex-doc-{sessionId}.json`
-3. Parse result:
-   - PASS/SKIP → proceed to EXECUTION
-   - FAIL → fix document and retry (interactive: AskUserQuestion, auto: auto-fix max 3x)
-4. Gate blocks `session-update.js --phase EXECUTION` without passing result
+**Result file**: `/tmp/codex-doc-{sessionId}.json`
 
-**Result File:** `/tmp/codex-doc-{sessionId}.json`
-**Cleanup:** Deleted on EXECUTION transition (session-update.js)
+**How It Works:**
+1. After design document is written, orchestrator/planner runs `codex-verify.js --mode doc-review`
+2. Gate in `gate-enforcement.js` blocks `session-update --phase EXECUTION` without result file
+3. Verdict handling:
 
-**Mode Behavior:**
+| Verdict | Gate Action | Next Step |
+|---------|-------------|-----------|
+| SKIP | Allow (Codex not installed) | Proceed to EXECUTION |
+| PASS | Allow | Proceed to EXECUTION |
+| FAIL | Block | Fix document → re-review |
+| No file | Block | Run doc-review first |
 
-| Mode | On FAIL |
-|------|---------|
-| Interactive | AskUserQuestion → user decides fix direction |
-| Auto (--auto) | Auto-fix → retry (max 3 attempts) |
+**Fix Loop:**
+- Interactive: AskUserQuestion with issues → user confirms → fix → re-review
+- Auto: Auto-fix → re-review (max 3 attempts)
 
-### Verification Phase: Dual Gate
+### Gate 2: VERIFICATION → DOCUMENTATION (Full Verification Gate)
+
+**Purpose**: Verify code quality and criteria after implementation.
+
+**Result file**: `/tmp/codex-{sessionId}.json`
 
 **Fork-Join Pattern:**
 1. **Phase 0 (Fork)**: Verifier spawns background Codex process via `codex-verify.js`
@@ -607,6 +611,12 @@ Ultrawork requires Codex doc-review before PLANNING → EXECUTION transition.
 - Ultrawork verifier focuses on evidence completeness and test execution
 - Codex provides code quality analysis and pattern detection
 - Two independent verifiers increase confidence in PASS verdict
+
+### File Cleanup
+
+Both result files are cleaned up on EXECUTION phase transition (Ralph loop):
+- `/tmp/codex-{sessionId}.json` - verification result
+- `/tmp/codex-doc-{sessionId}.json` - doc-review result
 
 ## Hook Configuration
 
