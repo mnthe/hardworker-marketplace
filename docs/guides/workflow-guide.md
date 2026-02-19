@@ -545,6 +545,35 @@ Solution:
 /ultrawork "reduce API response time from 5s to <100ms by adding database indexes"
 ```
 
+### Design Document Review Failures
+
+Symptom: "Codex doc-review FAILED" gate blocks transition to EXECUTION
+
+Causes:
+- Design document missing required sections
+- Specification ambiguity or incomplete details
+- Contradictory requirements
+
+Solution:
+
+1. Review the Codex feedback (shown in the failure message)
+2. Edit `docs/plans/YYYY-MM-DD-{goal-slug}-design.md` to address issues
+3. Confirm the fix is correct
+4. Ultrawork will automatically re-run the design review
+
+Example:
+
+```
+Design Document Issues:
+- Missing success criteria for Task 2
+- Ambiguous architecture diagram
+- Unclear data flow in the specification section
+```
+
+Edit the design document to clarify these points. The orchestrator will re-run Codex review automatically.
+
+If Codex review is not installed or is taking time, the session can proceed with SKIP verdict.
+
 ### Worker Failures
 
 Symptom: Worker agent fails during execution
