@@ -100,6 +100,46 @@ See `references/design-template.md` for complete template.
 
 ---
 
+## Phase 4.5: Codex Doc-Review
+
+After writing the design document, validate it via Codex doc-review.
+
+```bash
+bun $SCRIPTS/codex-verify.js \
+  --mode doc-review \
+  --design "$DESIGN_PATH" \
+  --goal "${GOAL}" \
+  --output /tmp/codex-doc-${CLAUDE_SESSION_ID}.json
+```
+
+**Result Handling:**
+
+| Verdict | Action |
+|---------|--------|
+| PASS | Continue to Phase 5 (Task Decomposition) |
+| SKIP | Codex not installed — continue (graceful degradation) |
+| FAIL | Fix loop based on mode |
+
+**Interactive Mode (default):**
+1. Show `doc_issues` to user via AskUserQuestion
+2. User confirms fix direction
+3. Edit design document
+4. Delete result file, re-run doc-review
+5. Repeat until PASS or user skips
+
+**Auto Mode (--auto):**
+1. Read `doc_issues` from result
+2. Auto-fix design document
+3. Delete result file, re-run doc-review
+4. Repeat (max 3 attempts)
+5. If still FAIL → leave session in PLANNING, report
+
+**CLI Error:** Retry once on execution failure. On repeated failure, report to user.
+
+**Note:** A PreToolUse gate blocks `session-update.js --phase EXECUTION` without a passing Codex doc-review result at `/tmp/codex-doc-${CLAUDE_SESSION_ID}.json`.
+
+---
+
 ## Phase 5: Decompose Tasks
 
 ### Task Guidelines
