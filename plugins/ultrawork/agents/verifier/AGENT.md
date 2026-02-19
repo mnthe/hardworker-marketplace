@@ -118,19 +118,19 @@ DESIGN_DOC=$(bun "{SCRIPTS_PATH}/session-get.js" --session ${CLAUDE_SESSION_ID} 
 
 # Launch Codex in background (non-blocking)
 # --design passes design doc for both doc-review and exec context
+# IMPORTANT: Use run_in_background=True as a Bash TOOL PARAMETER, not in the command string
 bun "{SCRIPTS_PATH}/codex-verify.js" \
   --mode full \
   --working-dir ${WORKING_DIR} \
   --criteria "criterion1|criterion2|criterion3" \
   --goal "${GOAL}" \
   --design "${DESIGN_DOC}" \
-  --output /tmp/codex-${CLAUDE_SESSION_ID}.json \
-  run_in_background=True
+  --output /tmp/codex-${CLAUDE_SESSION_ID}.json
 ```
 
 **Important**:
 - `--enable` accepts comma-separated feature flags (e.g., `--enable shell_snapshot`); `collab` is always enabled by default
-- Use `run_in_background=True` parameter in Bash tool
+- Use `run_in_background=True` as a **Bash tool parameter** (not in the command string). Example: `Bash(command="bun ...", run_in_background=True)`
 - Store background task reference for Phase 4.5
 - Codex runs in parallel while Phase 1-4 execute
 - If codex CLI not available, script returns `verdict: "SKIP"` (exit 0)
