@@ -159,7 +159,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **session-context-hook.js**     | UserPromptSubmit        | Inject session variables into context           | Adds SESSION_ID and CLAUDE_PLUGIN_ROOT to agent prompts                                                                                                            |
 | **agent-lifecycle-tracking.js** | PreToolUse              | Track agent execution for evidence              | Records which agents are active (for subagent tracking)                                                                                                            |
 | **post-tool-use-evidence.js**   | PostToolUse             | Collect evidence from tool usage                | Records command execution (Bash), file operations (Write/Edit), test results                                                                                       |
-| **gate-enforcement.js**         | PreToolUse (Edit/Write/Bash) | Enforce phase restrictions, TDD order, and Codex gate | Blocks code edits during PLANNING; blocks implementation before tests in TDD; blocks `--verifier-passed` without Codex result file                                |
+| **gate-enforcement.js**         | PreToolUse (Edit/Write/Bash) | Enforce phase restrictions, TDD order, and dual Codex gates | Blocks code edits during PLANNING; blocks implementation before tests in TDD; blocks `--phase EXECUTION` without doc-review result file; blocks `--verifier-passed` without verification result file |
 | **gate-status-notification.js** | PostToolUse (Task)      | Notify about gate enforcement status            | Displays session phase and gate rules after Task tool usage                                                                                                        |
 | **subagent-start-tracking.js**  | SubagentStart (ultrawork:.*) | Track subagent spawn                        | Records agent_id, agent_type to session.active_agents[]                                                                                                            |
 | **subagent-stop-tracking.js**   | SubagentStop            | Track subagent completion                       | Uses agent_type for filtering, removes from active_agents[], records completion with agent_type in evidence                                                        |
@@ -485,9 +485,11 @@ bun "{SCRIPTS_PATH}/task-update.js" ...
 
 ```
 PLANNING → EXECUTION
-  Trigger: Planner completes task graph
+  Trigger: Planner completes task graph + Codex doc-review passes
   Owner: Orchestrator (interactive) / Planner (auto)
   Script: session-update.js --phase EXECUTION
+  Gate: Requires /tmp/codex-doc-{sessionId}.json (PASS or SKIP)
+  Note: Run codex-verify.js --mode doc-review before transition
 
 EXECUTION → VERIFICATION
   Trigger: All non-verify tasks resolved
@@ -518,6 +520,15 @@ DOCUMENTATION → COMPLETE
 - Allow: `design.md`, `session.json`, `context.json`, `exploration/*.md`, `docs/plans/*.md`
 - Block: All other file edits (Edit/Write tools)
 
+**PLANNING → EXECUTION Gate (Codex Doc-Review)**:
+
+- Enforced by: `gate-enforcement.js` PreToolUse hook
+- Trigger: `session-update.js --phase EXECUTION` when current phase is PLANNING
+- Requires: `/tmp/codex-doc-{sessionId}.json` with verdict PASS or SKIP
+- SKIP verdict: Codex CLI not installed (graceful degradation)
+- FAIL verdict: Block with doc_issues displayed
+- No result file: Block with instructions to run codex-verify.js
+
 **EXECUTION Phase (TDD tasks)**:
 
 - Allow: Test files first (_.test._, _.spec._, **tests**/\*)
@@ -546,7 +557,29 @@ Verifier scans all evidence for these patterns. If found → instant FAIL:
 
 Ultrawork integrates with Codex CLI as an auxiliary verifier running in parallel during the VERIFICATION phase.
 
-### How It Works
+### Planning Phase: Doc-Review Gate
+
+Ultrawork requires Codex doc-review before PLANNING → EXECUTION transition.
+
+**Workflow:**
+1. Write design document in `docs/plans/`
+2. Run `codex-verify.js --mode doc-review --design <path> --output /tmp/codex-doc-{sessionId}.json`
+3. Parse result:
+   - PASS/SKIP → proceed to EXECUTION
+   - FAIL → fix document and retry (interactive: AskUserQuestion, auto: auto-fix max 3x)
+4. Gate blocks `session-update.js --phase EXECUTION` without passing result
+
+**Result File:** `/tmp/codex-doc-{sessionId}.json`
+**Cleanup:** Deleted on EXECUTION transition (session-update.js)
+
+**Mode Behavior:**
+
+| Mode | On FAIL |
+|------|---------|
+| Interactive | AskUserQuestion → user decides fix direction |
+| Auto (--auto) | Auto-fix → retry (max 3 attempts) |
+
+### Verification Phase: Dual Gate
 
 **Fork-Join Pattern:**
 1. **Phase 0 (Fork)**: Verifier spawns background Codex process via `codex-verify.js`
