@@ -199,6 +199,34 @@ bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} \
 
 **Why**: Without this step, `plan.design_doc` is `null` and the documentation phase is skipped entirely. The documenter agent needs this path to create the ADR and clean up the plan document.
 
+### Phase 3.5: Codex Doc-Review
+
+After writing the design document and storing its path, run Codex doc-review:
+
+```bash
+bun "{SCRIPTS_PATH}/codex-verify.js" \
+  --mode doc-review \
+  --design "$WORKING_DIR/docs/plans/YYYY-MM-DD-{goal-slug}-design.md" \
+  --goal "${GOAL}" \
+  --output /tmp/codex-doc-${CLAUDE_SESSION_ID}.json
+```
+
+Parse the result JSON:
+
+- **verdict: "PASS"** → Continue to Phase 4 (Task Decomposition)
+- **verdict: "SKIP"** → Codex not installed, continue (graceful degradation)
+- **verdict: "FAIL"** → Auto-fix loop:
+  1. Read `doc_issues` from the result
+  2. Fix the design document based on issues (edit the file)
+  3. Delete old result: delete /tmp/codex-doc-${CLAUDE_SESSION_ID}.json
+  4. Re-run codex-verify.js --mode doc-review
+  5. Repeat (max 3 attempts)
+  6. If still FAIL after 3 attempts, leave session in PLANNING and report issues
+
+**CLI Error Handling**: If codex-verify.js fails to execute, retry once. On repeated failure, leave session in PLANNING and report.
+
+**Note**: A gate in gate-enforcement.js will block `session-update.js --phase EXECUTION` if no passing Codex doc-review result exists. This phase ensures the gate will allow the transition.
+
 ### Phase 4: Task Decomposition
 
 **Rules:**
@@ -298,6 +326,34 @@ Design document must include:
 - **Rollback Strategy**: How to undo each phase
 - **Risk Analysis**: What could go wrong
 - **Testing Strategy**: How to verify each phase
+
+### Phase 3.5: Codex Doc-Review
+
+After writing the design document, run Codex doc-review (same as PLANNING tier Phase 3.5):
+
+```bash
+bun "{SCRIPTS_PATH}/codex-verify.js" \
+  --mode doc-review \
+  --design "$WORKING_DIR/docs/plans/YYYY-MM-DD-{goal-slug}-design.md" \
+  --goal "${GOAL}" \
+  --output /tmp/codex-doc-${CLAUDE_SESSION_ID}.json
+```
+
+Parse the result JSON:
+
+- **verdict: "PASS"** → Continue to Phase 4 (Create Phase Tasks)
+- **verdict: "SKIP"** → Codex not installed, continue (graceful degradation)
+- **verdict: "FAIL"** → Auto-fix loop:
+  1. Read `doc_issues` from the result
+  2. Fix the design document based on issues (edit the file)
+  3. Delete old result: delete /tmp/codex-doc-${CLAUDE_SESSION_ID}.json
+  4. Re-run codex-verify.js --mode doc-review
+  5. Repeat (max 3 attempts)
+  6. If still FAIL after 3 attempts, leave session in PLANNING and report issues
+
+**CLI Error Handling**: If codex-verify.js fails to execute, retry once. On repeated failure, leave session in PLANNING and report.
+
+**Note**: A gate in gate-enforcement.js will block `session-update.js --phase EXECUTION` if no passing Codex doc-review result exists. This phase ensures the gate will allow the transition.
 
 ### Phase 4: Create Phase Tasks
 
