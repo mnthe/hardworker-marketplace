@@ -244,6 +244,8 @@ async function main() {
     if (args.phase === 'EXECUTION') {
       const codexResultPath = `/tmp/codex-${args.sessionId}.json`;
       try { fs.unlinkSync(codexResultPath); } catch { /* file may not exist */ }
+      const codexDocResultPath = `/tmp/codex-doc-${args.sessionId}.json`;
+      try { fs.unlinkSync(codexDocResultPath); } catch { /* file may not exist */ }
     }
 
     // Read and output updated session

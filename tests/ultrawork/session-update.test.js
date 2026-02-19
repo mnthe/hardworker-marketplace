@@ -15,6 +15,7 @@ const {
   cleanupAllTestSessions
 } = require('./test-utils.js');
 const path = require('path');
+const fs = require('fs');
 
 // Set test base directory BEFORE importing session-utils
 process.env.ULTRAWORK_TEST_BASE_DIR = TEST_BASE_DIR;
@@ -554,6 +555,66 @@ describe('session-update.js', () => {
       const updated = readSession(session.sessionId);
       expect(updated.phase).toBe('COMPLETE');
       expect(updated.documenter_completed).toBe(true);
+    });
+  });
+
+  describe('EXECUTION transition cleanup', () => {
+    test('should clean up /tmp/codex-doc-{sessionId}.json on EXECUTION transition', async () => {
+      const codexDocPath = `/tmp/codex-doc-${session.sessionId}.json`;
+      // Create the file to verify it gets deleted
+      fs.writeFileSync(codexDocPath, JSON.stringify({ result: 'test' }));
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'EXECUTION'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      expect(fs.existsSync(codexDocPath)).toBe(false);
+    });
+
+    test('should still clean up /tmp/codex-{sessionId}.json on EXECUTION transition', async () => {
+      const codexPath = `/tmp/codex-${session.sessionId}.json`;
+      // Create the file to verify it gets deleted
+      fs.writeFileSync(codexPath, JSON.stringify({ result: 'test' }));
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'EXECUTION'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      expect(fs.existsSync(codexPath)).toBe(false);
+    });
+
+    test('should clean up both codex files on EXECUTION transition', async () => {
+      const codexPath = `/tmp/codex-${session.sessionId}.json`;
+      const codexDocPath = `/tmp/codex-doc-${session.sessionId}.json`;
+      // Create both files
+      fs.writeFileSync(codexPath, JSON.stringify({ result: 'test' }));
+      fs.writeFileSync(codexDocPath, JSON.stringify({ result: 'doc-test' }));
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'EXECUTION'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      expect(fs.existsSync(codexPath)).toBe(false);
+      expect(fs.existsSync(codexDocPath)).toBe(false);
+    });
+
+    test('should not fail if codex-doc file does not exist on EXECUTION transition', async () => {
+      // Ensure file doesn't exist
+      const codexDocPath = `/tmp/codex-doc-${session.sessionId}.json`;
+      try { fs.unlinkSync(codexDocPath); } catch { /* ignore */ }
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--phase', 'EXECUTION'
+      ]);
+
+      expect(result.exitCode).toBe(0);
     });
   });
 
