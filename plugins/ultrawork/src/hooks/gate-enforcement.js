@@ -194,6 +194,10 @@ function hasTddRedEvidence(task) {
   }
 
   return task.evidence.some(e => {
+    if (typeof e === 'string') {
+      return e.includes('TDD-RED');
+    }
+    // Structured evidence object (legacy/future format)
     const desc = e.description || '';
     return desc.includes('TDD-RED');
   });
@@ -429,5 +433,10 @@ Create fix tasks and transition to EXECUTION instead.`
   outputAndExit(createPreToolUseAllow());
 }
 
-// Entry point
-runHook(main, createPreToolUseAllow);
+// Entry point - only run when executed directly
+if (require.main === module) {
+  runHook(main, createPreToolUseAllow);
+}
+
+// Export for testing
+module.exports = { getCodexResultPath };
