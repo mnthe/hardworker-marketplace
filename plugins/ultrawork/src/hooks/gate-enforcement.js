@@ -10,7 +10,21 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 const { isSessionActive, readSessionField, getSessionDir } = require('../lib/session-utils.js');
+
+/**
+ * Check if codex CLI is available on the system
+ * @returns {boolean}
+ */
+function isCodexInstalled() {
+  try {
+    execSync('which codex', { stdio: ['pipe', 'pipe', 'pipe'] });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Get the Codex result file path for a session
@@ -281,21 +295,23 @@ function checkCodexDocGate(sessionId, command) {
   const resultPath = getCodexDocResultPath(sessionId);
 
   if (!fs.existsSync(resultPath)) {
+    // If Codex is not installed, allow through (graceful degradation)
+    if (!isCodexInstalled()) {
+      return null;
+    }
     return createPreToolUseBlock(
       'Codex doc-review not completed',
       `⛔ CODEX DOC-REVIEW GATE: doc-review result not found
 
 Expected file: ${resultPath}
 
+Codex CLI is installed but doc-review has not been run.
 The Codex doc-review must complete before transitioning from PLANNING to EXECUTION.
 
 WHAT TO DO:
-1. Run codex doc-review first
+1. Run codex doc-review on the design document
 2. Wait for the result file to be created
-3. Retry this command
-
-If doc-review is not applicable, create a SKIP result:
-  echo '{"verdict":"SKIP"}' > ${resultPath}`
+3. Retry this command`
     );
   }
 
@@ -398,22 +414,27 @@ async function main() {
       const resultPath = getCodexResultPath(sessionId);
 
       if (!fs.existsSync(resultPath)) {
-        outputAndExit(createPreToolUseBlock(
-          'Codex verification not completed',
-          `⛔ CODEX GATE: Codex verification result not found
+        // If Codex is not installed, allow through (graceful degradation)
+        if (!isCodexInstalled()) {
+          // No Codex, no gate — allow verifier-passed
+        } else {
+          outputAndExit(createPreToolUseBlock(
+            'Codex verification not completed',
+            `⛔ CODEX GATE: Codex verification result not found
 
 Expected file: ${resultPath}
 
+Codex CLI is installed but verification has not been run.
 The Codex verification must complete before transitioning to DOCUMENTATION.
-You launched Codex in Phase 0 — now wait for it:
 
-1. Use TaskOutput(background_task_id, block=True, timeout=300000)
-2. Read the result: cat ${resultPath}
-3. Retry this command
-
-If Codex was not launched, launch it now and wait for completion.`
-        ));
-        return;
+WHAT TO DO:
+1. Launch Codex verification in Phase 0
+2. Wait for completion: TaskOutput(background_task_id, block=True, timeout=300000)
+3. Read the result: cat ${resultPath}
+4. Retry this command`
+          ));
+          return;
+        }
       }
 
       try {
@@ -543,4 +564,4 @@ if (require.main === module) {
 }
 
 // Export for testing
-module.exports = { getCodexResultPath, getCodexDocResultPath, checkCodexDocGate };
+module.exports = { getCodexResultPath, getCodexDocResultPath, checkCodexDocGate, isCodexInstalled };
