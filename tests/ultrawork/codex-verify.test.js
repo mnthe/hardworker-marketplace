@@ -63,15 +63,6 @@ describe('codex-verify.js', () => {
   });
 
   describe('--mode review', () => {
-    test('should require --working-dir', async () => {
-      const result = await runScript(SCRIPT_PATH, [
-        '--mode', 'review'
-      ]);
-
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain('--working-dir');
-    });
-
     test('should output JSON with review field', async () => {
       const result = await runScript(SCRIPT_PATH, [
         '--mode', 'review',
@@ -99,16 +90,6 @@ describe('codex-verify.js', () => {
   });
 
   describe('--mode exec', () => {
-    test('should require --working-dir', async () => {
-      const result = await runScript(SCRIPT_PATH, [
-        '--mode', 'exec',
-        '--criteria', 'Tests pass|Code compiles'
-      ]);
-
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain('--working-dir');
-    });
-
     test('should require --criteria', async () => {
       const result = await runScript(SCRIPT_PATH, [
         '--mode', 'exec',
@@ -149,16 +130,6 @@ describe('codex-verify.js', () => {
   });
 
   describe('--mode full', () => {
-    test('should require --working-dir', async () => {
-      const result = await runScript(SCRIPT_PATH, [
-        '--mode', 'full',
-        '--criteria', 'Tests pass'
-      ]);
-
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain('--working-dir');
-    });
-
     test('should require --criteria', async () => {
       const result = await runScript(SCRIPT_PATH, [
         '--mode', 'full',

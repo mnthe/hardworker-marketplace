@@ -540,21 +540,28 @@ function validateModeArgs(args) {
     process.exit(1);
   }
 
-  // review, exec, full all require --working-dir
+  // Default --working-dir to cwd for modes that need it
   if (['review', 'exec', 'full'].includes(args.mode) && !args.workingDir) {
-    console.error(`Error: --working-dir (-w) is required for mode "${args.mode}"`);
-    process.exit(1);
+    args.workingDir = process.cwd();
   }
+
+  // Collect all missing required params and report at once
+  const errors = [];
 
   // exec and full require --criteria
   if (['exec', 'full'].includes(args.mode) && !args.criteria) {
-    console.error(`Error: --criteria (-c) is required for mode "${args.mode}"`);
-    process.exit(1);
+    errors.push(`--criteria (-c) is required for mode "${args.mode}"`);
   }
 
   // doc-review requires --design
   if (args.mode === 'doc-review' && !args.design) {
-    console.error('Error: --design (-d) is required for mode "doc-review"');
+    errors.push('--design (-d) is required for mode "doc-review"');
+  }
+
+  if (errors.length > 0) {
+    for (const err of errors) {
+      console.error(`Error: ${err}`);
+    }
     process.exit(1);
   }
 }
