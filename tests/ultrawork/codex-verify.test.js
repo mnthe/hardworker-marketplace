@@ -477,4 +477,274 @@ describe('codex-verify.js', () => {
       expect('summary' in parsed).toBe(true);
     });
   });
+
+  describe('--design-optional flag', () => {
+    const nonExistentDesign = '/tmp/nonexistent-codex-verify-test-design-optional-99999.md';
+
+    test('should be registered in ARG_SPEC (source inspection)', async () => {
+      const fs = require('fs');
+      const source = fs.readFileSync(SCRIPT_PATH, 'utf-8');
+      expect(source).toContain("'--design-optional'");
+      expect(source).toContain("designOptional");
+      // Must be a boolean flag (no value needed)
+      expect(source).toMatch(/--design-optional.*flag:\s*true/s);
+    });
+
+    test('help text includes --design-optional', async () => {
+      const result = await runScript(SCRIPT_PATH, ['--help']);
+      expect(result.exitCode).toBe(0);
+      assertHelpText(result.stdout, ['--design-optional']);
+    });
+
+    test('doc-review + --design-optional + file absent: SKIP verdict when codex available', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'doc-review',
+        '--design', nonExistentDesign,
+        '--design-optional'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      if (parsed.available) {
+        // Codex available, file absent, optional flag -> SKIP verdict
+        expect(parsed.verdict).toBe('SKIP');
+        expect(parsed.doc_review).toBeDefined();
+        expect(parsed.doc_review.doc_issues).toEqual([]);
+      }
+    });
+
+    test('doc-review without --design-optional + file absent: FAIL when codex available (existing behavior preserved)', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'doc-review',
+        '--design', nonExistentDesign
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      if (parsed.available) {
+        expect(parsed.verdict).toBe('FAIL');
+        expect(parsed.doc_review).toBeDefined();
+        expect(parsed.doc_review.doc_issues.length).toBeGreaterThan(0);
+      }
+    });
+
+    test('full + --design-optional + file absent: doc_review is not in result when codex available', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'full',
+        '--working-dir', '/tmp/test-project',
+        '--criteria', 'Tests pass',
+        '--design', nonExistentDesign,
+        '--design-optional'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      if (parsed.available) {
+        // Full mode with optional design file absent -> doc_review skipped entirely
+        expect(parsed.doc_review).toBeUndefined();
+      }
+    });
+
+    test('full without --design-optional + file absent: FAIL when codex available (existing behavior)', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'full',
+        '--working-dir', '/tmp/test-project',
+        '--criteria', 'Tests pass',
+        '--design', nonExistentDesign
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      if (parsed.available) {
+        expect(parsed.verdict).toBe('FAIL');
+        expect(parsed.doc_review).toBeDefined();
+      }
+    });
+
+    test('--design-optional is accepted as boolean flag (no value needed)', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'doc-review',
+        '--design', nonExistentDesign,
+        '--design-optional'
+      ]);
+
+      // Should not fail with argument parsing error
+      expect(result.exitCode).toBe(0);
+    });
+
+    test('source code passes designOptional to runCodexDocReview', async () => {
+      const fs = require('fs');
+      const source = fs.readFileSync(SCRIPT_PATH, 'utf-8');
+      // Verify runCodexDocReview accepts designOptional parameter
+      expect(source).toMatch(/function runCodexDocReview\(.*designOptional/);
+      // Verify main passes args.designOptional
+      expect(source).toContain('args.designOptional');
+    });
+
+    test('runCodexDocReview returns SKIP when file absent and optional (exported function)', () => {
+      const codexVerify = require('../../plugins/ultrawork/src/scripts/codex-verify.js');
+      // Verify function is exported
+      expect(typeof codexVerify.runCodexDocReview).toBe('function');
+
+      const result = codexVerify.runCodexDocReview(
+        nonExistentDesign, null, null, [], true
+      );
+      expect(result.exit_code).toBe(0);
+      expect(result.verdict).toBe('SKIP');
+      expect(result.doc_issues).toEqual([]);
+      expect(result.output).toContain('optional');
+    });
+
+    test('runCodexDocReview returns FAIL when file absent and NOT optional (exported function)', () => {
+      const codexVerify = require('../../plugins/ultrawork/src/scripts/codex-verify.js');
+
+      const result = codexVerify.runCodexDocReview(
+        nonExistentDesign, null, null, [], false
+      );
+      expect(result.exit_code).toBe(1);
+      expect(result.verdict).toBe('FAIL');
+      expect(result.doc_issues.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('buildVerificationPrompt - Sandbox Constraints', () => {
+    // Import the module to test internal functions
+    const codexVerify = require('../../plugins/ultrawork/src/scripts/codex-verify.js');
+
+    test('should include Sandbox Constraints section in prompt', () => {
+      const criteria = ['Tests pass', 'Code compiles'];
+      const prompt = codexVerify.buildVerificationPrompt(criteria);
+
+      expect(prompt).toContain('## Sandbox Constraints (IMPORTANT)');
+      expect(prompt).toContain('READ-ONLY sandbox');
+      expect(prompt).toContain('EPERM');
+      expect(prompt).toContain('EROFS');
+    });
+
+    test('should list DO NOT run commands', () => {
+      const criteria = ['Tests pass'];
+      const prompt = codexVerify.buildVerificationPrompt(criteria);
+
+      expect(prompt).toContain('npm run build');
+      expect(prompt).toContain('npm install');
+    });
+
+    test('should list read-only alternatives', () => {
+      const criteria = ['Tests pass'];
+      const prompt = codexVerify.buildVerificationPrompt(criteria);
+
+      expect(prompt).toContain('npx tsc --noEmit');
+      expect(prompt).toContain('npx eslint --no-fix');
+    });
+
+    test('should include sandbox limitation guidance for EPERM failures', () => {
+      const criteria = ['Tests pass'];
+      const prompt = codexVerify.buildVerificationPrompt(criteria);
+
+      expect(prompt).toContain('PASS (sandbox limitation)');
+    });
+
+    test('should place Sandbox Constraints before criteria list', () => {
+      const criteria = ['Tests pass', 'Code compiles'];
+      const prompt = codexVerify.buildVerificationPrompt(criteria);
+
+      const sandboxIdx = prompt.indexOf('## Sandbox Constraints');
+      const criteriaIdx = prompt.indexOf('Success Criteria:');
+
+      expect(sandboxIdx).toBeGreaterThan(-1);
+      expect(criteriaIdx).toBeGreaterThan(-1);
+      expect(sandboxIdx).toBeLessThan(criteriaIdx);
+    });
+  });
+
+  describe('getGitContext', () => {
+    const codexVerify = require('../../plugins/ultrawork/src/scripts/codex-verify.js');
+
+    test('should be a function', () => {
+      expect(typeof codexVerify.getGitContext).toBe('function');
+    });
+
+    test('should return object with diffStat and recentCommits', () => {
+      // Use the current project dir which is a git repo
+      const result = codexVerify.getGitContext(process.cwd());
+
+      expect(typeof result).toBe('object');
+      expect('diffStat' in result).toBe(true);
+      expect('recentCommits' in result).toBe(true);
+      expect(typeof result.diffStat).toBe('string');
+      expect(typeof result.recentCommits).toBe('string');
+    });
+
+    test('should return empty strings for non-git directory', () => {
+      const result = codexVerify.getGitContext('/tmp');
+
+      expect(result.diffStat).toBe('');
+      expect(result.recentCommits).toBe('');
+    });
+
+    test('should return recent commits from a git repo', () => {
+      // This test runs in a git repo
+      const repoRoot = path.resolve(__dirname, '../..');
+      const result = codexVerify.getGitContext(repoRoot);
+
+      // Should have some commit output (repo has commits)
+      expect(result.recentCommits.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('buildVerificationPrompt - Recent Changes (conditional)', () => {
+    const codexVerify = require('../../plugins/ultrawork/src/scripts/codex-verify.js');
+
+    test('should include Recent Changes section when gitContext has content', () => {
+      const criteria = ['Tests pass'];
+      const gitContext = {
+        diffStat: ' file1.js | 5 ++---\n file2.js | 10 +++++++---',
+        recentCommits: 'abc1234 fix: something\ndef5678 feat: another'
+      };
+      const prompt = codexVerify.buildVerificationPrompt(criteria, null, null, gitContext);
+
+      expect(prompt).toContain('## Recent Changes');
+      expect(prompt).toContain('file1.js');
+      expect(prompt).toContain('abc1234');
+    });
+
+    test('should NOT include Recent Changes section when gitContext is empty', () => {
+      const criteria = ['Tests pass'];
+      const gitContext = { diffStat: '', recentCommits: '' };
+      const prompt = codexVerify.buildVerificationPrompt(criteria, null, null, gitContext);
+
+      expect(prompt).not.toContain('## Recent Changes');
+    });
+
+    test('should NOT include Recent Changes section when gitContext is not provided', () => {
+      const criteria = ['Tests pass'];
+      const prompt = codexVerify.buildVerificationPrompt(criteria);
+
+      expect(prompt).not.toContain('## Recent Changes');
+    });
+
+    test('should include diffStat content in Recent Changes section', () => {
+      const criteria = ['Tests pass'];
+      const gitContext = {
+        diffStat: ' src/app.js | 20 ++++++++++----------',
+        recentCommits: ''
+      };
+      const prompt = codexVerify.buildVerificationPrompt(criteria, null, null, gitContext);
+
+      expect(prompt).toContain('## Recent Changes');
+      expect(prompt).toContain('src/app.js');
+    });
+
+    test('should include recentCommits content in Recent Changes section', () => {
+      const criteria = ['Tests pass'];
+      const gitContext = {
+        diffStat: '',
+        recentCommits: 'abc1234 fix: bug in auth'
+      };
+      const prompt = codexVerify.buildVerificationPrompt(criteria, null, null, gitContext);
+
+      expect(prompt).toContain('## Recent Changes');
+      expect(prompt).toContain('abc1234 fix: bug in auth');
+    });
+  });
 });

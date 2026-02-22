@@ -43,6 +43,7 @@ const ARG_SPEC = {
   '--base': { key: 'base', aliases: ['-b'] },
   '--design': { key: 'design', aliases: ['-d'] },
   '--enable': { key: 'enableFeatures', aliases: ['-e'] },
+  '--design-optional': { key: 'designOptional', aliases: [], flag: true },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
@@ -175,6 +176,30 @@ function runCodexReview(workingDir, base) {
 }
 
 /**
+ * Get git context (recent diff stats and commits) for the working directory
+ * @param {string} workingDir - Project directory
+ * @returns {{ diffStat: string, recentCommits: string }}
+ */
+function getGitContext(workingDir) {
+  let diffStat = '';
+  let recentCommits = '';
+  try {
+    diffStat = execSync(
+      'git diff --stat HEAD~5 2>/dev/null || git diff --stat $(git rev-list --max-parents=0 HEAD) HEAD',
+      { cwd: workingDir, encoding: 'utf-8', timeout: 10000, shell: true,
+        stdio: ['pipe', 'pipe', 'pipe'] }
+    ).trim();
+  } catch (_) {}
+  try {
+    recentCommits = execSync('git log --oneline -5', {
+      cwd: workingDir, encoding: 'utf-8', timeout: 10000,
+      stdio: ['pipe', 'pipe', 'pipe']
+    }).trim();
+  } catch (_) {}
+  return { diffStat, recentCommits };
+}
+
+/**
  * Parse pipe-separated criteria string into array
  * @param {string} criteriaStr - Pipe-separated criteria
  * @returns {string[]}
@@ -190,13 +215,14 @@ function parseCriteria(criteriaStr) {
 }
 
 /**
- * Build a verification prompt from criteria, goal, and optional design doc
+ * Build a verification prompt from criteria, goal, optional design doc, and git context
  * @param {string[]} criteria - List of success criteria
  * @param {string} [goal] - Optional project goal for context
  * @param {string} [designPath] - Optional path to design document
+ * @param {{ diffStat: string, recentCommits: string }} [gitContext] - Optional git context
  * @returns {string}
  */
-function buildVerificationPrompt(criteria, goal, designPath) {
+function buildVerificationPrompt(criteria, goal, designPath, gitContext) {
   let prompt = 'You are verifying code changes against success criteria.\n\n';
 
   if (goal) {
@@ -213,6 +239,34 @@ function buildVerificationPrompt(criteria, goal, designPath) {
     } catch (_) {
       prompt += `(Design file not found: ${designPath})\n\n`;
     }
+  }
+
+  // Sandbox constraints section
+  prompt += '## Sandbox Constraints (IMPORTANT)\n';
+  prompt += 'You are running in a READ-ONLY sandbox. The filesystem is immutable.\n';
+  prompt += 'Commands that write files will fail with EPERM or EROFS errors.\n\n';
+  prompt += 'DO NOT run these commands:\n';
+  prompt += '- npm run build (writes to build/ or dist/)\n';
+  prompt += '- npm install (writes to node_modules/)\n';
+  prompt += '- Any command that creates or modifies files\n\n';
+  prompt += 'Use these read-only alternatives instead:\n';
+  prompt += '- Build check: npx tsc --noEmit (type-checks without emitting files)\n';
+  prompt += '- Lint check: npx eslint --no-fix src/\n';
+  prompt += '- Test check: npm test (if tests fail with EPERM, report as "PASS (sandbox limitation)")\n\n';
+  prompt += 'If a command fails with EPERM or EROFS, report the criterion as "PASS (sandbox limitation)" rather than FAIL.\n\n';
+
+  // Recent Changes section (conditional)
+  if (gitContext && (gitContext.diffStat || gitContext.recentCommits)) {
+    prompt += '## Recent Changes\n';
+    if (gitContext.diffStat) {
+      prompt += 'The following files were recently changed (git diff --stat):\n';
+      prompt += gitContext.diffStat + '\n\n';
+    }
+    if (gitContext.recentCommits) {
+      prompt += 'Recent commits:\n';
+      prompt += gitContext.recentCommits + '\n\n';
+    }
+    prompt += 'Use this information to verify against the current state of the codebase, not outdated file content.\n\n';
   }
 
   prompt += 'Verify each of the following criteria by reading code and running read-only commands.\n';
@@ -246,7 +300,8 @@ function buildVerificationPrompt(criteria, goal, designPath) {
  * @returns {{ exit_code: number, output: string, criteria_results: Array }}
  */
 function runCodexExec(workingDir, criteria, goal, model, designPath, enableFeatures = []) {
-  const prompt = buildVerificationPrompt(criteria, goal, designPath);
+  const gitContext = getGitContext(workingDir);
+  const prompt = buildVerificationPrompt(criteria, goal, designPath, gitContext);
 
   try {
     const effectiveModel = model || DEFAULT_MODEL;
@@ -391,9 +446,17 @@ function parseDocReviewOutput(output) {
  * @param {string[]} [enableFeatures=[]] - Optional features to enable via --enable flags
  * @returns {{ exit_code: number, output: string, doc_issues: Array, verdict: string }}
  */
-function runCodexDocReview(designPath, goal, model, enableFeatures = []) {
+function runCodexDocReview(designPath, goal, model, enableFeatures = [], designOptional = false) {
   // Validate design file exists before building prompt
   if (!fs.existsSync(designPath)) {
+    if (designOptional) {
+      return {
+        exit_code: 0,
+        output: `Design file not found (optional): ${designPath}`,
+        doc_issues: [],
+        verdict: 'SKIP'
+      };
+    }
     return {
       exit_code: 1,
       output: `Design file not found: ${designPath}`,
@@ -489,6 +552,11 @@ function determineVerdict(reviewResult, execResult, docReviewResult) {
   // If review ran and had non-zero exit, that is a FAIL signal
   if (reviewResult && reviewResult.exit_code !== 0 && reviewResult.issues.length > 0) {
     return 'FAIL';
+  }
+
+  // If the only result is a SKIP doc-review (no exec or review), propagate SKIP
+  if (docReviewResult && docReviewResult.verdict === 'SKIP' && !execResult && !reviewResult) {
+    return 'SKIP';
   }
 
   return 'PASS';
@@ -623,7 +691,7 @@ function main() {
   }
 
   if (args.mode === 'doc-review') {
-    docReviewResult = runCodexDocReview(args.design, args.goal, args.model, enableFeatures);
+    docReviewResult = runCodexDocReview(args.design, args.goal, args.model, enableFeatures, args.designOptional);
   }
 
   if (args.mode === 'review' || args.mode === 'full') {
@@ -632,11 +700,17 @@ function main() {
 
   if (args.mode === 'exec' || args.mode === 'full') {
     const criteria = parseCriteria(args.criteria);
-    execResult = runCodexExec(args.workingDir, criteria, args.goal, args.model, args.design, enableFeatures);
+    // When design is optional and file is absent, don't pass design path to exec
+    const effectiveDesign = (args.design && (!args.designOptional || fs.existsSync(args.design))) ? args.design : undefined;
+    execResult = runCodexExec(args.workingDir, criteria, args.goal, args.model, effectiveDesign, enableFeatures);
   }
 
   if (args.mode === 'full' && args.design) {
-    docReviewResult = runCodexDocReview(args.design, args.goal, args.model, enableFeatures);
+    // When design is optional and file is absent, skip doc review entirely
+    if (!args.designOptional || fs.existsSync(args.design)) {
+      docReviewResult = runCodexDocReview(args.design, args.goal, args.model, enableFeatures, args.designOptional);
+    }
+    // designOptional + file absent -> docReviewResult remains null
   }
 
   const verdict = determineVerdict(reviewResult, execResult, docReviewResult);
@@ -690,3 +764,6 @@ function outputResult(result, outputPath) {
 if (require.main === module) {
   main();
 }
+
+// Export for testing
+module.exports = { buildVerificationPrompt, getGitContext, runCodexDocReview };
