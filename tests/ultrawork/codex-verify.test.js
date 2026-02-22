@@ -747,4 +747,65 @@ describe('codex-verify.js', () => {
       expect(prompt).toContain('abc1234 fix: bug in auth');
     });
   });
+
+  describe('--sandbox parameter and resolveSandboxMode', () => {
+    test('help text includes --sandbox', async () => {
+      const result = await runScript(SCRIPT_PATH, ['--help']);
+
+      expect(result.exitCode).toBe(0);
+      assertHelpText(result.stdout, ['--sandbox']);
+    });
+
+    test('--sandbox parameter accepted with exec mode', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'exec',
+        '--working-dir', '/tmp/test-project',
+        '--criteria', 'Test',
+        '--sandbox', 'read-only'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.mode).toBe('exec');
+    });
+
+    test('invalid --sandbox value causes exit 1', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'exec',
+        '--working-dir', '/tmp/test-project',
+        '--criteria', 'Test',
+        '--sandbox', 'invalid-mode'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Invalid sandbox mode');
+    });
+  });
+
+  describe('buildVerificationPrompt - sandbox mode variations', () => {
+    const codexVerify = require('../../plugins/ultrawork/src/scripts/codex-verify.js');
+
+    test('read-only mode includes Sandbox Constraints section', () => {
+      const prompt = codexVerify.buildVerificationPrompt(['Test'], null, null, null, 'read-only');
+
+      expect(prompt).toContain('## Sandbox Constraints (IMPORTANT)');
+      expect(prompt).toContain('READ-ONLY sandbox');
+      expect(prompt).toContain('EPERM');
+    });
+
+    test('workspace-write mode includes Sandbox Info instead of Constraints', () => {
+      const prompt = codexVerify.buildVerificationPrompt(['Test'], null, null, null, 'workspace-write');
+
+      expect(prompt).not.toContain('## Sandbox Constraints (IMPORTANT)');
+      expect(prompt).not.toContain('READ-ONLY sandbox');
+      expect(prompt).toContain('## Sandbox Info');
+      expect(prompt).toContain('workspace-write sandbox');
+    });
+
+    test('default (no sandboxMode) uses read-only behavior', () => {
+      const prompt = codexVerify.buildVerificationPrompt(['Test']);
+
+      expect(prompt).toContain('## Sandbox Constraints (IMPORTANT)');
+    });
+  });
 });

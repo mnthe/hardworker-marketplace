@@ -47,12 +47,31 @@ const ARG_SPEC = {
   '--design': { key: 'design', aliases: ['-d'] },
   '--enable': { key: 'enableFeatures', aliases: ['-e'] },
   '--design-optional': { key: 'designOptional', aliases: [], flag: true },
+  '--sandbox': { key: 'sandbox', aliases: ['-s'] },
   '--help': { key: 'help', aliases: ['-h'], flag: true }
 };
 
 const VALID_MODES = ['check', 'review', 'exec', 'full', 'doc-review'];
+const VALID_SANDBOX_MODES = ['read-only', 'workspace-write', 'danger-full-access'];
 const DEFAULT_ENABLE_FEATURES = ['collab'];
 const DEFAULT_MODEL = 'gpt-5.3-codex';
+
+/**
+ * Determine sandbox mode based on verify mode or explicit override
+ * @param {VerifyMode} mode
+ * @param {string} [override]
+ * @returns {string}
+ */
+function resolveSandboxMode(mode, override) {
+  if (override) {
+    if (!VALID_SANDBOX_MODES.includes(override)) {
+      console.error(`Error: Invalid sandbox mode "${override}". Must be: ${VALID_SANDBOX_MODES.join(', ')}`);
+      process.exit(1);
+    }
+    return override;
+  }
+  return ['exec', 'full'].includes(mode) ? 'workspace-write' : 'read-only';
+}
 
 // ============================================================================
 // Codex Availability
@@ -218,7 +237,7 @@ function parseCriteria(criteriaStr) {
  * @param {{ diffStat: string, recentCommits: string }} [gitContext] - Optional git context
  * @returns {string}
  */
-function buildVerificationPrompt(criteria, goal, designPath, gitContext) {
+function buildVerificationPrompt(criteria, goal, designPath, gitContext, sandboxMode = 'read-only') {
   let prompt = 'You are verifying code changes against success criteria.\n\n';
 
   if (goal) {
@@ -236,19 +255,25 @@ function buildVerificationPrompt(criteria, goal, designPath, gitContext) {
     }
   }
 
-  // Sandbox constraints section
-  prompt += '## Sandbox Constraints (IMPORTANT)\n';
-  prompt += 'You are running in a READ-ONLY sandbox. The filesystem is immutable.\n';
-  prompt += 'Commands that write files will fail with EPERM or EROFS errors.\n\n';
-  prompt += 'DO NOT run these commands:\n';
-  prompt += '- npm run build (writes to build/ or dist/)\n';
-  prompt += '- npm install (writes to node_modules/)\n';
-  prompt += '- Any command that creates or modifies files\n\n';
-  prompt += 'Use these read-only alternatives instead:\n';
-  prompt += '- Build check: npx tsc --noEmit (type-checks without emitting files)\n';
-  prompt += '- Lint check: npx eslint --no-fix src/\n';
-  prompt += '- Test check: npm test (if tests fail with EPERM, report as "PASS (sandbox limitation)")\n\n';
-  prompt += 'If a command fails with EPERM or EROFS, report the criterion as "PASS (sandbox limitation)" rather than FAIL.\n\n';
+  // Sandbox constraints section (only for read-only mode)
+  if (sandboxMode === 'read-only') {
+    prompt += '## Sandbox Constraints (IMPORTANT)\n';
+    prompt += 'You are running in a READ-ONLY sandbox. The filesystem is immutable.\n';
+    prompt += 'Commands that write files will fail with EPERM or EROFS errors.\n\n';
+    prompt += 'DO NOT run these commands:\n';
+    prompt += '- npm run build (writes to build/ or dist/)\n';
+    prompt += '- npm install (writes to node_modules/)\n';
+    prompt += '- Any command that creates or modifies files\n\n';
+    prompt += 'Use these read-only alternatives instead:\n';
+    prompt += '- Build check: npx tsc --noEmit (type-checks without emitting files)\n';
+    prompt += '- Lint check: npx eslint --no-fix src/\n';
+    prompt += '- Test check: npm test (if tests fail with EPERM, report as "PASS (sandbox limitation)")\n\n';
+    prompt += 'If a command fails with EPERM or EROFS, report the criterion as "PASS (sandbox limitation)" rather than FAIL.\n\n';
+  } else if (sandboxMode === 'workspace-write') {
+    prompt += '## Sandbox Info\n';
+    prompt += 'You are running in a workspace-write sandbox. You can read all files and write within the workspace directory.\n';
+    prompt += 'You can run tests, builds, and other commands that write to the workspace or /tmp.\n\n';
+  }
 
   // Recent Changes section (conditional)
   if (gitContext && (gitContext.diffStat || gitContext.recentCommits)) {
@@ -293,13 +318,13 @@ function buildVerificationPrompt(criteria, goal, designPath, gitContext) {
  * @param {string} [designPath] - Optional path to design document
  * @returns {{ exit_code: number, output: string, criteria_results: Array }}
  */
-function runCodexExec(workingDir, criteria, goal, model, designPath, enableFeatures = []) {
+function runCodexExec(workingDir, criteria, goal, model, designPath, enableFeatures = [], sandboxMode = 'workspace-write') {
   const gitContext = getGitContext(workingDir);
-  const prompt = buildVerificationPrompt(criteria, goal, designPath, gitContext);
+  const prompt = buildVerificationPrompt(criteria, goal, designPath, gitContext, sandboxMode);
 
   try {
     const effectiveModel = model || DEFAULT_MODEL;
-    const args = ['exec', '--sandbox', 'read-only'];
+    const args = ['exec', '--sandbox', sandboxMode];
     enableFeatures.forEach(feature => {
       args.push('--enable', feature);
     });
@@ -439,7 +464,7 @@ function parseDocReviewOutput(output) {
  * @param {string} [model] - Optional model override
  * @returns {{ exit_code: number, output: string, doc_issues: Array, verdict: string }}
  */
-function runCodexDocReview(designPath, goal, model, enableFeatures = [], designOptional = false) {
+function runCodexDocReview(designPath, goal, model, enableFeatures = [], designOptional = false, sandboxMode = 'read-only') {
   // Validate design file exists before building prompt
   if (!fs.existsSync(designPath)) {
     if (designOptional) {
@@ -462,7 +487,7 @@ function runCodexDocReview(designPath, goal, model, enableFeatures = [], designO
 
   try {
     const effectiveModel = model || DEFAULT_MODEL;
-    const args = ['exec', '--sandbox', 'read-only'];
+    const args = ['exec', '--sandbox', sandboxMode];
     enableFeatures.forEach(feature => {
       args.push('--enable', feature);
     });
@@ -683,8 +708,10 @@ function main() {
     return;
   }
 
+  const sandboxMode = resolveSandboxMode(args.mode, args.sandbox);
+
   if (args.mode === 'doc-review') {
-    docReviewResult = runCodexDocReview(args.design, args.goal, args.model, enableFeatures, args.designOptional);
+    docReviewResult = runCodexDocReview(args.design, args.goal, args.model, enableFeatures, args.designOptional, sandboxMode);
   }
 
   if (args.mode === 'review' || args.mode === 'full') {
@@ -695,13 +722,13 @@ function main() {
     const criteria = parseCriteria(args.criteria);
     // When design is optional and file is absent, don't pass design path to exec
     const effectiveDesign = (args.design && (!args.designOptional || fs.existsSync(args.design))) ? args.design : undefined;
-    execResult = runCodexExec(args.workingDir, criteria, args.goal, args.model, effectiveDesign, enableFeatures);
+    execResult = runCodexExec(args.workingDir, criteria, args.goal, args.model, effectiveDesign, enableFeatures, sandboxMode);
   }
 
   if (args.mode === 'full' && args.design) {
     // When design is optional and file is absent, skip doc review entirely
     if (!args.designOptional || fs.existsSync(args.design)) {
-      docReviewResult = runCodexDocReview(args.design, args.goal, args.model, enableFeatures, args.designOptional);
+      docReviewResult = runCodexDocReview(args.design, args.goal, args.model, enableFeatures, args.designOptional, sandboxMode);
     }
     // designOptional + file absent -> docReviewResult remains null
   }
