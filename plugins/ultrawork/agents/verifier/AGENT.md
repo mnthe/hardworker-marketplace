@@ -125,16 +125,19 @@ bun "{SCRIPTS_PATH}/codex-verify.js" \
   --criteria "criterion1|criterion2|criterion3" \
   --goal "${GOAL}" \
   --design "${DESIGN_DOC}" \
+  --design-optional \
   --output /tmp/codex-${CLAUDE_SESSION_ID}.json
 ```
 
 **Important**:
 - `--enable` accepts comma-separated feature flags (e.g., `--enable shell_snapshot`); `collab` is always enabled by default
+- `--design-optional` makes the design file optional — if the file was deleted (e.g., by documenter), doc-review is skipped instead of failing. Always use this flag when running in `full` mode during verification, since the design document may have been intentionally removed after ADR creation.
 - Use `run_in_background=True` as a **Bash tool parameter** (not in the command string). Example: `Bash(command="bun ...", run_in_background=True)`
 - Store background task reference for Phase 4.5
 - Codex runs in parallel while Phase 1-4 execute
 - If codex CLI not available, script returns `verdict: "SKIP"` (exit 0)
 - If `--design` is provided in `full` mode, Codex also runs doc-review and includes results in output
+- The verification prompt now includes **Sandbox Constraints** (warns about read-only filesystem, EPERM/EROFS handling) and **Recent Changes** (git diff --stat + recent commits) to reduce false positives
 
 ### Phase 1.5: Design Document Verification
 
