@@ -174,7 +174,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **planner**        | inherit | Task decomposition   | Read explorer context, make design decisions (auto mode), create task graph, write design doc to `docs/plans/`  |
 | **worker**         | inherit | Task implementation  | Execute ONE task, collect evidence, update task file. Supports standard and TDD approaches                      |
 | **verifier**       | opus    | Quality gatekeeper   | Audit evidence, scan for blocked patterns, run final tests, PASS/FAIL determination, trigger Ralph loop on fail. Transitions to DOCUMENTATION (PASS) or EXECUTION (FAIL). |
-| **reviewer**       | inherit | Code review          | Deep verification, read actual code, check edge cases, detect security issues, provide specific feedback        |
+| **reviewer**       | opus    | Code review + correctness gate | Deep verification with P0/P1 correctness checks. Mandatory in verification pipeline (Phase 4.7). Task-level + integration review. |
 | **documenter**       | opus    | Documentation | Create ADR, update permanent docs, delete plan doc. Transitions session to COMPLETE. |
 | **scope-analyzer** | haiku   | Dependency detection | Analyze cross-layer deps, output to context.json scopeExpansion                                                 |
 
@@ -540,6 +540,13 @@ DOCUMENTATION → COMPLETE
 2. TDD-GREEN: Implementation created, test executed, exit code 0
 3. TDD-REFACTOR: (Optional) Improvements made, tests still pass
 
+**VERIFICATION Phase (Mandatory Reviewer Gate)**:
+
+- Verifier spawns reviewer agent as Phase 4.7
+- Reviewer performs task-level + integration review for P0+P1 issues
+- Reviewer verdict (APPROVE/REQUEST_CHANGES/REJECT) feeds into Quad Gate
+- Not hook-enforced: managed internally by verifier agent logic
+
 ### Blocked Patterns
 
 Verifier scans all evidence for these patterns. If found → instant FAIL:
@@ -718,12 +725,13 @@ worker -> execute task 2 (parallel if unblocked)
 
 ```bash
 # Orchestrator spawns verifier
-verifier -> audit evidence -> run tests -> PASS/FAIL
+verifier -> audit evidence -> run tests -> spawn reviewer -> PASS/FAIL
 ```
 
-- Agent: verifier (inherit model)
+- Agent: verifier (opus model)
+- Sub-agent: reviewer (opus model) — mandatory P0/P1 code correctness gate
 - Output: Updated verify task, session.json
-- Updates: session.phase → COMPLETE (PASS) or EXECUTION (FAIL)
+- Updates: session.phase → DOCUMENTATION (PASS) or EXECUTION (FAIL)
 
 ### 6. Documentation Phase (always runs after verification PASS)
 
