@@ -269,7 +269,75 @@ Parse Codex result JSON:
 - Issues with `severity: "error"` contribute to FAIL verdict
 - Issues with `severity: "warning"` are informational only
 
-### Phase 5: PASS/FAIL Determination
+### Phase 4.7: Mandatory Reviewer (Code Correctness Gate)
+
+> **⚠️ MANDATORY**: This phase runs after Codex and before the final gate. The reviewer checks P0+P1 code correctness that process-based verification cannot catch.
+
+**Why this exists**: The verifier checks process compliance (evidence format, test pass, blocked phrases). But P0 issues (code that can't run) and P1 issues (cross-module mismatches) require reading actual code and tracing logic flow. The reviewer does this.
+
+#### Step 1: Prepare Reviewer Input
+
+Build task summary for reviewer from resolved tasks:
+
+```bash
+# Get all resolved tasks
+bun "{SCRIPTS_PATH}/task-list.js" --session ${CLAUDE_SESSION_ID} --status resolved --format json
+
+# For each task, identify changed files (from evidence)
+# Build TASKS list: "Task {id}: {subject} | Files: {file1, file2, ...}"
+
+# Determine git diff base
+# Use the branch base or first commit of the session
+GIT_DIFF_BASE=$(git merge-base HEAD main 2>/dev/null || git rev-list --max-parents=0 HEAD)
+```
+
+#### Step 2: Spawn Reviewer Agent
+
+Spawn the reviewer agent with verification mode:
+
+```
+Agent(subagent_type="ultrawork:reviewer", prompt="""
+CLAUDE_SESSION_ID: ${CLAUDE_SESSION_ID}
+SCRIPTS_PATH: ${SCRIPTS_PATH}
+MODE: verification
+
+TASKS:
+- Task 1: Add authentication middleware | Files: src/auth.ts, src/middleware.ts
+- Task 2: Add API endpoints | Files: src/routes.ts, src/handlers.ts
+
+GIT_DIFF_BASE: ${GIT_DIFF_BASE}
+""")
+```
+
+#### Step 3: Parse Reviewer Result
+
+Parse the reviewer's JSON output:
+
+```json
+{
+  "verdict": "APPROVE | REQUEST_CHANGES | REJECT",
+  "task_reviews": [...],
+  "integration_review": { "issues": [...] },
+  "timestamp": "..."
+}
+```
+
+**Verdict handling:**
+- `APPROVE`: No P0/P1 issues found → Reviewer Gate passes
+- `REQUEST_CHANGES`: P1 issues found → Reviewer Gate FAILS → create fix tasks
+- `REJECT`: P0 issues found → Reviewer Gate FAILS → create fix tasks with CRITICAL priority
+
+**If Reviewer Gate FAILS**, create fix tasks for each issue:
+
+```bash
+# For each P0/P1 issue found:
+bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
+  --subject "Fix: [P0/P1] [issue description]" \
+  --description "Reviewer found [severity] issue: [description]. File: [file]:[line]. Suggestion: [suggestion]" \
+  --criteria '["Issue resolved with evidence"]'
+```
+
+### Phase 5: PASS/FAIL Determination (Quad Gate)
 
 **PASS Requirements (ALL must be true):**
 
@@ -281,19 +349,22 @@ Parse Codex result JSON:
 | **Claude Gate: Commands Pass** | All verification commands exit 0 |
 | **Claude Gate: Tasks Closed** | All tasks (except verify) status="resolved" |
 | **Codex Gate: PASS or SKIP** | Codex verification passed OR not installed |
+| **Reviewer Gate: APPROVE** | Reviewer found zero P0/P1 issues |
 
-**Triple Gate Decision Table:**
+**Quad Gate Decision Table:**
 
-| Claude Gate | Codex Gate | Doc Gate | Final Verdict | Action |
-|-------------|------------|----------|---------------|--------|
-| PASS | PASS | PASS | **PASS** | Complete session |
-| PASS | PASS | FAIL | **FAIL** | Create tasks for doc issues |
-| PASS | FAIL | PASS | **FAIL** | Create tasks for Codex issues |
-| FAIL | any | any | **FAIL** | Create tasks for Claude issues |
-| PASS | PASS | N/A | **PASS** | Complete session (no design doc) |
-| PASS | SKIP | PASS | **PASS** | Complete session (Codex unavailable) |
-| PASS | SKIP | N/A | **PASS** | Complete session (no Codex, no design) |
-| FAIL | SKIP | any | **FAIL** | Create tasks for Claude issues |
+| Claude Gate | Codex Gate | Reviewer Gate | Doc Gate | Final Verdict | Action |
+|-------------|------------|---------------|----------|---------------|--------|
+| PASS | PASS | APPROVE | PASS | **PASS** | Complete session |
+| PASS | PASS | APPROVE | FAIL | **FAIL** | Create tasks for doc issues |
+| PASS | PASS | APPROVE | N/A | **PASS** | Complete session (no design doc) |
+| PASS | SKIP | APPROVE | PASS | **PASS** | Complete session (Codex unavailable) |
+| PASS | SKIP | APPROVE | N/A | **PASS** | Complete session (no Codex, no design) |
+| PASS | any | REQUEST_CHANGES | any | **FAIL** | Create tasks for P1 issues |
+| PASS | any | REJECT | any | **FAIL** | Create tasks for P0 issues (CRITICAL) |
+| PASS | FAIL | APPROVE | PASS | **FAIL** | Create tasks for Codex issues |
+| FAIL | any | any | any | **FAIL** | Create tasks for Claude issues |
+| FAIL | SKIP | any | any | **FAIL** | Create tasks for Claude issues |
 
 **Note**: Doc Gate is N/A when no design document exists. It only applies when `--design` was provided to Codex.
 
@@ -305,6 +376,8 @@ Parse Codex result JSON:
 | **Blocked pattern** | Create task: "Replace speculation with evidence" |
 | **Command failure** | Create task: "Fix failing tests" |
 | **Codex found issues** | Create task: "Fix Codex-identified issue: [detail]" |
+| **Reviewer P0 issue** | Create task: "Fix: [P0] [description]" (CRITICAL) |
+| **Reviewer P1 issue** | Create task: "Fix: [P1] [description]" |
 
 ### Phase 6: Update Files and Transition Phase
 
@@ -393,6 +466,25 @@ bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EX
 
 **SKIP Note** (if applicable): Codex CLI not installed - verification skipped (graceful degradation)
 
+## Reviewer Gate
+
+### Reviewer Availability
+- Spawned: true
+- Verdict: APPROVE / REQUEST_CHANGES / REJECT
+
+### Task Reviews
+
+| Task | Verdict | P0 Issues | P1 Issues |
+|------|---------|-----------|-----------|
+| 1 | APPROVE | 0 | 0 |
+| 2 | REQUEST_CHANGES | 0 | 2 |
+
+### Integration Review
+- Cross-module issues: 0 / N found
+  1. [P1] scanner.ts ↔ review.ts: CLI envelope not unwrapped
+
+### Reviewer Gate Verdict: APPROVE / REQUEST_CHANGES / REJECT
+
 ## Doc Gate (if design document exists)
 
 ### Design Document
@@ -409,6 +501,7 @@ bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EX
 |------|--------|
 | Claude Gate | PASS / FAIL |
 | Codex Gate | PASS / FAIL / SKIP |
+| Reviewer Gate | APPROVE / REQUEST_CHANGES / REJECT |
 | Doc Gate | PASS / FAIL / N/A |
 | **Final Verdict** | **PASS / FAIL** |
 
