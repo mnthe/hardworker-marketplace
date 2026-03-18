@@ -684,6 +684,11 @@ function main() {
   const args = parseArgs(ARG_SPEC);
   validateModeArgs(args);
 
+  // Pre-cleanup: remove existing output file before running new verification
+  if (args.output && fs.existsSync(args.output)) {
+    fs.unlinkSync(args.output);
+  }
+
   // Parse enable features from comma-separated string; collab is always enabled
   const userFeatures = args.enableFeatures
     ? args.enableFeatures.split(',').map(f => f.trim()).filter(Boolean)

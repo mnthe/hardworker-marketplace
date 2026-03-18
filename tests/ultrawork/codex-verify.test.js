@@ -607,6 +607,85 @@ describe('codex-verify.js', () => {
     });
   });
 
+  describe('output file pre-cleanup', () => {
+    test('main() should delete existing output file before mode execution (source inspection)', () => {
+      // Verify the pre-cleanup logic exists in main() before any mode execution
+      const fs = require('fs');
+      const source = fs.readFileSync(SCRIPT_PATH, 'utf-8');
+
+      // The pre-cleanup should use fs.unlinkSync to delete the output file
+      // before any mode-specific execution begins
+      expect(source).toContain('Pre-cleanup');
+      expect(source).toMatch(/args\.output.*unlinkSync|unlinkSync.*args\.output/s);
+    });
+
+    test('should replace existing output file with new result', async () => {
+      const fs = require('fs');
+      const outputPath = path.join(session.sessionDir, 'codex-precleanup-test.json');
+
+      // Write old content to the output path
+      fs.writeFileSync(outputPath, JSON.stringify({ old: true, stale: 'data' }), 'utf-8');
+      expect(fs.existsSync(outputPath)).toBe(true);
+
+      // Run codex-verify with --output pointing to the same file
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'check',
+        '--output', outputPath
+      ]);
+
+      expect(result.exitCode).toBe(0);
+
+      // The file should now contain new result, not old content
+      expect(fs.existsSync(outputPath)).toBe(true);
+      const newContent = fs.readFileSync(outputPath, 'utf-8');
+      const parsed = JSON.parse(newContent);
+      expect(parsed.mode).toBe('check');
+      expect(parsed.verdict).toBeDefined();
+      expect(newContent).not.toContain('stale');
+    });
+
+    test('should work fine when output file does not exist yet', async () => {
+      const fs = require('fs');
+      const outputPath = path.join(session.sessionDir, 'codex-fresh-output.json');
+
+      // Ensure file does not exist
+      if (fs.existsSync(outputPath)) {
+        fs.unlinkSync(outputPath);
+      }
+      expect(fs.existsSync(outputPath)).toBe(false);
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'check',
+        '--output', outputPath
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      expect(fs.existsSync(outputPath)).toBe(true);
+      const parsed = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+      expect(parsed.mode).toBe('check');
+    });
+
+    test('existing output file with invalid content is replaced with valid JSON', async () => {
+      const fs = require('fs');
+      const outputPath = path.join(session.sessionDir, 'codex-precleanup-verify.json');
+
+      // Write old content
+      fs.writeFileSync(outputPath, 'NOT VALID JSON - old garbage', 'utf-8');
+      expect(fs.existsSync(outputPath)).toBe(true);
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--mode', 'check',
+        '--output', outputPath
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const newContent = fs.readFileSync(outputPath, 'utf-8');
+      const parsed = JSON.parse(newContent);
+      expect(parsed.mode).toBe('check');
+      expect(parsed.verdict).toBeDefined();
+    });
+  });
+
   describe('buildVerificationPrompt - Sandbox Constraints', () => {
     // Import the module to test internal functions
     const codexVerify = require('../../plugins/ultrawork/src/scripts/codex-verify.js');
