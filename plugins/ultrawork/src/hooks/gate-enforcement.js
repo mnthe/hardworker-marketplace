@@ -405,6 +405,39 @@ async function main() {
   }
 
   // =========================================================================
+  // Codex result file protection: block manual rm of codex result files
+  // =========================================================================
+  if (toolNameLower === 'bash' && sessionId) {
+    const command = hookInput.tool_input?.command || '';
+
+    const codexResultPath = getCodexResultPath(sessionId);
+    const codexDocResultPath = getCodexDocResultPath(sessionId);
+
+    // Detect rm/unlink as a command (at start or after shell separators like &&, ||, ;, |)
+    const isRmCommand = /(^|[;&|]\s*)(rm|unlink)\b/.test(command.trim());
+    const targetsCodexFile = command.includes(codexResultPath) || command.includes(codexDocResultPath) ||
+      command.includes(`/tmp/codex-${sessionId}`) || command.includes(`/tmp/codex-doc-${sessionId}`);
+
+    if (isRmCommand && targetsCodexFile) {
+      outputAndExit(createPreToolUseBlock(
+        'Manual deletion of Codex result files is not allowed',
+        `CODEX FILE PROTECTION: Manual deletion blocked
+
+Target: ${command}
+
+WHY BLOCKED:
+Codex result files are managed automatically by codex-verify.js.
+Manual deletion can bypass verification gates and create inconsistent state.
+
+WHAT TO DO INSTEAD:
+- Re-run codex-verify.js (it auto-cleans old results before running)
+- Or use session-update.js --phase EXECUTION (auto-cleans on phase transition)`
+      ));
+      return;
+    }
+  }
+
+  // =========================================================================
   // Codex gate: block --verifier-passed without Codex result
   // =========================================================================
   if (toolNameLower === 'bash' && sessionId) {
