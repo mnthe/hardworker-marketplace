@@ -428,8 +428,7 @@ AskUserQuestion(questions=[{
 }])
 ```
 - Fix the design document based on issues
-- Delete old result: `rm /tmp/codex-doc-${CLAUDE_SESSION_ID}.json`
-- Re-run Codex doc-review
+- Re-run Codex doc-review (old result is automatically cleaned before re-run)
 - Repeat until PASS or SKIP
 
 **If CLI error** (codex-verify.js execution fails):
