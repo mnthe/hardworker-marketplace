@@ -619,11 +619,23 @@ Ultrawork integrates Codex CLI at two phase transition points:
 - Codex provides code quality analysis and pattern detection
 - Two independent verifiers increase confidence in PASS verdict
 
-### File Cleanup
+### File Lifecycle and Cleanup
 
-Both result files are cleaned up on EXECUTION phase transition (Ralph loop):
-- `/tmp/codex-{sessionId}.json` - verification result
-- `/tmp/codex-doc-{sessionId}.json` - doc-review result
+**Automatic Cleanup on Script Invocation:**
+- Both `codex-verify.js --mode doc-review` and `codex-verify.js --mode full` automatically delete existing result files before execution
+- This ensures fresh results on every invocation and prevents stale results from interfering with gate enforcement
+- Location: `main()` function in codex-verify.js deletes `--output` file before mode-specific logic
+
+**Manual Deletion Blocking:**
+- `gate-enforcement.js` PreToolUse hook blocks Bash commands attempting `rm` or `unlink` of codex result files
+- Prevents bypassing automatic cleanup mechanisms that maintain consistency
+- Helpful error message guides users to re-run codex-verify.js instead (which auto-cleans)
+
+**Cleanup on Phase Transition (Ralph Loop):**
+- When transitioning from EXECUTION back to EXECUTION (Ralph loop for verification failure):
+  - `/tmp/codex-{sessionId}.json` deleted - old verification result
+  - `/tmp/codex-doc-{sessionId}.json` deleted - old doc-review result
+- Ensures fresh verification on retry, not reading stale failure results
 
 ## Hook Configuration
 
