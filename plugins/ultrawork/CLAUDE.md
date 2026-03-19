@@ -55,6 +55,8 @@ plugins/ultrawork/
 │   │   ├── evidence-summary.js  # AI-friendly evidence index
 │   │   ├── evidence-query.js    # Filter & query evidence
 │   │   └── scope-set.js         # Set scope expansion data in context.json
+│   ├── rules/                 # Deterministic verification rules
+│   │   └── phase-rules.json   # Default Gate 0 rule definitions
 │   └── hooks/                 # Lifecycle hooks (11 files)
 │       ├── session-start-hook.js
 │       ├── compact-recovery-hook.js
@@ -109,6 +111,7 @@ All scripts use Bun runtime with flag-based parameters.
 | **task-summary.js**       | Generate AI-friendly task markdown                          | `--session <ID>` `--task <ID>` `--save`                                                                               |
 | **evidence-summary.js**   | Generate AI-friendly evidence index                         | `--session <ID>` `--save` `--format md\|json`                                                                         |
 | **evidence-query.js**     | Query evidence with filters                                 | `--session <ID>` `--type test_result` `--last 5` `--search "npm"` `--task 1`                                          |
+| **deterministic-verify.js** | Run Gate 0 deterministic checks                            | `--session` `--working-dir`                                                                                           |
 | **codex-verify.js**       | Run Codex CLI as auxiliary verifier (dual gate)             | `--mode check\|review\|exec\|full` `--working-dir <dir>` `--criteria "c1\|c2"` `--output <file>` `--enable <features>` |
 
 **Supporting files:**
@@ -154,7 +157,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 | Hook File                       | Event                   | Purpose                                         | Behavior                                                                                                                                                           |
 | ------------------------------- | ----------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **session-start-hook.js**       | SessionStart            | Cleanup old sessions, provide session ID        | Deletes sessions >7 days old in terminal states (COMPLETE/CANCELLED/FAILED)                                                                                        |
+| **session-start-hook.js**       | SessionStart            | Cleanup old sessions, provide session ID, show onboarding banner | Deletes sessions >7 days old in terminal states (COMPLETE/CANCELLED/FAILED)                                                                                        |
 | **compact-recovery-hook.js**    | SessionStart (compact)  | Inject procedural knowledge after compaction    | Reads session.json and tasks/\*.json, generates recovery message for active sessions with delegation rules, context variables, task status, and phase instructions |
 | **session-context-hook.js**     | UserPromptSubmit        | Inject session variables into context           | Adds SESSION_ID and CLAUDE_PLUGIN_ROOT to agent prompts                                                                                                            |
 | **agent-lifecycle-tracking.js** | PreToolUse              | Track agent execution for evidence              | Records which agents are active (for subagent tracking)                                                                                                            |
@@ -174,7 +177,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **planner**        | inherit | Task decomposition   | Read explorer context, make design decisions (auto mode), create task graph, write design doc to `docs/plans/`  |
 | **worker**         | inherit | Task implementation  | Execute ONE task, collect evidence, update task file. Supports standard and TDD approaches                      |
 | **verifier**       | opus    | Quality gatekeeper   | Audit evidence, scan for blocked patterns, run final tests, PASS/FAIL determination, trigger Ralph loop on fail. Transitions to DOCUMENTATION (PASS) or EXECUTION (FAIL). |
-| **reviewer**       | opus    | Code review + correctness gate | Deep verification with P0/P1 correctness checks. Mandatory in verification pipeline (Phase 4.7). Task-level + integration review. |
+| **reviewer**       | opus    | Code review + correctness gate | Deep verification with P0/P1 correctness checks. Mandatory in verification pipeline (Phase 2-2). Task-level + integration review. |
 | **documenter**       | opus    | Documentation | Create ADR, update permanent docs, delete plan doc. Transitions session to COMPLETE. |
 | **scope-analyzer** | haiku   | Dependency detection | Analyze cross-layer deps, output to context.json scopeExpansion                                                 |
 
@@ -542,7 +545,7 @@ DOCUMENTATION → COMPLETE
 
 **VERIFICATION Phase (Mandatory Reviewer Gate)**:
 
-- Verifier spawns reviewer agent as Phase 4.7
+- Verifier spawns reviewer agent as Phase 2-2
 - Reviewer performs task-level + integration review for P0+P1 issues
 - Reviewer verdict (APPROVE/REQUEST_CHANGES/REJECT) feeds into Quad Gate
 - Not hook-enforced: managed internally by verifier agent logic
@@ -593,10 +596,10 @@ Ultrawork integrates Codex CLI at two phase transition points:
 **Result file**: `/tmp/codex-{sessionId}.json`
 
 **Fork-Join Pattern:**
-1. **Phase 0 (Fork)**: Verifier spawns background Codex process via `codex-verify.js`
-2. **Phases 1-4**: Verifier performs primary checks (evidence audit, tests, blocked patterns)
-3. **Phase 4.5 (Join)**: Verifier waits for Codex completion, reads results from output file
-4. **Phase 5**: Combined verdict (both gates must pass)
+1. **Phase 1-2 (Fork)**: Verifier spawns background Codex process via `codex-verify.js`
+2. **Phase 1-1**: Verifier performs primary checks (evidence audit, tests, blocked patterns)
+3. **Phase 2-1 (Join)**: Verifier waits for Codex completion, reads results from output file
+4. **Phase 3-1**: Combined verdict (both gates must pass)
 
 **Graceful Degradation:**
 - If Codex not installed: Verifier continues with primary checks only
@@ -636,6 +639,25 @@ Ultrawork integrates Codex CLI at two phase transition points:
   - `/tmp/codex-{sessionId}.json` deleted - old verification result
   - `/tmp/codex-doc-{sessionId}.json` deleted - old doc-review result
 - Ensures fresh verification on retry, not reading stale failure results
+
+### Gate 0: Deterministic Verification
+
+Gate 0 runs deterministic checks before any LLM-based verification in the Verifier pipeline. It checks project-specific rules defined in `phase-rules.json`.
+
+**Default Rules** (`src/rules/phase-rules.json`):
+- `all_tasks_resolved`: All tasks must be in resolved status
+- `evidence_exists`: At least one test_result in evidence
+
+**Project Override** (`.claude/ultrawork-rules.json`):
+Projects can add custom checks:
+- `command`: Run shell command, check exit code (e.g., lint, build)
+- `glob`: Check file pattern matches (e.g., test files exist)
+- `task_status`: Verify task statuses
+- `evidence_count`: Count evidence entries by type
+
+**Merge Strategy**: Project rules are additive. Same `name` = project overrides default.
+
+**Gate 0 FAIL**: Immediate FAIL, skip all LLM gates (saves tokens). Fix tasks created with specific error details.
 
 ## Hook Configuration
 
@@ -758,6 +780,14 @@ documenter -> create ADR, update permanent docs, delete plan
 - Input: Design document, task evidence, git diff
 - Output: ADR file, updated permanent docs, plan file deleted
 - Phase transition: documenter calls session-update.js --documenter-completed --phase COMPLETE
+
+### Lessons Extraction
+
+The Documenter (Phase 2-3) extracts process lessons on session completion:
+- **Output**: `docs/lessons/YYYY-MM-DD-{slug}.md`
+- **Analysis**: Failure-fix patterns, gate failure counts, Ralph loop causes
+- **Skipped**: When session completes cleanly on first pass (nothing to learn)
+- **Command**: `/ultrawork-lessons` to view lessons dashboard
 
 ### 7. Session Complete
 
