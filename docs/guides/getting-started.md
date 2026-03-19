@@ -194,6 +194,7 @@ Multi-session collaboration with role-based workers. Enables parallel developmen
 /ultrawork --auto "goal"       # Skip plan confirmation
 /ultrawork-status              # Check session state
 /ultrawork-evidence            # List collected evidence
+/ultrawork-lessons             # View lessons from past sessions
 /ultrawork-exec                # Execute existing plan
 /ultrawork-cancel              # Cancel current session
 ```
