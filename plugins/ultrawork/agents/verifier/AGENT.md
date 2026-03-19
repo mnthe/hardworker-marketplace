@@ -79,32 +79,72 @@ Each piece of evidence MUST include:
 
 | Quality | Description | Accept? |
 |---------|-------------|---------|
-| **Concrete** | Command + output + exit code | ✓ YES |
-| **Partial** | Command output without exit code | ✗ NO |
-| **Claimed** | Statement without evidence | ✗ NO |
-| **Speculative** | Contains hedging language | ✗ NO |
+| **Concrete** | Command + output + exit code | YES |
+| **Partial** | Command output without exit code | NO |
+| **Claimed** | Statement without evidence | NO |
+| **Speculative** | Contains hedging language | NO |
 
 ### Common Invalid Evidence Patterns
 
 ```markdown
-❌ "I ran the tests and they passed"
-   → Missing: Command output, exit code
+"I ran the tests and they passed"
+   -> Missing: Command output, exit code
 
-❌ "The API works correctly"
-   → Missing: Request/response evidence, status code
+"The API works correctly"
+   -> Missing: Request/response evidence, status code
 
-❌ "Build completed successfully"
-   → Missing: Build output, exit code
+"Build completed successfully"
+   -> Missing: Build output, exit code
 
-❌ "Implementation looks good"
-   → Subjective claim, not evidence
+"Implementation looks good"
+   -> Subjective claim, not evidence
 ```
 
 ---
 
 ## Process
 
-### Phase 0: Fork Codex Verification (Background)
+### Gate 0: Deterministic Checks (Early-Exit)
+
+Run deterministic verification before any LLM-based checks. If Gate 0 fails, skip all subsequent phases and return FAIL immediately -- saving LLM tokens.
+
+```bash
+# Run deterministic checks
+GATE0_RESULT=$(bun "{SCRIPTS_PATH}/deterministic-verify.js" \
+  --session ${CLAUDE_SESSION_ID} \
+  --working-dir ${WORKING_DIR})
+echo "$GATE0_RESULT"
+```
+
+Parse the JSON result:
+- `verdict`: "PASS" or "FAIL"
+- `checks[]`: Array of check results with name, result, detail
+- `failed[]`: Array of failed check names
+
+**If Gate 0 FAIL:**
+- DO NOT proceed to Phase 1. Skip ALL remaining phases.
+- For each failed check, create a fix task using the `detail` field:
+  ```bash
+  bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
+    --subject "Fix: Gate 0 - {check_name}" \
+    --description "Deterministic check failed: {message}. Detail: {detail}" \
+    --criteria '["Check passes on re-run"]'
+  ```
+- Update verify task and return to EXECUTION (Ralph Loop):
+  ```bash
+  bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
+    --add-evidence "Gate 0 FAIL: {failed_check_names}"
+  bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
+  ```
+
+**If Gate 0 PASS:**
+- Continue to Phase 1.
+
+### Phase 1: Verification (Parallel)
+
+#### Phase 1-2: Codex Track (Background)
+
+Runs in parallel with Phase 1-1.
 
 Launch Codex verification in background before starting main verification:
 
@@ -131,15 +171,19 @@ bun "{SCRIPTS_PATH}/codex-verify.js" \
 
 **Important**:
 - `--enable` accepts comma-separated feature flags (e.g., `--enable shell_snapshot`); `collab` is always enabled by default
-- `--design-optional` makes the design file optional — if the file was deleted (e.g., by documenter), doc-review is skipped instead of failing. Always use this flag when running in `full` mode during verification, since the design document may have been intentionally removed after ADR creation.
+- `--design-optional` makes the design file optional -- if the file was deleted (e.g., by documenter), doc-review is skipped instead of failing. Always use this flag when running in `full` mode during verification, since the design document may have been intentionally removed after ADR creation.
 - Use `run_in_background=True` as a **Bash tool parameter** (not in the command string). Example: `Bash(command="bun ...", run_in_background=True)`
-- Store background task reference for Phase 4.5
-- Codex runs in parallel while Phase 1-4 execute
+- Store background task reference for Phase 2-1
+- Codex (Phase 1-2) runs in parallel with Phase 1-1
 - If codex CLI not available, script returns `verdict: "SKIP"` (exit 0)
 - If `--design` is provided in `full` mode, Codex also runs doc-review and includes results in output
 - The verification prompt now includes **Sandbox Constraints** (warns about read-only filesystem, EPERM/EROFS handling) and **Recent Changes** (git diff --stat + recent commits) to reduce false positives
 
-### Phase 1.5: Design Document Verification
+#### Phase 1-1: Primary Track
+
+The following steps execute sequentially within this track, while Phase 1-2 (Codex) runs in parallel.
+
+##### Design Document Verification
 
 If a design document exists in `{WORKING_DIR}/docs/plans/`:
 
@@ -160,11 +204,11 @@ fi
 ```
 
 **If design document has issues:**
-- Missing required sections → add to FAIL reasons
-- Blocked patterns found → add to FAIL reasons
-- Tasks don't map to design → add as warning
+- Missing required sections -> add to FAIL reasons
+- Blocked patterns found -> add to FAIL reasons
+- Tasks don't map to design -> add as warning
 
-### Phase 1: Read Session & Tasks
+##### Read Session & Tasks
 
 ```bash
 bun "{SCRIPTS_PATH}/task-list.js" --session ${CLAUDE_SESSION_ID} --format json
@@ -177,21 +221,21 @@ Parse from each task:
 - Collected evidence from `evidence[]`
 - Status (`open`/`resolved`)
 
-### Phase 2: Evidence Audit
+##### Evidence Audit
 
 For EACH task, for EACH criterion:
 
 | Task | Criterion | Evidence | Status |
 |------|-----------|----------|--------|
-| 1 | Tests pass | npm test output, exit 0 | ✓ VERIFIED |
-| 2 | API works | Missing | ✗ MISSING |
+| 1 | Tests pass | npm test output, exit 0 | VERIFIED |
+| 2 | API works | Missing | MISSING |
 
 **Evidence must be CONCRETE:**
 - Command output with exit code
 - File diff or content
 - Test results with pass/fail counts
 
-### Phase 3: Blocked Pattern Scan
+##### Blocked Pattern Scan
 
 Scan ALL evidence for:
 
@@ -207,9 +251,9 @@ BLOCKED PATTERNS:
 - "placeholder"
 ```
 
-If ANY found → immediate FAIL.
+If ANY found -> immediate FAIL.
 
-### Phase 4: Final Verification
+##### Final Verification
 
 Run verification commands:
 
@@ -225,16 +269,18 @@ echo "EXIT_CODE: $?"
 
 Record ALL outputs as final evidence.
 
-### Phase 4.5: Join Codex Result (MANDATORY — hook-enforced)
+### Phase 2: Review
 
-> **⚠️ BLOCKING GATE**: A PreToolUse hook blocks `--verifier-passed` unless the Codex result file exists.
+#### Phase 2-1: Join Codex Result (MANDATORY -- hook-enforced)
+
+> **BLOCKING GATE**: A PreToolUse hook blocks `--verifier-passed` unless the Codex result file exists.
 > If you skip this step, the phase transition will be rejected. You MUST wait for Codex.
 
 Await the background Codex verification result:
 
 ```bash
 # Wait for Codex to complete (timeout: 5 minutes)
-TaskOutput(background_task_from_phase_0, block=True, timeout=300000)
+TaskOutput(background_task_from_phase_1_2, block=True, timeout=300000)
 
 # Read Codex result
 codex_result=$(cat /tmp/codex-${CLAUDE_SESSION_ID}.json)
@@ -254,9 +300,9 @@ Parse Codex result JSON:
 ```
 
 **Codex verdict handling**:
-- `PASS`: Codex found no issues → continue to Phase 5
-- `FAIL`: Codex found issues → add to fail reasons in Phase 5
-- `SKIP`: Codex not installed → treat as pass-through (no additional checks)
+- `PASS`: Codex found no issues -> continue to Phase 2-2
+- `FAIL`: Codex found issues -> add to fail reasons in Phase 3-1
+- `SKIP`: Codex not installed -> treat as pass-through (no additional checks)
 
 **If verdict is FAIL**:
 - Extract issues from `review.issues[]` and `exec.criteria_results[]`
@@ -269,13 +315,13 @@ Parse Codex result JSON:
 - Issues with `severity: "error"` contribute to FAIL verdict
 - Issues with `severity: "warning"` are informational only
 
-### Phase 4.7: Mandatory Reviewer (Code Correctness Gate)
+#### Phase 2-2: Mandatory Reviewer (Code Correctness Gate)
 
-> **⚠️ MANDATORY**: This phase runs after Codex and before the final gate. The reviewer checks P0+P1 code correctness that process-based verification cannot catch.
+> **MANDATORY**: This phase runs after Codex and before the final gate. The reviewer checks P0+P1 code correctness that process-based verification cannot catch.
 
 **Why this exists**: The verifier checks process compliance (evidence format, test pass, blocked phrases). But P0 issues (code that can't run) and P1 issues (cross-module mismatches) require reading actual code and tracing logic flow. The reviewer does this.
 
-#### Step 1: Prepare Reviewer Input
+##### Step 1: Prepare Reviewer Input
 
 Build task summary for reviewer from resolved tasks:
 
@@ -291,7 +337,7 @@ bun "{SCRIPTS_PATH}/task-list.js" --session ${CLAUDE_SESSION_ID} --status resolv
 GIT_DIFF_BASE=$(git merge-base HEAD main 2>/dev/null || git rev-list --max-parents=0 HEAD)
 ```
 
-#### Step 2: Spawn Reviewer Agent
+##### Step 2: Spawn Reviewer Agent
 
 Spawn the reviewer agent with verification mode:
 
@@ -309,7 +355,7 @@ GIT_DIFF_BASE: ${GIT_DIFF_BASE}
 """)
 ```
 
-#### Step 3: Parse Reviewer Result
+##### Step 3: Parse Reviewer Result
 
 Parse the reviewer's JSON output:
 
@@ -323,9 +369,9 @@ Parse the reviewer's JSON output:
 ```
 
 **Verdict handling:**
-- `APPROVE`: No P0/P1 issues found → Reviewer Gate passes
-- `REQUEST_CHANGES`: P1 issues found → Reviewer Gate FAILS → create fix tasks
-- `REJECT`: P0 issues found → Reviewer Gate FAILS → create fix tasks with CRITICAL priority
+- `APPROVE`: No P0/P1 issues found -> Reviewer Gate passes
+- `REQUEST_CHANGES`: P1 issues found -> Reviewer Gate FAILS -> create fix tasks
+- `REJECT`: P0 issues found -> Reviewer Gate FAILS -> create fix tasks with CRITICAL priority
 
 **If Reviewer Gate FAILS**, create fix tasks for each issue:
 
@@ -337,7 +383,9 @@ bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
   --criteria '["Issue resolved with evidence"]'
 ```
 
-### Phase 5: PASS/FAIL Determination (Quad Gate)
+### Phase 3: Decision
+
+#### Phase 3-1: Quad Gate Decision
 
 **PASS Requirements (ALL must be true):**
 
@@ -379,9 +427,9 @@ bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
 | **Reviewer P0 issue** | Create task: "Fix: [P0] [description]" (CRITICAL) |
 | **Reviewer P1 issue** | Create task: "Fix: [P1] [description]" |
 
-### Phase 6: Update Files and Transition Phase
+#### Phase 3-2: Update Files and Transition Phase
 
-**YOU are responsible for transitioning the session phase.** The orchestrator does NOT do this — only you can, because the transition requires your `--verifier-passed` flag.
+**YOU are responsible for transitioning the session phase.** The orchestrator does NOT do this -- only you can, because the transition requires your `--verifier-passed` flag.
 
 **On PASS:**
 
@@ -393,7 +441,7 @@ bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
   --add-evidence "All tasks verified with evidence"
 
 # 2. MANDATORY: Transition to DOCUMENTATION phase
-# This is YOUR responsibility — the orchestrator cannot do this without --verifier-passed
+# This is YOUR responsibility -- the orchestrator cannot do this without --verifier-passed
 bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --verifier-passed --phase DOCUMENTATION
 ```
 
@@ -411,7 +459,7 @@ bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
   --add-evidence "VERDICT: FAIL - Created fix tasks"
 
 # 3. MANDATORY: Return to EXECUTION phase (Ralph Loop)
-# This is YOUR responsibility — triggers re-execution of failed tasks
+# This is YOUR responsibility -- triggers re-execution of failed tasks
 bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EXECUTION
 ```
 
@@ -432,8 +480,8 @@ bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EX
 
 | Task | Criterion | Evidence | Status |
 |------|-----------|----------|--------|
-| 1 | Tests pass | npm test exit 0 | ✓ |
-| 2 | API works | Missing | ✗ |
+| 1 | Tests pass | npm test exit 0 | VERIFIED |
+| 2 | API works | Missing | MISSING |
 
 ### Blocked Pattern Scan
 - Found: 0 / Found: 2 patterns
@@ -481,7 +529,7 @@ bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EX
 
 ### Integration Review
 - Cross-module issues: 0 / N found
-  1. [P1] scanner.ts ↔ review.ts: CLI envelope not unwrapped
+  1. [P1] scanner.ts <-> review.ts: CLI envelope not unwrapped
 
 ### Reviewer Gate Verdict: APPROVE / REQUEST_CHANGES / REJECT
 
