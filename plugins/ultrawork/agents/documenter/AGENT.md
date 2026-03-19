@@ -66,7 +66,7 @@ Also:
 
 ### Phase 2: Create ADR and Update Permanent Docs
 
-#### 2a. Create ADR
+#### Phase 2-1: Create ADR
 
 Create an ADR file in `docs/adr/`:
 
@@ -123,25 +123,84 @@ Accepted — {date}
 - Design doc: `2026-02-14-user-auth-design.md`
 - ADR: `2026-02-14-user-auth.md`
 
-#### 2b. Update Permanent Docs (if they exist)
+#### Phase 2-2: Update Living Docs (Drift Repair)
 
-Search for related permanent documentation:
+Identify and fix documentation drift caused by this session's code changes:
 
-```python
-Glob("docs/*.md", path=WORKING_DIR)
-Glob("docs/**/*.md", path=WORKING_DIR)
+1. Extract changed code files from evidence:
+```bash
+bun "{SCRIPTS_PATH}/evidence-query.js" --session ${CLAUDE_SESSION_ID} --type file_operation --format json
 ```
 
-For each relevant permanent doc found (e.g., `ARCHITECTURE.md`, `API.md`, `README.md`):
-- Read the document
-- If the implementation added new components, APIs, or architectural patterns that the document covers, update it with the actual implementation details
-- Use the Edit tool for surgical updates
+2. Read each living document and check if it describes any of the changed files:
+   - `CLAUDE.md` (project root)
+   - `.claude/rules/*.md`
+   - `README.md`
+   - `docs/*.md` (existing permanent docs)
 
-**Rules for permanent doc updates:**
+3. For each document where drift is detected:
+   - Read the document
+   - Compare its claims against the actual current code
+   - Use Edit tool for surgical updates
+   - Only fix drift related to THIS session's changes
+
+**Drift detection source**: Use evidence `file_operation` entries to identify which code files changed. Then read each living document and use opus-level reasoning to determine if any claims in the document are now stale relative to the changed code.
+
+**Rules for drift repair:**
 - Only update docs that **already exist** — never create new permanent docs
-- Only add information that is **directly relevant** to the existing document's scope
+- Only fix drift caused by THIS session's code changes — don't go on a broader cleanup
 - Keep edits minimal and focused — don't restructure existing content
-- If no permanent docs exist or none are relevant, skip this step
+- If no drift detected, skip this step
+
+#### Phase 2-3: Extract Lessons
+
+Analyze the evidence log to extract process lessons from this session:
+
+```bash
+bun "{SCRIPTS_PATH}/evidence-summary.js" --session ${CLAUDE_SESSION_ID} --format json
+bun "{SCRIPTS_PATH}/task-list.js" --session ${CLAUDE_SESSION_ID} --format json
+```
+
+Create `{WORKING_DIR}/docs/lessons/YYYY-MM-DD-{slug}.md`:
+
+```bash
+mkdir -p "{WORKING_DIR}/docs/lessons"
+```
+
+**Analysis scope (use opus-level deep reasoning):**
+1. **Failure→fix chains**: Trace FAIL verdict → fix task creation → re-verification → PASS flow
+2. **Gate failure counts**: How many times Gate 0, Codex, Reviewer each triggered failures
+3. **Repeated patterns**: Same type of failure occurring multiple times (e.g., lint 3x)
+4. **Project-specific recommendations**: Actionable items for future sessions
+
+**Lessons file structure:**
+```markdown
+# Lessons: {goal description}
+
+## Session Summary
+- **Date**: YYYY-MM-DD
+- **Tasks**: N total, M first-pass, K fix tasks
+- **Ralph Loops**: N (causes)
+- **Gate 0 Failures**: N (which checks)
+
+## Failure-Fix Patterns
+
+### Pattern: {description}
+- **발생**: {when/where}
+- **원인**: {root cause}
+- **수정**: {how fixed}
+- **교훈**: {takeaway}
+
+## Verification Insights
+- Gate 0 pass rate
+- Reviewer findings summary
+- Codex findings summary
+
+## Recommendations
+- {actionable items for future sessions}
+```
+
+**Skip lessons if**: Session completed on first try with zero failures (nothing actionable to extract).
 
 ### Phase 3: Cleanup
 
@@ -176,15 +235,16 @@ git add --all     # Stages ALL files
 git add *         # Glob expansion - dangerous
 
 # ✅ REQUIRED - Only add files YOU created/modified:
-git add docs/adr/YYYY-MM-DD-slug.md docs/ARCHITECTURE.md && git commit -m "$(cat <<'EOF'
-docs(adr): create ADR and update permanent docs
+git add docs/adr/YYYY-MM-DD-slug.md docs/lessons/YYYY-MM-DD-slug.md docs/ARCHITECTURE.md && git commit -m "$(cat <<'EOF'
+docs(adr): create ADR, extract lessons, and update permanent docs
 
 [ultrawork] Session: ${CLAUDE_SESSION_ID}
 
-Created ADR from design document, updated permanent docs, deleted plan.
+Created ADR from design document, extracted lessons, updated permanent docs, deleted plan.
 
 Files changed:
 - docs/adr/YYYY-MM-DD-slug.md (created)
+- docs/lessons/YYYY-MM-DD-slug.md (created, if applicable)
 - docs/ARCHITECTURE.md (updated)
 - docs/plans/design.md (deleted)
 EOF
@@ -238,3 +298,5 @@ bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --document
 9. **Commit after documentation work** — Always commit changes after Phase 3 cleanup, before transitioning to COMPLETE
 10. **Selective staging** — ONLY `git add <specific-files>`, NEVER `git add -A` or `git add .`
 11. **Record commit hash** — Add evidence of the commit hash before transitioning to COMPLETE
+12. **Extract lessons when valuable** — Create lessons file in docs/lessons/ when the session had failures, Ralph loops, or non-trivial verification findings. Skip for clean first-pass completions.
+13. **Repair drift surgically** — Only update living docs that are directly affected by this session's code changes. Don't restructure or improve docs beyond the drift.
