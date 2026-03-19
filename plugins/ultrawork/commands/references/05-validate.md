@@ -47,14 +47,14 @@ Make PASS/FAIL determination.
 The verifier must:
 
 1. **Audit Evidence** - Check that every success criterion has corresponding evidence
-2. **Verify Design Document** - If design doc exists, check section completeness and blocked patterns (Phase 1.5)
+2. **Verify Design Document** - If design doc exists, check section completeness and blocked patterns
 3. **Scan for Blocked Patterns** - Search all evidence and code for zero-tolerance phrases
 4. **Run Final Tests** - Execute test suite, verify exit code 0
-5. **Make Determination** - Clear PASS or FAIL verdict with rationale (triple gate: Claude + Codex + Doc)
+5. **Make Determination** - Clear PASS or FAIL verdict with rationale (Quad Gate: Claude + Codex + Doc + Reviewer)
 
 ---
 
-## Design Document Verification (Phase 1.5)
+## Design Document Verification
 
 If a design document exists in `{WORKING_DIR}/docs/plans/`:
 
@@ -199,7 +199,7 @@ Exit code: 0
 
 ## PASS Determination
 
-**Verifier can mark PASS only if (triple gate):**
+**Verifier can mark PASS only if (Quad Gate):**
 
 1. ✅ All tasks have status `resolved`
 2. ✅ Every success criterion has concrete evidence
@@ -208,16 +208,18 @@ Exit code: 0
 5. ✅ No unresolved issues mentioned in evidence
 6. ✅ Design document passes review (if present) — no missing sections, no blocked patterns
 7. ✅ Codex gate: PASS or SKIP
+8. ✅ Reviewer gate (Phase 2-2): APPROVE (zero P0 and P1 issues)
 
-**Triple Gate Decision:**
+**Quad Gate Decision:**
 
-| Claude Gate | Codex Gate | Doc Gate | Final Verdict |
-|-------------|------------|----------|---------------|
-| PASS | PASS | PASS | **PASS** |
-| PASS | PASS | FAIL | **FAIL** |
-| PASS | SKIP | PASS | **PASS** |
-| FAIL | any | any | **FAIL** |
-| PASS | PASS | N/A | **PASS** |
+| Claude Gate | Codex Gate | Doc Gate | Reviewer Gate | Final Verdict |
+|-------------|------------|----------|---------------|---------------|
+| PASS | PASS | PASS | APPROVE | **PASS** |
+| PASS | PASS | PASS | REQUEST_CHANGES | **FAIL** |
+| PASS | PASS | FAIL | any | **FAIL** |
+| PASS | SKIP | PASS | APPROVE | **PASS** |
+| FAIL | any | any | any | **FAIL** |
+| PASS | PASS | N/A | APPROVE | **PASS** |
 
 **PASS action:**
 
@@ -289,27 +291,35 @@ Every session must go through the VERIFICATION phase before completion.
 
 ---
 
-## Reviewer Agent (Optional Deep Verification)
+## Mandatory Reviewer (Phase 2-2)
 
-For high-stakes work, spawn reviewer agent after verifier:
+The reviewer agent is a mandatory gate in the verification pipeline. The verifier spawns the reviewer during Phase 2-2 for P0/P1 correctness checks:
 
 ```python
-# After verifier PASS, optionally run reviewer
+# Verifier spawns reviewer as Phase 2-2
 Task(
     subagent_type="ultrawork:reviewer:reviewer",
     model="opus",
     prompt=f"""
 SESSION_ID: ${CLAUDE_SESSION_ID}
 SCRIPTS_PATH: ${CLAUDE_PLUGIN_ROOT}/src/scripts
+MODE: verification
+
+TASKS:
+- Task 1: {subject} | Files: {file1, file2}
+- Task 2: {subject} | Files: {file3, file4}
+
+GIT_DIFF_BASE: {base_branch}
 
 Deep code review:
 - Read actual implementation code
-- Check edge case handling
+- Check edge case handling (P0/P1)
 - Verify error handling completeness
 - Detect security issues
 - Assess code quality
+- Cross-module integration review
 
-Provide detailed feedback.
+Provide structured verdict (APPROVE/REQUEST_CHANGES/REJECT).
 """
 )
 ```
@@ -321,7 +331,7 @@ Provide detailed feedback.
 | Speed | Fast (~1-2 min) | Slow (~5-10 min) |
 | Depth | Evidence-based | Code-reading |
 | Focus | Criteria met? | Quality, security, edge cases |
-| When | Always (mandatory) | Optional, high-stakes only |
+| When | Always (mandatory) | Always (mandatory, Phase 2-2) |
 
 ---
 

@@ -76,9 +76,9 @@ DESIGN_DOC: {design_doc}
 
 Collect evidence, task results, and git diff — same as before.
 
-### Phase 2: Create ADR + Update Permanent Docs
+### Phase 2: Create ADR + Update Permanent Docs + Extract Lessons
 
-#### 2a. Create ADR
+#### Phase 2-1: Create ADR
 
 | Aspect | Detail |
 |--------|--------|
@@ -103,7 +103,7 @@ Collect evidence, task results, and git diff — same as before.
 - Fallback strategies that weren't triggered
 - Documentation plan / todo items
 
-#### 2b. Update Permanent Docs
+#### Phase 2-2: Update Living Docs (Drift Repair)
 
 | Aspect | Detail |
 |--------|--------|
@@ -111,6 +111,15 @@ Collect evidence, task results, and git diff — same as before.
 | Targets | ARCHITECTURE.md, API.md, README.md, etc. |
 | Action | Surgical Edit updates with implementation details |
 | Skip if | No relevant permanent docs exist |
+
+#### Phase 2-3: Lessons Extraction
+
+| Aspect | Detail |
+|--------|--------|
+| Scope | Extract reusable insights from session evidence and decisions |
+| Targets | Patterns, anti-patterns, decision rationale worth preserving |
+| Action | Record lessons learned for future sessions |
+| Skip if | Session was trivial with no notable decisions |
 
 ### Phase 3: Cleanup
 

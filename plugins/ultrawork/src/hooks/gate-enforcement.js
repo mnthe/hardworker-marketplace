@@ -461,7 +461,7 @@ Codex CLI is installed but verification has not been run.
 The Codex verification must complete before transitioning to DOCUMENTATION.
 
 WHAT TO DO:
-1. Launch Codex verification in Phase 0
+1. Launch Codex verification in Phase 1-2
 2. Wait for completion: TaskOutput(background_task_id, block=True, timeout=300000)
 3. Read the result: cat ${resultPath}
 4. Retry this command`

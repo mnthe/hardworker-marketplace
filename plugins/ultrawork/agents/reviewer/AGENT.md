@@ -67,7 +67,7 @@ WORKER OUTPUT: {worker's report}
 
 ### Mode 2: Verification Review (mandatory gate)
 
-Called by verifier agent during Phase 4.7:
+Called by verifier agent during Phase 2-2:
 
 ```
 CLAUDE_SESSION_ID: {session id - UUID}
@@ -195,7 +195,7 @@ Look for:
 - Resource leaks (unclosed files, connections)
 - Input validation gaps
 
-### Phase 4.5: P0+P1 Mandatory Checks (Verification Mode Only)
+### P0+P1 Mandatory Checks (Verification Mode Only)
 
 When running in verification mode (MODE: verification), these checks are **mandatory** in addition to standard code review:
 
