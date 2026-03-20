@@ -114,6 +114,138 @@ Examples:
 
 ---
 
+## Quantitative Collection
+
+Beyond descriptive findings, gather measurable data that enables informed planning decisions.
+
+### Consumer Tracking
+
+Identify files that depend on the area being explored:
+
+```bash
+# Find consumers of a specific module
+grep -r "import.*moduleName" --include="*.ts" --include="*.js" -l
+grep -r "require.*moduleName" --include="*.ts" --include="*.js" -l
+```
+
+Record the count of consumers for key files. High consumer count = high-risk changes.
+
+### Test Status
+
+Collect existing test coverage data:
+
+```bash
+# Count test files in project
+find . -name "*.test.*" -o -name "*.spec.*" | wc -l
+
+# Count test files per directory
+find src/ -name "*.test.*" | head -20
+
+# Check for test configuration
+ls jest.config* vitest.config* .bun* 2>/dev/null
+```
+
+Report: total test file count, test runner in use, directories with/without tests.
+
+### Interface Signatures
+
+Extract key type and function signatures for files relevant to the goal:
+
+```bash
+# Extract exported interfaces and types
+grep -n "export.*\(type\|interface\|function\|class\)" file.ts | head -20
+
+# Extract function signatures with context
+grep -A3 "export.*function" file.ts
+```
+
+Record the public API surface of files that will likely be modified.
+
+### Line Counts
+
+Measure file sizes to estimate task complexity:
+
+```bash
+# Line counts for relevant files
+wc -l src/auth.ts src/middleware/*.ts src/types.ts
+```
+
+Files over 300 lines may need splitting. Files under 50 lines are low-risk changes.
+
+### Reporting Format
+
+Include a `## Quantitative Data` section in your exploration markdown:
+
+```markdown
+## Quantitative Data
+
+| Metric | Value |
+|--------|-------|
+| Test files | 23 |
+| Test runner | vitest |
+| Consumer count (auth.ts) | 12 files |
+| Consumer count (types.ts) | 8 files |
+| Lines in auth.ts | 245 |
+| Exported interfaces | 5 |
+```
+
+---
+
+## Goal-Aligned Exploration
+
+Exploration must be driven by the session goal. Breadth-first scanning wastes tokens when the goal points to a specific domain.
+
+### Keyword Extraction
+
+Parse the goal for domain keywords to prioritize exploration:
+
+| Goal keyword | Priority exploration area |
+|-------------|--------------------------|
+| auth, login, session, JWT | Authentication layer, middleware, token handling |
+| database, schema, migration, model | Database layer, ORM config, migration files |
+| API, endpoint, route, REST | Route handlers, controllers, API middleware |
+| test, coverage, spec | Test infrastructure, test utilities, CI config |
+| UI, component, page, form | Frontend components, layouts, styles |
+| deploy, CI, build, config | Build system, CI/CD pipelines, environment config |
+
+### Depth Over Breadth
+
+For goal-relevant areas, explore deeply:
+
+1. **Read the actual implementation** (not just file names)
+2. **Trace the call chain** (entry point through to data layer)
+3. **Identify edge cases** in existing code
+4. **Document existing patterns** that new code must follow
+
+For non-goal areas, a surface scan is sufficient (file list + brief purpose).
+
+### Relevance Annotation
+
+Every finding must connect back to the goal. In your exploration markdown, annotate findings:
+
+```markdown
+### src/middleware/auth.ts
+**Relevance**: Direct target for modification (goal: "add role-based access")
+- Uses JWT validation with `jsonwebtoken` library
+- Current middleware checks token existence but not roles
+- 12 route files import this middleware
+
+### src/db/schema.ts
+**Relevance**: Requires schema change to store user roles
+- Prisma schema, User model has no role field
+- Migration directory shows 5 existing migrations
+```
+
+### Exploration Priority Order
+
+1. Files directly named in or implied by the goal
+2. Files that import/depend on those files (consumers)
+3. Test files for the above
+4. Configuration files (if goal involves infra changes)
+5. Everything else (surface scan only)
+
+---
+
 ## Process
 
 ### Phase 1: Read Session
