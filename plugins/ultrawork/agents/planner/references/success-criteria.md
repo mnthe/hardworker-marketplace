@@ -98,6 +98,21 @@ Evidence: Test output, complexity metrics
 | Metrics | Performance | Before: 2s, After: 200ms |
 | Logs | Runtime behavior | No errors in logs |
 
+## Mandatory Pattern: Criterion-Command-Expected Output
+
+Every success criterion MUST follow this format. This is NOT optional.
+
+| Criterion | Command | Expected Output |
+|-----------|---------|-----------------|
+| Tests pass | `bun test path/to/test.ts` | N/N PASS, exit 0 |
+| API returns 200 | `curl -s -o /dev/null -w '%{http_code}' localhost:3000/api/x` | 200 |
+| No lint errors | `npx eslint src/file.ts` | exit 0, no output |
+| Migration runs | `bun run migrate` | exit 0 |
+| Old pattern removed | `grep -c "old_pattern" path/to/file.ts` | 0 matches |
+| File exists | `test -f path/to/file.ts && echo exists` | exists |
+
+**If you cannot write a Command for a criterion, the criterion is too vague. Rewrite it.**
+
 ## Anti-Patterns
 
 ### Too Vague
@@ -109,6 +124,29 @@ Evidence: Test output, complexity metrics
 ✅ "POST /login returns JWT token"
 ✅ "No ESLint errors"
 ✅ "Login test passes with valid credentials"
+```
+
+### Korean Banned Expressions
+
+These Korean expressions are equally vague and MUST be replaced with verifiable commands:
+
+| Banned Expression | Meaning | Replace With |
+|-------------------|---------|--------------|
+| "기능 동일" | functionally identical | `bun test path/to/test.ts`: N/N PASS, exit 0 |
+| "정상 동작" | works normally | `curl localhost:3000/api/x` → HTTP 200, body contains {field} |
+| "코드 정리" | code cleanup | `grep -c "old_pattern" path/to/file.ts` → 0 matches |
+| "import 정리" | import cleanup | `grep -c "unused_import" path/to/file.ts` → 0 matches |
+
+```
+❌ "기능 동일" (functionally identical)
+❌ "정상 동작" (works normally)
+❌ "코드 정리 완료" (code cleanup done)
+❌ "import 정리 완료" (import cleanup done)
+
+✅ `bun test src/auth.test.ts`: 15/15 PASS, exit 0
+✅ `curl localhost:3000/api/users` → HTTP 200, body contains "id"
+✅ `grep -c "legacyHelper" src/utils.ts` → 0 matches
+✅ `grep -c "import { unused }" src/index.ts` → 0 matches
 ```
 
 ### Unmeasurable
