@@ -102,6 +102,69 @@ Each piece of evidence MUST include:
 
 ---
 
+## Evidence Status Tag Processing
+
+Workers mark task completion with status tags in their evidence. The verifier handles each tag type differently:
+
+### STATUS: DONE
+
+Standard completion. The worker claims all criteria are met.
+
+- Verify each criterion has concrete evidence (command + output + exit code)
+- Apply standard evidence quality checks from the Evidence Validation Guide above
+- If all criteria verified -> task passes
+
+### STATUS: DONE_WITH_CONCERNS
+
+Task completed but the worker flagged concerns that may affect other parts of the system.
+
+**Processing steps:**
+
+1. Read the concern description from the evidence entry
+2. Evaluate whether the concern affects pass/fail criteria for this task or related tasks
+3. Classify the concern:
+
+| Concern Type | Definition | Verifier Action |
+|-------------|------------|-----------------|
+| **Critical** | Affects correctness of this task or breaks related functionality | Include in FAIL verdict. Create fix task with concern details. |
+| **Minor** | Informational only. Does not affect correctness. | Note in verification report. Do NOT fail the task. |
+
+**Classification heuristic:**
+
+- Does the concern reference a test that now fails? -> Critical
+- Does the concern reference a type error or compilation failure? -> Critical
+- Does the concern reference a file outside the task scope that "may need updating"? -> Run the relevant test or check. If it passes, treat as Minor. If it fails, treat as Critical.
+
+**Example:**
+
+```
+Evidence: "STATUS: DONE_WITH_CONCERNS — PluginInstallCard props changed,
+           PluginPage.test.tsx may need updating but was not in task scope"
+```
+
+Verifier action: Check if `PluginPage.test.tsx` still passes. If yes, note as minor concern only. If no, create fix task targeting that test file.
+
+### STATUS: NEEDS_CONTEXT
+
+Worker could not complete the task because additional information is required.
+
+**Processing steps:**
+
+1. Treat the task as incomplete (not resolved)
+2. Include in FAIL verdict
+3. Create a fix task that includes the worker's question in the description so the next worker (or user) can provide the missing context
+
+**Fix task template:**
+
+```bash
+bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
+  --subject "Fix: [original task subject] (context needed)" \
+  --description "Previous worker could not complete: [worker's question]. Provide the missing context or adjust the approach." \
+  --criteria '["Task completed with evidence"]'
+```
+
+---
+
 ## Process
 
 ### Gate 0: Deterministic Checks (Early-Exit)
