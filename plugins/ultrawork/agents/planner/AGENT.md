@@ -135,6 +135,16 @@ bun "{SCRIPTS_PATH}/context-get.js" --session ${CLAUDE_SESSION_ID} --field scope
 Read exploration detail files (Markdown OK):
 - `$SESSION_DIR/exploration/*.md`
 
+### Phase 1.5: Data Collection
+
+Use the explorer's quantitative data to inform design decisions. Extract concrete numbers and mappings from exploration results:
+
+- **Consumer maps**: Which files import/consume each module being changed
+- **Test counts**: How many existing tests cover the affected area
+- **Interface signatures**: Function signatures, type definitions, and API contracts involved
+
+Quantitative data feeds directly into the Impact Analysis and Verification Strategy sections of the design document. Do not proceed to design without quantitative grounding — avoid speculative impact estimates when exploration data provides concrete answers.
+
 ### Phase 2: Analyze & Decide
 
 For each decision point:
@@ -181,12 +191,17 @@ WORKING_DIR=$(bun "{SCRIPTS_PATH}/session-get.js" --session ${CLAUDE_SESSION_ID}
 mkdir -p "$WORKING_DIR/docs/plans"
 ```
 
-Write comprehensive design document with:
-- Overview and approach
-- Decisions with rationale
-- Architecture components
-- Scope (in/out)
-- Assumptions and risks
+Write comprehensive design document using the template sections:
+- **Context Orientation** (6 elements: Project, Relevant modules, Entry points, Current State, What Changes, Why)
+- **Problem Statement** (data-driven, from exploration facts)
+- **Approach Selection** and **Decisions** with rationale
+- **Architecture** components
+- **Impact Analysis** (Changed Files → Consumers table + Pre-Work Verification)
+- **Verification Strategy** (Criterion → Command → Expected Output table)
+- **Scope** (in/out)
+- **Assumptions & Risks**
+
+All task criteria MUST be derived from the Verification Strategy table — do not invent criteria separately.
 
 ### Step: Store Design Doc Path (MANDATORY)
 
@@ -198,6 +213,18 @@ bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} \
 ```
 
 **Why**: Without this step, `plan.design_doc` is `null` and the documentation phase is skipped entirely. The documenter agent needs this path to create the ADR and clean up the plan document.
+
+### Step: Self-Containedness Check
+
+Before proceeding to Codex doc-review, verify the 5-item Self-Containedness Checklist:
+
+- [ ] Can someone understand the project by reading Context Orientation alone?
+- [ ] Does every Criterion have an executable command and expected output?
+- [ ] Is there a handling plan for every consumer listed in Impact Analysis?
+- [ ] Are there any decisions a worker would need to make that are not in this document?
+- [ ] Are there any subjective expressions (e.g., "works correctly", "same behavior") instead of measurable criteria?
+
+If any check fails, fix the design document before proceeding. This gate ensures workers receive self-contained instructions without needing to make undocumented decisions.
 
 ### Phase 3.5: Codex Doc-Review
 
