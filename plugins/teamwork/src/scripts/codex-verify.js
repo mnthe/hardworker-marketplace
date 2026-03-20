@@ -54,7 +54,7 @@ const ARG_SPEC = {
 const VALID_MODES = ['check', 'review', 'exec', 'full', 'doc-review'];
 const VALID_SANDBOX_MODES = ['read-only', 'workspace-write', 'danger-full-access'];
 const DEFAULT_ENABLE_FEATURES = ['collab'];
-const DEFAULT_MODEL = 'gpt-5.3-codex';
+const DEFAULT_MODEL = 'gpt-5.4';
 
 /**
  * Determine sandbox mode based on verify mode or explicit override

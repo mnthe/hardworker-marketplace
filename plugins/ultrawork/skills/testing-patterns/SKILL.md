@@ -415,7 +415,7 @@ export class OpenAI {
         id: 'chatcmpl-123',
         object: 'chat.completion',
         created: Date.now(),
-        model: 'gpt-4',
+        model: 'gpt-5.4',
         choices: [
           {
             index: 0,
