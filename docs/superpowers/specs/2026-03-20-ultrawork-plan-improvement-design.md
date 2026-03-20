@@ -88,32 +88,50 @@ tasks/*.json이 이미 실행 단위로 존재하므로, 물리적 파일 분리
 
 ### 변경 범위
 
-두 가지 축의 변경이 독립적으로 적용됨:
+네 가지 축의 변경이 적용됨:
 
 ```
-Axis 1: Template (문서 구조)
+Axis 1: Template (문서 구조) — 2 파일
   ├── design-template.md 재설계
   └── success-criteria.md 강화
 
-Axis 2: Process (생성 과정)
-  ├── explorer AGENT.md — 정량 데이터 수집 항목 추가
-  ├── overview-exploration SKILL.md — 정량 수집 가이드 추가
-  ├── planning SKILL.md — interview 가이드라인 + self-containedness 통합
+Axis 2: Process (생성 과정) — 5 파일
+  ├── explorer AGENT.md — 정량 데이터 수집 + Goal-aligned 탐색
+  ├── overview-exploration SKILL.md — 정량 수집 가이드
+  ├── planning SKILL.md — interview 가이드라인 + self-containedness
   ├── planner AGENT.md — 프로세스 단계 반영
-  └── task-decomposition.md — criteria 검증 규칙 추가
+  └── task-decomposition.md — criteria 검증 + 파일 분류
+
+Axis 3: Reference 일관성 — 4 파일
+  ├── context-aware-options.md — Impact 분석 템플릿
+  ├── interview-rounds.md — 정량적 제약조건 수집
+  ├── brainstorm-protocol.md — 제약조건 수집 섹션
+  └── task-examples.md — 신규 criteria 형식 예시
+
+Axis 4: Agent 행동 강화 — 3 파일
+  ├── worker AGENT.md — Self-review + Status tags
+  ├── reviewer AGENT.md — Calibration 가이드
+  └── verifier AGENT.md — CONCERNS 태그 처리
 ```
 
 ### 컴포넌트 변경 매핑
 
 | 파일 | 변경 유형 | 변경 내용 |
 |------|----------|----------|
-| `skills/planning/references/design-template.md` | 대폭 수정 | Context Orientation, Impact Analysis, Verification Strategy 섹션 추가; Testing Strategy → Verification Strategy 대체; Documentation 섹션 제거; Assumptions+Risks 통합 |
+| `skills/planning/references/design-template.md` | 대폭 수정 | Appendix A 전문으로 대체. Context Orientation, Problem Statement, Impact Analysis, Verification Strategy 추가; Testing Strategy/Documentation 제거; Assumptions+Risks 통합 |
 | `agents/planner/references/success-criteria.md` | 수정 | 금지 표현 목록에 한국어 패턴 추가, Criterion → Command → Output 패턴 필수화 |
-| `agents/planner/references/task-decomposition.md` | 수정 | criteria가 Verification Strategy에서 추출되는 흐름 추가 |
-| `agents/explorer/AGENT.md` | 수정 | Quantitative Collection 섹션 추가 (소비자 추적, 테스트 현황) |
-| `skills/overview-exploration/SKILL.md` | 수정 | 정량 데이터 수집 항목 추가 |
-| `skills/planning/SKILL.md` | 수정 | Data-driven interview 규칙, Self-containedness check 추가 |
-| `agents/planner/AGENT.md` | 수정 | 프로세스 단계 반영 (Data Collection → Interview → Write → Check) |
+| `agents/planner/references/task-decomposition.md` | 수정 | Verification Strategy에서 criteria 추출 흐름 + Create/Modify/Test 파일 분류 |
+| `agents/explorer/AGENT.md` | 수정 | Quantitative Collection 섹션 + Goal-aligned exploration 가이드 |
+| `skills/overview-exploration/SKILL.md` | 수정 | 정량 데이터 수집 항목 + Goal-aligned 가이드 |
+| `skills/planning/SKILL.md` | 수정 | Data-driven interview 규칙, Self-containedness check |
+| `agents/planner/AGENT.md` | 수정 | 프로세스 단계 반영 |
+| `skills/planning/references/context-aware-options.md` | 수정 | 옵션별 Impact 분석 (선택 시 task graph 영향) |
+| `skills/planning/references/interview-rounds.md` | 수정 | 정량적 제약조건 수집 라운드 |
+| `skills/planning/references/brainstorm-protocol.md` | 수정 | 정량적 제약조건 수집 섹션 |
+| `skills/planning/references/task-examples.md` | 수정 | 신규 criteria 형식 + 파일 분류 반영 예시 |
+| `agents/worker/AGENT.md` | 수정 | Self-review 체크리스트 + Evidence 상태 태그 가이드 |
+| `agents/reviewer/AGENT.md` | 수정 | Calibration 가이드 (blockers만 flag) |
+| `agents/verifier/AGENT.md` | 수정 | DONE_WITH_CONCERNS / NEEDS_CONTEXT 태그 처리 |
 
 ### 변경하지 않는 것
 
@@ -156,30 +174,38 @@ bun test tests/ultrawork/  # 기존 테스트 모두 통과 확인
 
 ### In Scope
 
+**Axis 1: Template (문서 구조) — 2 파일**
+
 1. **design-template.md** 재설계
    - Context Orientation 섹션 (6요소 필수)
+   - Problem Statement 섹션 (데이터 기반)
    - Impact Analysis 섹션 (Changed Files → Consumers 테이블 + Pre-Work Verification)
    - Verification Strategy 섹션 (Criterion → Command → Expected Output 테이블)
    - Self-Containedness Checklist (문서 하단)
    - Testing Strategy → Verification Strategy 대체
    - Documentation 섹션 제거
    - Assumptions + Risks 통합
+   - (전체 템플릿 내용은 Appendix A 참조)
 
 2. **success-criteria.md** 강화
    - 금지 표현 목록에 한국어 패턴 추가 ("기능 동일", "정상 동작", "코드 정리", "import 정리")
    - Criterion → Command → Output 필수 패턴
    - Good/Bad 예시 확대
 
+**Axis 2: Process (생성 과정) — 5 파일**
+
 3. **task-decomposition.md** 보강
    - Verification Strategy에서 criteria 추출 흐름
    - Worker에게 전달할 criteria 형식 규칙
+   - Create / Modify / Test 파일 분류 도입 (superpowers 패턴)
 
 4. **explorer AGENT.md** 수정
-   - Quantitative Collection 섹션 추가
-   - 수집 항목: 파일별 소비자 목록, 테스트 현황, 인터페이스 시그니처
+   - Quantitative Collection 섹션 추가 (소비자 추적, 테스트 현황, 인터페이스 시그니처)
+   - Goal-aligned exploration 가이드 추가 — 목표 키워드 기반 탐색 우선순위
 
 5. **overview-exploration SKILL.md** 수정
    - 정량 데이터 수집 가이드 추가
+   - Goal-aligned 탐색 우선순위 가이드
 
 6. **planning SKILL.md** 수정
    - Data-driven interview 질문 생성 규칙
@@ -189,10 +215,40 @@ bun test tests/ultrawork/  # 기존 테스트 모두 통과 확인
 7. **planner AGENT.md** 수정
    - 프로세스 단계 업데이트 반영
 
+**Axis 3: Reference 파일 일관성 — 4 파일**
+
+8. **context-aware-options.md** 수정
+   - 옵션별 Impact 분석 템플릿 추가 (선택 시 task graph에 미치는 영향)
+
+9. **interview-rounds.md** 수정
+   - 데이터 기반 질문 생성 템플릿
+   - 정량적 제약조건 수집 라운드 추가 (latency, coverage 등)
+
+10. **brainstorm-protocol.md** 수정
+    - 정량적 제약조건 수집 섹션 추가
+    - Approach 선택 시 task graph 영향 분석 가이드
+
+11. **task-examples.md** 수정
+    - 신규 criteria 형식 (Command → Output) 반영한 예시 교체
+    - Create / Modify / Test 파일 분류 반영
+
+**Axis 4: Agent 행동 강화 — 3 파일**
+
+12. **worker AGENT.md** 수정
+    - Self-review 체크리스트 추가 (formal review 전 자체 점검)
+    - Evidence 상태 태그 가이드 (STATUS: DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT)
+
+13. **reviewer AGENT.md** 수정
+    - Calibration 가이드 추가 — blockers만 flag, style preference 무시
+    - "Only flag issues that would cause real problems during implementation"
+
+14. **verifier AGENT.md** 수정
+    - DONE_WITH_CONCERNS / NEEDS_CONTEXT evidence 태그 처리 로직 가이드
+
 ### Out of Scope
 
 - session.json 스키마 변경
-- tasks/*.json 구조 변경
+- tasks/*.json 구조 변경 (상태 값 추가 없음 — evidence 태그로 대체)
 - Hook 로직 수정
 - Script 파일 수정
 - Codex doc-review 스크립트 수정
@@ -200,12 +256,15 @@ bun test tests/ultrawork/  # 기존 테스트 모두 통과 확인
 - Spec/Plan 물리적 파일 분리
 - 새로운 agent 추가
 - 파이프라인 단계 수 변경
+- Auto-trigger / brainstorming 대체 (별도 spec으로 분리)
 
 ---
 
 ## Verification Strategy
 
 ### Criterion → Verification 매핑
+
+**Axis 1: Template**
 
 | # | Criterion | Command | Expected Output |
 |---|-----------|---------|-----------------|
@@ -218,12 +277,37 @@ bun test tests/ultrawork/  # 기존 테스트 모두 통과 확인
 | V7 | design-template.md에서 Assumptions+Risks가 통합됨 | `grep -c "^## Assumptions & Risks$" plugins/ultrawork/skills/planning/references/design-template.md` | 1 |
 | V8 | success-criteria.md에 한국어 금지 표현 추가됨 | `grep -c "기능 동일" plugins/ultrawork/agents/planner/references/success-criteria.md` | 1+ |
 | V9 | success-criteria.md에 Command → Output 패턴 존재 | `grep -c "Command" plugins/ultrawork/agents/planner/references/success-criteria.md` | 1+ |
+
+**Axis 2: Process**
+
+| # | Criterion | Command | Expected Output |
+|---|-----------|---------|-----------------|
 | V10 | task-decomposition.md에 Verification Strategy 참조 존재 | `grep -c "Verification Strategy" plugins/ultrawork/agents/planner/references/task-decomposition.md` | 1+ |
-| V11 | explorer AGENT.md에 Quantitative Collection 존재 | `grep -c "Quantitative" plugins/ultrawork/agents/explorer/AGENT.md` | 1+ |
-| V12 | planning SKILL.md에 Data-driven interview 규칙 존재 | `grep -c "Data-driven\|데이터 기반" plugins/ultrawork/skills/planning/SKILL.md` | 1+ |
-| V13 | planning SKILL.md에 Self-containedness 가이드 존재 | `grep -c "Self-[Cc]ontainedness\|self-containedness" plugins/ultrawork/skills/planning/SKILL.md` | 1+ |
-| V14 | planner AGENT.md에 개선된 프로세스 단계 존재 | `grep -c "Data Collection\|Quantitative\|Self-[Cc]ontainedness" plugins/ultrawork/agents/planner/AGENT.md` | 1+ |
-| V15 | 기존 테스트 통과 | `bun test tests/ultrawork/` | PASS, exit 0 |
+| V11 | task-decomposition.md에 Create/Modify/Test 파일 분류 존재 | `grep -c "Create.*Modify.*Test\|Create / Modify / Test" plugins/ultrawork/agents/planner/references/task-decomposition.md` | 1+ |
+| V12 | explorer AGENT.md에 Quantitative Collection 존재 | `grep -c "Quantitative" plugins/ultrawork/agents/explorer/AGENT.md` | 1+ |
+| V13 | explorer AGENT.md에 Goal-aligned 가이드 존재 | `grep -c "goal-aligned\|Goal-aligned\|goal.*based.*priorit" plugins/ultrawork/agents/explorer/AGENT.md` | 1+ |
+| V14 | planning SKILL.md에 Data-driven interview 규칙 존재 | `grep -c "Data-driven\|데이터 기반" plugins/ultrawork/skills/planning/SKILL.md` | 1+ |
+| V15 | planning SKILL.md에 Self-containedness 가이드 존재 | `grep -c "Self-[Cc]ontainedness\|self-containedness" plugins/ultrawork/skills/planning/SKILL.md` | 1+ |
+| V16 | planner AGENT.md에 개선된 프로세스 단계 존재 | `grep -c "Data Collection\|Quantitative\|Self-[Cc]ontainedness" plugins/ultrawork/agents/planner/AGENT.md` | 1+ |
+
+**Axis 3: Reference 일관성**
+
+| # | Criterion | Command | Expected Output |
+|---|-----------|---------|-----------------|
+| V17 | context-aware-options.md에 Impact 분석 존재 | `grep -c "impact\|Impact" plugins/ultrawork/skills/planning/references/context-aware-options.md` | 1+ |
+| V18 | interview-rounds.md에 정량적 제약조건 수집 존재 | `grep -c "quantitative\|정량\|latency\|SLA\|coverage" plugins/ultrawork/skills/planning/references/interview-rounds.md` | 1+ |
+| V19 | brainstorm-protocol.md에 정량적 제약조건 섹션 존재 | `grep -c "quantitative\|정량\|constraint" plugins/ultrawork/skills/planning/references/brainstorm-protocol.md` | 1+ |
+| V20 | task-examples.md에 Command → Output criteria 반영 | `grep -c "Command\|Expected Output\|exit.*0" plugins/ultrawork/skills/planning/references/task-examples.md` | 1+ |
+
+**Axis 4: Agent 행동**
+
+| # | Criterion | Command | Expected Output |
+|---|-----------|---------|-----------------|
+| V21 | worker AGENT.md에 Self-review 체크리스트 존재 | `grep -c "Self-[Rr]eview\|self-review" plugins/ultrawork/agents/worker/AGENT.md` | 1+ |
+| V22 | worker AGENT.md에 DONE_WITH_CONCERNS 태그 가이드 존재 | `grep -c "DONE_WITH_CONCERNS" plugins/ultrawork/agents/worker/AGENT.md` | 1+ |
+| V23 | reviewer AGENT.md에 Calibration 가이드 존재 | `grep -c "calibration\|Calibration\|blockers.*only\|style.*preference" plugins/ultrawork/agents/reviewer/AGENT.md` | 1+ |
+| V24 | verifier AGENT.md에 CONCERNS 태그 처리 존재 | `grep -c "DONE_WITH_CONCERNS\|NEEDS_CONTEXT" plugins/ultrawork/agents/verifier/AGENT.md` | 1+ |
+| V25 | 기존 테스트 통과 | `bun test tests/ultrawork/` | PASS, exit 0 |
 
 ---
 
@@ -233,29 +317,38 @@ bun test tests/ultrawork/  # 기존 테스트 모두 통과 확인
 
 | ID | Subject | Complexity | Blocked By | Est. Files |
 |----|---------|------------|------------|------------|
-| 1 | design-template.md 재설계 | standard | - | 1 |
+| 1 | design-template.md 재설계 (Appendix A 적용) | standard | - | 1 |
 | 2 | success-criteria.md 강화 | standard | - | 1 |
 | 3 | task-decomposition.md 보강 | standard | 2 | 1 |
-| 4 | explorer AGENT.md 수정 | standard | - | 1 |
+| 4 | explorer AGENT.md 수정 (Quantitative + Goal-aligned) | standard | - | 1 |
 | 5 | overview-exploration SKILL.md 수정 | standard | 4 | 1 |
 | 6 | planning SKILL.md 수정 | standard | 1, 2 | 1 |
 | 7 | planner AGENT.md 수정 | standard | 6 | 1 |
-| verify | 최종 검증 | complex | 1-7 | - |
+| 8 | context-aware-options.md 수정 | standard | 6 | 1 |
+| 9 | interview-rounds.md 수정 | standard | 6 | 1 |
+| 10 | brainstorm-protocol.md 수정 | standard | 6 | 1 |
+| 11 | task-examples.md 수정 | standard | 2, 3 | 1 |
+| 12 | worker AGENT.md 수정 (Self-review + Status tags) | standard | - | 1 |
+| 13 | reviewer AGENT.md 수정 (Calibration) | standard | - | 1 |
+| 14 | verifier AGENT.md 수정 (CONCERNS 처리) | standard | 12 | 1 |
+| verify | 최종 검증 | complex | 1-14 | - |
 
 ### Execution Waves
 
 ```
-Wave 1 (parallel): Task 1, 2, 4
-Wave 2 (parallel): Task 3, 5, 6
-Wave 3: Task 7
+Wave 1 (parallel): Task 1, 2, 4, 12, 13
+Wave 2 (parallel): Task 3, 5, 6, 14
+Wave 3 (parallel): Task 7, 8, 9, 10, 11
 Wave 4: Verify
 ```
 
 ### Key Criteria
-1. 모든 신규 섹션이 design-template.md에 존재 (V1-V7)
-2. 금지 표현 + Command-Output 패턴이 success-criteria.md에 포함 (V8-V9)
-3. 모든 프로세스 파일에 개선사항 반영됨 (V10-V14)
-4. 기존 테스트 regression 없음 (V15)
+1. Template 개선 완료: design-template.md에 모든 신규 섹션 존재 (V1-V7)
+2. Criteria 품질 강제: 금지 표현 + Command-Output 패턴 반영 (V8-V9)
+3. Process 파일 개선 완료: 탐색/인터뷰/플래너 모두 반영 (V10-V16)
+4. Reference 일관성: 4개 reference 파일에 신규 패턴 반영 (V17-V20)
+5. Agent 행동 강화: worker/reviewer/verifier에 개선사항 반영 (V21-V24)
+6. 기존 테스트 regression 없음 (V25)
 
 ---
 
@@ -280,7 +373,7 @@ Wave 4: Verify
 ## Self-Containedness Checklist
 
 - [x] Context Orientation만 읽고 이 프로젝트/변경이 뭔지 알 수 있는가?
-- [x] 모든 Criterion에 실행 명령과 기대 출력이 있는가? (V1-V15)
+- [x] 모든 Criterion에 실행 명령과 기대 출력이 있는가? (V1-V25)
 - [x] Impact Analysis의 모든 소비자에 대한 처리 방안이 있는가?
 - [x] 문서에 없는 결정을 worker가 내려야 하는 상황이 있는가? → 없음
 - [x] "기능 동일", "정상 동작" 같은 주관적 표현이 없는가? → 없음
