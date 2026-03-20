@@ -55,11 +55,81 @@ Grep(pattern="func main", type="go")
 Grep(pattern="auth|login|session", output_mode="files_with_matches")
 ```
 
-### Step 4: Read Documentation
+### Step 4: Quantitative Data Collection
+
+Beyond descriptive findings, collect measurable data that enables informed planning decisions.
+
+**Test file count:**
+
+```bash
+# Count test files in project
+find . -name "*.test.*" -o -name "*.spec.*" | wc -l
+
+# Check for test configuration
+ls jest.config* vitest.config* .bun* 2>/dev/null
+```
+
+**Key interface signatures:**
+
+```bash
+# Extract exported interfaces and types
+grep -A3 "export.*interface\|export.*type\|export.*function" src/ --include="*.ts" -rn | head -20
+```
+
+**File line counts for main source files:**
+
+```bash
+# Line counts for relevant source files
+wc -l src/**/*.ts 2>/dev/null | tail -5
+```
+
+Include these metrics in your exploration output under a "Quantitative Data" subsection (see Output Format below).
+
+### Step 5: Read Documentation
 
 ```python
 Read(file_path="README.md")
 Read(file_path="CLAUDE.md")
+```
+
+---
+
+## Goal-Aligned Exploration Priority
+
+Exploration must be driven by the session goal. Breadth-first scanning wastes time when the goal points to a specific domain.
+
+### Keyword Extraction
+
+Parse the session goal for domain keywords to prioritize exploration:
+
+| Goal keyword | Priority exploration area |
+|-------------|--------------------------|
+| auth, login, session, JWT | Authentication layer, middleware, token handling |
+| database, schema, migration, model | Database layer, ORM config, migration files |
+| API, endpoint, route, REST | Route handlers, controllers, API middleware |
+| test, coverage, spec | Test infrastructure, test utilities, CI config |
+| UI, component, page, form | Frontend components, layouts, styles |
+| deploy, CI, build, config | Build system, CI/CD pipelines, environment config |
+
+**Example**: goal = "add authentication" → prioritize exploring `auth/`, `login/`, `session/`, `middleware/` patterns first.
+
+### Exploration Priority Order
+
+1. Files directly named in or implied by the goal
+2. Files that import/depend on those files (consumers)
+3. Test files for the above
+4. Configuration files (if goal involves infra changes)
+5. Everything else (surface scan only)
+
+### Relevance Annotation
+
+Every finding should connect back to the goal. Annotate findings with relevance:
+
+```markdown
+### src/middleware/auth.ts
+**Relevance**: Direct target for modification (goal: "add role-based access")
+- Uses JWT validation with `jsonwebtoken` library
+- 12 route files import this middleware
 ```
 
 ---
@@ -88,8 +158,17 @@ Summarize findings in structured format:
 **Existing Patterns**:
 - {auth, database, api patterns found}
 
-**Relevant Files** (based on Goal):
-- {files relevant to the user's goal}
+**Quantitative Data**:
+
+| Metric | Value |
+|--------|-------|
+| Test files | {count} |
+| Test runner | {runner} |
+| Lines in {key file} | {count} |
+| Exported interfaces | {count} |
+
+**Relevant to Goal**:
+- {files directly related to the session goal, with relevance annotation}
 ```
 
 See `references/templates.md` for complete template.
