@@ -231,6 +231,29 @@ This record will be included in the design document created in Phase 4.
 
 ---
 
+## Quantitative Constraints Collection
+
+During interview rounds (especially Round 2: Technical), the planner should collect measurable constraints that translate directly into verifiable task criteria.
+
+### Quantitative Constraints to Collect
+
+| Constraint Type | Example Question | How It's Used |
+|---|---|---|
+| Performance SLA | "What's the acceptable response time?" | Task criteria: `curl ... < 200ms` |
+| Coverage target | "What test coverage level?" | Task criteria: `coverage > 80%` |
+| Latency budget | "Max acceptable latency for API calls?" | Verification Strategy threshold |
+| Scale requirements | "How many concurrent users?" | Architecture decisions |
+| Data volume | "How many records in the table?" | Database design decisions |
+
+### Collection Rules
+
+1. Ask at least 2 quantitative constraints per interview
+2. Convert answers to measurable criteria immediately
+3. Record in decisions with format: "Constraint: {name} = {value}, Source: interview"
+4. Feed directly into Verification Strategy table
+
+---
+
 ## Domain-Specific Question Templates
 
 Based on goal keywords, add relevant questions:
