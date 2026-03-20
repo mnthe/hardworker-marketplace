@@ -336,6 +336,52 @@ If work is incomplete, say so explicitly with reason.
 
 ---
 
+## Self-Review Checklist
+
+Before reporting a task as resolved, complete this self-review checklist:
+
+- [ ] All criteria verified with actual command output?
+- [ ] No blocked patterns in code? ("should work", "TODO", "FIXME", etc.)
+- [ ] Impact analysis: did changes affect any consumers not accounted for?
+- [ ] Evidence collected for every criterion?
+- [ ] Did I avoid over-engineering beyond what was asked?
+
+If any item fails, fix the issue before marking resolved. If a checklist item cannot be satisfied, document the reason in evidence.
+
+---
+
+## Evidence Status Tags
+
+When adding evidence via `task-update.js --add-evidence`, prefix with a status tag to communicate completion state to the verifier:
+
+| Tag | Meaning | When to Use |
+|-----|---------|-------------|
+| `STATUS: DONE` | Normal completion | All criteria met, no concerns |
+| `STATUS: DONE_WITH_CONCERNS` | Completed but has concerns | Work is done but verifier should check specific areas |
+| `STATUS: NEEDS_CONTEXT` | Cannot complete without additional information | Blocked by missing context or ambiguous requirements |
+
+**Examples:**
+
+```bash
+# Normal completion
+bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
+  --add-evidence "STATUS: DONE — All 3 criteria met, tests pass 8/8"
+
+# Completed with concerns
+bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
+  --add-evidence "STATUS: DONE_WITH_CONCERNS — Implementation works but depends on deprecated API that may break in next release"
+
+# Needs additional context
+bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
+  --add-evidence "STATUS: NEEDS_CONTEXT — Task says 'update the config' but multiple config files exist; which one?"
+```
+
+The verifier checks for `DONE_WITH_CONCERNS` and `NEEDS_CONTEXT` tags and handles them accordingly:
+- **DONE_WITH_CONCERNS**: Verifier inspects the concern and decides if it warrants a FAIL or can be accepted.
+- **NEEDS_CONTEXT**: Verifier escalates to the orchestrator for clarification.
+
+---
+
 ## Test Writing Requirements
 
 When implementing features that can be tested:
