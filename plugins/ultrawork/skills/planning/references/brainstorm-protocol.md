@@ -105,6 +105,52 @@ AskUserQuestion(questions=[{
 
 ---
 
+## Quantitative Constraints Collection
+
+When exploring approaches and recording decisions, also collect quantitative constraints that will feed into the Verification Strategy.
+
+### What to Collect
+
+| Category | Examples |
+|----------|----------|
+| **Performance constraints** | Response time < 200ms, throughput > 1000 req/s |
+| **Quality constraints** | Test coverage >= 80%, error rate < 0.1% |
+| **Scale constraints** | Support 10k concurrent users, handle 1M records |
+| **Resource constraints** | Memory < 512MB, bundle size < 200KB |
+
+### How to Collect
+
+During approach exploration, ask:
+
+```python
+AskUserQuestion(questions=[{
+  "question": "Are there quantitative constraints for this feature?",
+  "header": "Constraints",
+  "options": [
+    {"label": "Performance", "description": "Response time, throughput targets"},
+    {"label": "Quality", "description": "Test coverage, error rate thresholds"},
+    {"label": "Scale", "description": "User count, data volume requirements"},
+    {"label": "None specific", "description": "No hard quantitative constraints"}
+  ],
+  "multiSelect": True
+}])
+```
+
+Specific follow-up questions:
+- "What performance constraints apply to this feature?"
+- "What's the minimum test coverage expectation?"
+- "Are there scale requirements we should design for?"
+
+### Where It Goes
+
+Collected constraints feed into:
+
+1. **Verification Strategy** - Become measurable criteria with command + expected output
+2. **Task decomposition** - Influence task sizing and complexity
+3. **Risk analysis** - Constraints that cannot be met become risks
+
+---
+
 ## Red Flags (Ask More Questions)
 
 Stop and ask if you notice:
