@@ -57,6 +57,27 @@ See `references/context-aware-options.md` for:
 - Context-aware vs generic examples
 - Validation checklist
 
+### Data-Driven Interview Questions
+
+Interview questions must be generated from exploration data, not generic templates.
+
+#### Question Generation Rules
+
+**BAD (generic):** "어떤 아키텍처 패턴을 사용할까요?"
+**GOOD (data-driven):** "graph/service.go가 2곳에서 사용됩니다. 두 곳 모두 동시에 변경할까요?"
+
+**Formula:** [탐색에서 발견한 사실] + [그로 인한 설계 선택지] + [각 선택지의 trade-off]
+
+#### Interview Question → Design Section Mapping
+
+| Question Category | Design Section |
+|---|---|
+| "어떤 접근법?" | Approach Selection, Decisions |
+| "영향 범위는?" | Impact Analysis |
+| "성공 기준은?" | Verification Strategy |
+| "위험 요소는?" | Assumptions & Risks |
+| "테스트 방법은?" | Verification Strategy |
+
 ### Interview Rounds
 
 Rounds are adjusted based on complexity assessment:
@@ -97,6 +118,18 @@ Write comprehensive design.md including:
 - **Execution strategy** (task overview, waves, key criteria)
 
 See `references/design-template.md` for complete template.
+
+### Self-Containedness Check
+
+After writing the design document, the planner performs a self-containedness check:
+
+- [ ] Context Orientation만 읽고 이 프로젝트가 뭔지 알 수 있는가?
+- [ ] 모든 Criterion에 실행 명령과 기대 출력이 있는가?
+- [ ] Impact Analysis의 모든 소비자에 대한 처리 방안이 있는가?
+- [ ] 문서에 없는 결정을 worker가 내려야 하는 상황이 있는가?
+- [ ] "기능 동일", "정상 동작" 같은 주관적 표현이 없는가?
+
+If any check fails, fix the design document before proceeding to Codex doc-review.
 
 ---
 
