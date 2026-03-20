@@ -219,6 +219,33 @@ For each question, create 3-4 options:
 
 ---
 
+## Impact Analysis for Options
+
+When generating options for interview questions, each option should include its impact on the task graph:
+
+### Impact Template
+
+For each option presented:
+- **Task impact**: How does this choice affect task count/complexity?
+- **Dependency impact**: Does this choice create new dependencies between tasks?
+- **Risk impact**: What risks does this choice introduce or mitigate?
+
+### Example
+
+```
+Option A: Use existing Prisma ORM
+- Task impact: 2 tasks (model + migration) — fastest path
+- Dependency impact: None new — Prisma already in dependency tree
+- Risk impact: Low — team familiar with Prisma
+
+Option B: Switch to Drizzle ORM
+- Task impact: 4 tasks (setup + model + migration + adapter)
+- Dependency impact: New dependency, requires learning curve
+- Risk impact: Medium — new tool, but better TypeScript inference
+```
+
+---
+
 ## Validation Checklist
 
 Before presenting options to user, verify:
