@@ -488,11 +488,18 @@ bun "{SCRIPTS_PATH}/task-update.js" ...
 
 ```
 PLANNING → EXECUTION
-  Trigger: Planner completes task graph + Codex doc-review passes
+  Pipeline:
+    1. Write design document (without Execution Strategy)
+    2. Codex doc-review validates the design
+    3. After doc-review passes, write Execution Strategy (post-review) and decompose into tasks
+    4. Transition to EXECUTION
+  Trigger: Planner completes task decomposition after verified spec
   Owner: Orchestrator (interactive) / Planner (auto)
   Script: session-update.js --phase EXECUTION
   Gate: Requires /tmp/codex-doc-{sessionId}.json (PASS or SKIP)
-  Note: Run codex-verify.js --mode doc-review before transition
+  Note: Execution Strategy is written AFTER doc-review passes (post-review).
+        Design document is validated by doc-review without task decomposition details.
+        After verified spec, planner adds Execution Strategy and creates tasks.
 
 EXECUTION → VERIFICATION
   Trigger: All non-verify tasks resolved
