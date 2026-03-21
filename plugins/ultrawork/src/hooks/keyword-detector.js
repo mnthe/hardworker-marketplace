@@ -9,6 +9,10 @@
  *   - ultrawork-plan, ulw-plan, uw-plan → /ultrawork --plan-only "{original prompt}"
  *   - ultrawork-auto, ulw-auto, uw-auto → /ultrawork --auto "{original prompt}"
  *
+ * Advisory keywords (suggest /ultrawork-plan, do not transform prompt):
+ *   - Korean: 구현, 만들어, 리팩토링, 추가해, 수정해, 변경해
+ *   - English: implement, build, refactor, create, add, modify
+ *
  * Skip conditions:
  *   - Prompt already starts with /
  *   - Active ultrawork session exists (non-terminal phase)
@@ -43,9 +47,14 @@ const KEYWORD_PATTERNS = {
     /^(ultrawork-plan|ulw-plan|uw-plan)\s+(.+)$/i,
     /^(ultrawork|ulw|uw)\s+--plan-only\s+(.+)$/i
   ],
-  // Standard mode keywords (least specific - check last)
+  // Standard mode keywords
   standard: [
     /^(ultrawork|ulw|uw)\s+(.+)$/i
+  ],
+  // Advisory mode keywords (구현 키워드 — 제안 only, prompt 변경 없음)
+  advisory: [
+    /^(구현|만들어|리팩토링|추가해|수정해|변경해)\S*\s+(.+)$/i,
+    /^(implement|build|refactor|create|add|modify)\s+(.+)$/i
   ]
 };
 
@@ -75,7 +84,7 @@ function isSessionActive(sessionId) {
 /**
  * Try to match prompt against keyword patterns
  * @param {string} prompt
- * @returns {{ mode: 'auto'|'plan-only'|'standard', goal: string } | null}
+ * @returns {{ mode: 'auto'|'plan-only'|'standard'|'advisory', goal: string } | null}
  */
 function matchKeyword(prompt) {
   // Check auto mode patterns first
@@ -99,6 +108,14 @@ function matchKeyword(prompt) {
     const match = prompt.match(pattern);
     if (match) {
       return { mode: 'standard', goal: match[2].trim() };
+    }
+  }
+
+  // Check advisory patterns last (구현 키워드 suggest only)
+  for (const pattern of KEYWORD_PATTERNS.advisory) {
+    const match = prompt.match(pattern);
+    if (match) {
+      return { mode: 'advisory', goal: match[2].trim() };
     }
   }
 
@@ -160,6 +177,16 @@ async function main() {
   if (!match) {
     // No keyword match - pass through
     console.log(JSON.stringify(createUserPromptSubmit()));
+    process.exit(0);
+    return;
+  }
+
+  // Advisory mode: 제안 only — prompt 변경 없이 additionalContext로 /ultrawork-plan suggest
+  if (match.mode === 'advisory') {
+    const output = createUserPromptSubmit({
+      additionalContext: '💡 구현 작업이 감지되었습니다. `/ultrawork-plan`을 사용하면 체계적인 planning이 가능합니다.'
+    });
+    console.log(JSON.stringify(output));
     process.exit(0);
     return;
   }
