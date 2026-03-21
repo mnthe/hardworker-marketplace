@@ -201,6 +201,8 @@ Write comprehensive design document using the template sections:
 - **Scope** (in/out)
 - **Assumptions & Risks**
 
+**Do NOT include Execution Strategy in this phase.** Execution Strategy is written after doc-review passes (see Phase 4).
+
 All task criteria MUST be derived from the Verification Strategy table — do not invent criteria separately.
 
 ### Step: Store Design Doc Path (MANDATORY)
@@ -255,6 +257,14 @@ Parse the result JSON:
 **Note**: A gate in gate-enforcement.js will block `session-update.js --phase EXECUTION` if no passing Codex doc-review result exists. This phase ensures the gate will allow the transition.
 
 ### Phase 4: Task Decomposition
+
+**After doc-review passes, write Execution Strategy before decomposing into tasks.**
+
+Add an **Execution Strategy (Post-Review)** section to the design document. This section is written after doc-review verification to ensure the reviewed spec drives task decomposition:
+- Task breakdown overview (how the verified design maps to discrete tasks)
+- Execution order and dependency rationale
+- Parallel work opportunities
+- Worker complexity assignments (standard vs complex)
 
 **Rules:**
 - Each task = one discrete unit of work (~30 minutes max)
@@ -354,6 +364,8 @@ Design document must include:
 - **Risk Analysis**: What could go wrong
 - **Testing Strategy**: How to verify each phase
 
+**Do NOT include Execution Strategy in this phase.** Execution Strategy is written after doc-review passes (see Phase 4).
+
 ### Phase 3.5: Codex Doc-Review
 
 After writing the design document, run Codex doc-review (same as PLANNING tier Phase 3.5):
@@ -383,6 +395,15 @@ Parse the result JSON:
 **Note**: A gate in gate-enforcement.js will block `session-update.js --phase EXECUTION` if no passing Codex doc-review result exists. This phase ensures the gate will allow the transition.
 
 ### Phase 4: Create Phase Tasks
+
+**After doc-review passes, write Execution Strategy before creating tasks.**
+
+Add an **Execution Strategy (Post-Review)** section to the design document. This section is written after doc-review verification to ensure the reviewed spec drives task decomposition:
+- Phase-level task breakdown (how the verified design maps to phase groups)
+- Cross-phase dependency rationale
+- Parallel work opportunities within each phase
+- Worker complexity assignments (standard vs complex)
+- Checkpoint strategy between phases
 
 Create tasks grouped by phase with clear phase boundaries:
 
