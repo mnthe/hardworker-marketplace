@@ -353,6 +353,8 @@ AskUserQuestion(questions=[{
 
 **IMPORTANT: Design documents go to PROJECT directory, not session directory.**
 
+**NOTE: Do NOT include Execution Strategy in the design document at this point.** The design is submitted to doc-review without it. Execution Strategy (task decomposition, dependency graph, wave planning) is added after doc-review passes.
+
 ```bash
 # Get working directory from session
 WORKING_DIR=$(bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir)
@@ -364,7 +366,7 @@ mkdir -p "$WORKING_DIR/docs/plans"
 # Format: YYYY-MM-DD-{goal-slug}-design.md
 DESIGN_PATH="$WORKING_DIR/docs/plans/$(date +%Y-%m-%d)-{goal-slug}-design.md"
 
-# Write design document to PROJECT directory
+# Write design document to PROJECT directory (without Execution Strategy)
 Write(
   file_path=DESIGN_PATH,
   content=design_content
@@ -377,7 +379,51 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 
 See `skills/planning/SKILL.md` Phase 4 for template.
 
-#### 3f. Task Decomposition
+#### 3f. Codex Doc-Review
+
+Run Codex doc-review on the design document before proceeding to task decomposition.
+
+```bash
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/codex-verify.js" \
+  --mode doc-review \
+  --design "$DESIGN_PATH" \
+  --goal "${goal}" \
+  --output /tmp/codex-doc-${CLAUDE_SESSION_ID}.json
+```
+
+Parse the result JSON:
+
+- **verdict: "PASS"** --> Continue to Step 3g (Task Decomposition)
+- **verdict: "SKIP"** --> Codex not installed, continue (graceful degradation)
+- **verdict: "FAIL"** --> Fix loop:
+  1. Show `doc_issues` from the result to the user
+  2. Ask user for confirmation or feedback on fixes
+  3. Fix the design document based on issues
+  4. Re-run `codex-verify.js --mode doc-review`
+  5. Repeat (max 3 attempts)
+  6. If still FAIL after 3 attempts, leave session in PLANNING and report issues
+
+```python
+# Interactive mode: show issues to user
+if verdict == "FAIL":
+    AskUserQuestion(questions=[{
+      "question": f"Doc-review found issues:\n{doc_issues}\n\nHow to proceed?",
+      "header": "Doc Review",
+      "options": [
+        {"label": "Fix and re-review", "description": "Apply fixes and run doc-review again"},
+        {"label": "Skip review", "description": "Proceed without fixing (not recommended)"}
+      ],
+      "multiSelect": False
+    }])
+```
+
+**CLI Error Handling**: If codex-verify.js fails to execute, retry once. On repeated failure, leave session in PLANNING and report.
+
+**Note**: A gate in gate-enforcement.js will block `session-update.js --phase EXECUTION` if no passing Codex doc-review result exists.
+
+#### 3g. Task Decomposition
+
+**NOTE: Write the Execution Strategy section to the design document BEFORE decomposing tasks.** Now that doc-review has passed, add the Execution Strategy (task breakdown, dependency graph, wave planning) to the design doc, then create the task files.
 
 Decompose design into tasks. Write each task:
 
@@ -392,7 +438,7 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/task-create.js" --session ${CLAUDE_SESSIO
 
 Always include verify task at end.
 
-#### 3g. Update Session Phase
+#### 3h. Update Session Phase
 
 ```bash
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase PLANNING_COMPLETE
