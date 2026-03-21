@@ -19,7 +19,6 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 const { getSessionFile } = require('../lib/session-utils.js');
 const {
   createUserPromptSubmit,
