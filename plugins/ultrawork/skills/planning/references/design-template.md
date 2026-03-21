@@ -149,7 +149,12 @@ These MUST NOT appear as criteria. Use the command+output alternative instead:
 - ❌ "코드 정리" → ✅ `grep -c "old_pattern" path/to/file.ts` → 0 matches
 - ❌ "import 정리" → ✅ `grep -c "unused_import" path/to/file.ts` → 0 matches
 
-## Execution Strategy
+<!-- Post-Review Section: Write this section AFTER doc-review passes.
+     Do NOT include in the initial design document submitted to doc-review.
+     The sections above are validated by Codex doc-review.
+     After doc-review PASS, add this section with task decomposition. -->
+
+## Execution Strategy (Post-Review)
 
 ### Task Overview
 | ID | Task | Complexity | Approach | Blocked By |
