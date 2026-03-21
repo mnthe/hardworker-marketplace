@@ -115,7 +115,6 @@ Write comprehensive design.md including:
 - Error handling strategy
 - Testing strategy
 - Scope (in/out)
-- **Execution strategy** (task overview, waves, key criteria)
 
 See `references/design-template.md` for complete template.
 
@@ -174,6 +173,13 @@ bun $SCRIPTS/codex-verify.js \
 ---
 
 ## Phase 5: Decompose Tasks
+
+### Write Execution Strategy (Post-Review)
+
+After doc-review passes, add the Execution Strategy section to the design document.
+This section was intentionally excluded from the initial design to allow doc-review to validate the pure design first.
+
+See `references/design-template.md` for the Execution Strategy (Post-Review) template.
 
 ### Task Guidelines
 
