@@ -531,11 +531,16 @@ DOCUMENTATION → COMPLETE
 
 - Allow: `design.md`, `session.json`, `context.json`, `exploration/*.md`, `docs/plans/*.md`
 - Block: All other file edits (Edit/Write tools)
+- **Task Creation Guard**: `task-create.js` blocks task creation unless Codex doc-review has completed (PASS/SKIP verdict)
+  - Enforced by: `checkDocReviewGate()` function inside task-create.js (line 131)
+  - Graceful degradation: Allows task creation if Codex not installed or result file corrupted
+  - Prevents `--auto` mode from bypassing doc-review during PLANNING phase
 
 **PLANNING → EXECUTION Gate (Codex Doc-Review)**:
 
-- Enforced by: `gate-enforcement.js` PreToolUse hook
-- Trigger: `session-update.js --phase EXECUTION` when current phase is PLANNING
+- Enforced by: `gate-enforcement.js` PreToolUse hook (blocks `session-update --phase EXECUTION`)
+- Also enforced by: `task-create.js` checkDocReviewGate() (blocks task creation directly)
+- Trigger: Attempting to transition phase or create tasks when current phase is PLANNING
 - Requires: `/tmp/codex-doc-{sessionId}.json` with verdict PASS or SKIP
 - SKIP verdict: Codex CLI not installed (graceful degradation)
 - FAIL verdict: Block with doc_issues displayed
