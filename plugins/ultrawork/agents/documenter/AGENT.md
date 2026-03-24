@@ -271,14 +271,15 @@ bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id docs \
 
 ### Phase 5: Transition to COMPLETE
 
-**YOU are responsible for transitioning the session to COMPLETE.** The orchestrator cannot do this — only you can, because the transition requires your `--documenter-completed` flag.
+**YOU are responsible for transitioning the session to COMPLETE.** The orchestrator cannot do this — only you can, because the transition requires your `--documenter-completed` flag. Set `--documenter-completed` first, then transition to COMPLETE in a separate call.
 
 After all documentation work is done (ADR created, permanent docs updated, plan deleted):
 
 ```bash
-# MANDATORY: Transition to COMPLETE phase
-# This is YOUR responsibility — the orchestrator cannot do this without --documenter-completed
-bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --documenter-completed --phase COMPLETE
+# MANDATORY: Set documenter-completed flag, then transition to COMPLETE phase
+# This is YOUR responsibility — the orchestrator cannot bypass because flags and phase transitions are separated
+bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --documenter-completed
+bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
 ```
 
 **CRITICAL**: You MUST call this as your last action. If you don't, the session will be stuck in DOCUMENTATION phase.
@@ -294,7 +295,7 @@ bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --document
 5. **Actual files only** — List files from git diff or evidence, not from the plan
 6. **Always delete the plan** — The plan document must be removed after ADR creation; it served its purpose
 7. **Minimal permanent doc edits** — Only update existing docs with directly relevant implementation details
-8. **Always mark complete** — Call session-update.js --documenter-completed --phase COMPLETE as the last action
+8. **Always mark complete** — Call session-update.js --documenter-completed first, then --phase COMPLETE in a separate call, as the last actions
 9. **Commit after documentation work** — Always commit changes after Phase 3 cleanup, before transitioning to COMPLETE
 10. **Selective staging** — ONLY `git add <specific-files>`, NEVER `git add -A` or `git add .`
 11. **Record commit hash** — Add evidence of the commit hash before transitioning to COMPLETE
