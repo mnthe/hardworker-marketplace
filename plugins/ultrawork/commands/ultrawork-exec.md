@@ -160,14 +160,16 @@ while iteration <= max_iterations:
     if verification_result == "CANCELLED":
         return
     elif verification_result == "PASS":
-        # Verifier already transitioned to DOCUMENTATION phase
-        # via: session-update.js --verifier-passed --phase DOCUMENTATION
+        # Verifier already transitioned to DOCUMENTATION phase via two-step protocol:
+        # via: session-update.js --verifier-passed  (step 1: set flag)
+        #      session-update.js --phase DOCUMENTATION  (step 2: transition)
         # Read phase to confirm
         phase = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field phase')
 
         if phase.strip() == "DOCUMENTATION":
-            # Spawn documenter — it will transition to COMPLETE
-            # via: session-update.js --documenter-completed --phase COMPLETE
+            # Spawn documenter — it will transition to COMPLETE via two-step protocol:
+            # via: session-update.js --documenter-completed  (step 1: set flag)
+            #      session-update.js --phase COMPLETE  (step 2: transition)
             working_dir = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field working_dir')
             design_doc = Bash(f'bun "{CLAUDE_PLUGIN_ROOT}/src/scripts/session-get.js" --session ${CLAUDE_SESSION_ID} --field plan.design_doc')
 

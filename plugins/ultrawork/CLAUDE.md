@@ -509,18 +509,20 @@ EXECUTION → VERIFICATION
 VERIFICATION → DOCUMENTATION (success)
   Trigger: Verifier PASS verdict
   Owner: Verifier agent
-  Script: session-update.js --verifier-passed --phase DOCUMENTATION
+  Script: session-update.js --verifier-passed  (step 1: set flag)
+          session-update.js --phase DOCUMENTATION  (step 2: transition)
 
 VERIFICATION → EXECUTION (failure - Ralph Loop)
   Trigger: Verifier FAIL verdict, creates fix tasks
   Owner: Verifier agent
   Script: session-update.js --phase EXECUTION
-  Side effects: Resets verifier_passed=false, deletes /tmp/codex-{session}.json
+  Side effects: Resets verifier_passed=false, documenter_completed=false, deletes /tmp/codex-{session}.json
 
 DOCUMENTATION → COMPLETE
   Trigger: Documenter completes (ADR created, docs updated, plan deleted)
   Owner: Documenter agent
-  Script: session-update.js --documenter-completed --phase COMPLETE
+  Script: session-update.js --documenter-completed  (step 1: set flag)
+          session-update.js --phase COMPLETE  (step 2: transition)
 ```
 
 ### Gate Enforcement Rules
@@ -786,7 +788,7 @@ documenter -> create ADR, update permanent docs, delete plan
 - Agent: documenter (haiku model)
 - Input: Design document, task evidence, git diff
 - Output: ADR file, updated permanent docs, plan file deleted
-- Phase transition: documenter calls session-update.js --documenter-completed --phase COMPLETE
+- Phase transition: documenter calls session-update.js --documenter-completed (step 1: set flag), then session-update.js --phase COMPLETE (step 2: transition)
 
 ### Lessons Extraction
 

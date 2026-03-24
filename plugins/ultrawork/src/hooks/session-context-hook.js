@@ -152,8 +152,8 @@ function buildNextAction(phase, explorationStage, autoMode, maxWorkers) {
       return `1. Spawn verifier agent to validate all criteria
 2. Verifier checks evidence_log against success criteria
 3. Verifier scans for blocked patterns
-4. If PASS: mark phase=COMPLETE
-5. If FAIL: mark phase=FAILED with failure_reason`;
+4. If PASS: two-step protocol — session-update.js --verifier-passed, then session-update.js --phase DOCUMENTATION
+5. If FAIL: mark phase=EXECUTION (Ralph loop) with fix tasks`;
 
     default:
       return `Unknown phase - check session.json`;

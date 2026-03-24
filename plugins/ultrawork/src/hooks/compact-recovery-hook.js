@@ -223,12 +223,13 @@ Wait for all explorers to complete before planning.`;
     case 'VERIFICATION':
       return `1. Spawn verifier: Task(subagent_type="ultrawork:verifier", ...)
 2. Verifier will check evidence and run tests
-3. PASS → phase=COMPLETE, FAIL → phase=EXECUTION (Ralph loop)`;
+3. PASS → two-step: session-update.js --verifier-passed, then session-update.js --phase DOCUMENTATION
+4. FAIL → phase=EXECUTION (Ralph loop)`;
 
     case 'DOCUMENTATION':
       return `1. Spawn documenter: Task(subagent_type="ultrawork:documenter", ...)
 2. Documenter creates ADR, updates permanent docs, deletes plan
-3. After documenter completes: session-update.js --phase COMPLETE`;
+3. After documenter completes (two-step): session-update.js --documenter-completed, then session-update.js --phase COMPLETE`;
 
     case 'COMPLETE':
       return `Session complete. Review results with /ultrawork-status`;
