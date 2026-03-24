@@ -406,6 +406,20 @@ describe('task-create.js', () => {
       expect(result.stderr).toContain('Codex doc-review returned FAIL');
     });
 
+    test('PLANNING + corrupt result file → task created (graceful degradation)', async () => {
+      const resultPath = docResultPath(planningSession.sessionId);
+      fs.writeFileSync(resultPath, 'not valid json {{{', 'utf-8');
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', planningSession.sessionId,
+        '--id', 'gate-corrupt',
+        '--subject', 'Gate corrupt file test'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('OK: Task gate-corrupt created');
+    });
+
     test('EXECUTION phase → gate skip (task created)', async () => {
       // session fixture already uses EXECUTION phase
       const result = await runScript(SCRIPT_PATH, [
