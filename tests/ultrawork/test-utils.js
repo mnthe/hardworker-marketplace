@@ -67,6 +67,7 @@ function createMockSession(sessionId, options = {}) {
       auto_mode: options.auto_mode || false
     },
     verifier_passed: options.verifier_passed || false,
+    documenter_completed: options.documenter_completed || false,
     cancelled_at: options.cancelled_at || null
   };
 
