@@ -14,7 +14,7 @@ describe('task-create.js', () => {
   let session;
 
   beforeEach(() => {
-    session = createMockSession('test-task-create');
+    session = createMockSession('test-task-create', { phase: 'EXECUTION' });
   });
 
   afterEach(() => {
@@ -318,6 +318,90 @@ describe('task-create.js', () => {
       expect(result.exitCode).toBe(0);
       const parsed = JSON.parse(result.stdout.split('\n').slice(1).join('\n'));
       expect(parsed.id).toBe('alias-test');
+    });
+  });
+
+  describe('doc-review gate', () => {
+    let planningSession;
+    const docResultPath = (sid) => `/tmp/codex-doc-${sid}.json`;
+
+    beforeEach(() => {
+      planningSession = createMockSession('test-task-create-gate', { phase: 'PLANNING' });
+    });
+
+    afterEach(() => {
+      planningSession.cleanup();
+      // Clean up any doc-review result files
+      const resultPath = docResultPath(planningSession.sessionId);
+      if (fs.existsSync(resultPath)) {
+        fs.unlinkSync(resultPath);
+      }
+    });
+
+    test('PLANNING + PASS result → task created', async () => {
+      const resultPath = docResultPath(planningSession.sessionId);
+      fs.writeFileSync(resultPath, JSON.stringify({ verdict: 'PASS' }), 'utf-8');
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', planningSession.sessionId,
+        '--id', 'gate-pass',
+        '--subject', 'Gate pass test'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('OK: Task gate-pass created');
+    });
+
+    test('PLANNING + SKIP result → task created', async () => {
+      const resultPath = docResultPath(planningSession.sessionId);
+      fs.writeFileSync(resultPath, JSON.stringify({ verdict: 'SKIP' }), 'utf-8');
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', planningSession.sessionId,
+        '--id', 'gate-skip',
+        '--subject', 'Gate skip test'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('OK: Task gate-skip created');
+    });
+
+    test('PLANNING + FAIL result → exit 1', async () => {
+      const resultPath = docResultPath(planningSession.sessionId);
+      fs.writeFileSync(resultPath, JSON.stringify({ verdict: 'FAIL' }), 'utf-8');
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', planningSession.sessionId,
+        '--id', 'gate-fail',
+        '--subject', 'Gate fail test'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Codex doc-review returned FAIL');
+    });
+
+    test('PLANNING + no result + Codex installed → exit 1', async () => {
+      // No result file exists, and Codex is installed on this machine
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', planningSession.sessionId,
+        '--id', 'gate-no-result',
+        '--subject', 'Gate no result test'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Codex doc-review must pass before creating tasks');
+    });
+
+    test('EXECUTION phase → gate skip (task created)', async () => {
+      // session fixture already uses EXECUTION phase
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', 'gate-execution',
+        '--subject', 'Execution phase test'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('OK: Task gate-execution created');
     });
   });
 });

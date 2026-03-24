@@ -8,7 +8,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { getSessionDir } = require('../lib/session-utils.js');
+const { execSync } = require('child_process');
+const { getSessionDir, readSession } = require('../lib/session-utils.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
 const { writeJsonAtomically } = require('../lib/json-ops.js');
 
@@ -105,6 +106,64 @@ function validateArgs(args) {
 }
 
 // ============================================================================
+// Doc-Review Gate
+// ============================================================================
+
+/**
+ * Check if codex CLI is available on the system
+ * @returns {boolean}
+ */
+function isCodexInstalled() {
+  try {
+    execSync('which codex', { stdio: ['pipe', 'pipe', 'pipe'] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check doc-review gate during PLANNING phase.
+ * Blocks task creation if Codex doc-review has not passed.
+ * @param {string} sessionId - Session ID
+ * @returns {void}
+ */
+function checkDocReviewGate(sessionId) {
+  let session;
+  try {
+    session = readSession(sessionId);
+  } catch {
+    return; // Session not found - skip gate
+  }
+
+  if (session.phase !== 'PLANNING') {
+    return; // Gate only applies during PLANNING phase
+  }
+
+  const resultPath = `/tmp/codex-doc-${sessionId}.json`;
+
+  if (!fs.existsSync(resultPath)) {
+    if (!isCodexInstalled()) {
+      return; // Graceful degradation: Codex not installed
+    }
+    console.error('Error: Codex doc-review must pass before creating tasks during PLANNING phase.\nRun codex-verify.js --mode doc-review first.');
+    process.exit(1);
+  }
+
+  try {
+    const result = JSON.parse(fs.readFileSync(resultPath, 'utf-8'));
+    if (result.verdict === 'PASS' || result.verdict === 'SKIP') {
+      return; // Gate passed
+    }
+  } catch {
+    return; // Corrupt file - graceful degradation
+  }
+
+  console.error('Error: Codex doc-review returned FAIL. Fix the design document and re-run doc-review before creating tasks.');
+  process.exit(1);
+}
+
+// ============================================================================
 // Task Creation
 // ============================================================================
 
@@ -146,6 +205,8 @@ function parseBlockedBy(blockedByStr) {
  * @returns {void}
  */
 function createTask(args) {
+  checkDocReviewGate(args.session);
+
   // Read description from file if --description-file is provided
   if (args.descriptionFile) {
     args.description = fs.readFileSync(args.descriptionFile, 'utf-8').trim();
