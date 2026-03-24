@@ -97,7 +97,7 @@ All scripts use Bun runtime with flag-based parameters.
 | **session-get.js**        | Read session data or extract specific field                 | `--session <ID>` `--field phase` `--file`                                                                             |
 | **session-update.js**     | Update session phase, plan approval, exploration stage      | `--session <ID>` `--phase EXECUTION` `--plan-approved` `--exploration-stage complete`                                 |
 | **scope-set.js**          | Set scope expansion data in context.json                    | `--session <ID>` `--data '<JSON>'`                                                                                    |
-| **task-create.js**        | Create task JSON file with validation                       | `--session <ID>` `--id "1"` `--subject "..."` `--criteria "c1\|c2"` `--complexity standard\|complex` `--approach tdd` |
+| **task-create.js**        | Create task JSON file with validation                       | `--session <ID>` `--id "1"` `--subject "..."` `--description-file <path>` `--criteria "c1\|c2"` `--complexity standard\|complex` `--approach tdd` |
 | **task-get.js**           | Read task details or extract specific field                 | `--session <ID>` `--task-id "1"` `--field status` (aliases: --task, --id)                                             |
 | **task-list.js**          | List tasks with filtering                                   | `--session <ID>` `--status open\|resolved` `--format json\|table`                                                     |
 | **task-update.js**        | Update task status and add evidence                         | `--session <ID>` `--task-id "1"` `--status resolved` `--add-evidence "..."` (aliases: --task, --id)                   |
@@ -956,6 +956,17 @@ bun src/scripts/task-create.js --session abc-123 \
   --id "1" \
   --subject "Add auth middleware" \
   --description "Implement JWT middleware" \
+  --complexity standard \
+  --criteria "Tests pass|Middleware created"
+```
+
+**With multi-line description** (use `--description-file` instead of `--description`):
+
+```bash
+bun src/scripts/task-create.js --session abc-123 \
+  --id "1" \
+  --subject "Add auth middleware" \
+  --description-file /tmp/ultrawork-task-1-desc.md \
   --complexity standard \
   --criteria "Tests pass|Middleware created"
 ```

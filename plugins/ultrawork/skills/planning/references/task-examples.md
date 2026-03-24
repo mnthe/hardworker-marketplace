@@ -131,6 +131,27 @@ bun $SCRIPTS/task-create.js --session ${CLAUDE_SESSION_ID} \
   --criteria "curl -X POST localhost:3000/auth/login -d '{\"provider\":\"google\"}' -> HTTP 302, exit 0|curl -s localhost:3000/api/auth/session | jq '.user' -> non-null JSON, exit 0|bun test tests/auth/ -> PASS, exit 0"
 ```
 
+### Multi-line Description (Recommended for complex tasks)
+
+When description contains multiple lines, special characters, or Korean text, use `--description-file` to avoid shell quoting issues:
+
+```bash
+# Step 1: Write description to temp file (Write tool handles escaping)
+# /tmp/ultrawork-task-1-desc.md:
+# ## Implementation Steps
+# - Step 1: Create auth config
+# - Step 2: Add Google provider
+# - Step 3: Set up environment variables
+
+# Step 2: Pass file path to task-create
+bun $SCRIPTS/task-create.js --session ${CLAUDE_SESSION_ID} \
+  --id "1" \
+  --subject "Setup NextAuth.js configuration" \
+  --description-file /tmp/ultrawork-task-1-desc.md \
+  --complexity standard \
+  --criteria "cat package.json | grep next-auth -> next-auth, exit 0"
+```
+
 ---
 
 ## Example 2: Database Migration (Prisma)

@@ -139,6 +139,20 @@ bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-create.js --session ${CLAUDE_SESSION_
   --blocked-by "0" # Comma-separated task IDs (empty for no dependencies)
 ```
 
+**Multi-line description** (use `--description-file` instead of `--description`):
+
+```bash
+bun ${CLAUDE_PLUGIN_ROOT}/src/scripts/task-create.js --session ${CLAUDE_SESSION_ID} \
+  --id "1" \
+  --subject "Brief task title" \
+  --description-file /tmp/ultrawork-task-1-desc.md \
+  --complexity standard \
+  --criteria "Criterion 1|Criterion 2|Criterion 3" \
+  --blocked-by "0"
+```
+
+> NOTE: `--description` and `--description-file` are mutually exclusive. Use `--description-file` when the description contains multiple lines, special characters, or non-ASCII text.
+
 **Dependency patterns**:
 - Independent tasks → `--blocked-by ""` (parallel execution)
 - Sequential dependency → `--blocked-by "1"` (after task 1)
