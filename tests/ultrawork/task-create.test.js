@@ -227,6 +227,86 @@ describe('task-create.js', () => {
     });
   });
 
+  describe('--description-file support', () => {
+    test('should read description from file', async () => {
+      // Create a temp file with description content
+      const descFile = path.join(session.sessionDir, 'desc.txt');
+      fs.writeFileSync(descFile, 'Description from file content', 'utf-8');
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', 'df-1',
+        '--subject', 'Task with description file',
+        '--description-file', descFile
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.split('\n').slice(1).join('\n'));
+      expect(parsed.description).toBe('Description from file content');
+    });
+
+    test('should trim whitespace from file content', async () => {
+      const descFile = path.join(session.sessionDir, 'desc-ws.txt');
+      fs.writeFileSync(descFile, '  Description with whitespace  \n\n', 'utf-8');
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', 'df-2',
+        '--subject', 'Task with trimmed description',
+        '--description-file', descFile
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.split('\n').slice(1).join('\n'));
+      expect(parsed.description).toBe('Description with whitespace');
+    });
+
+    test('should fail when file does not exist', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', 'df-3',
+        '--subject', 'Task with missing file',
+        '--description-file', '/nonexistent/path/desc.txt'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('does not exist');
+    });
+
+    test('should fail when both --description and --description-file are provided', async () => {
+      const descFile = path.join(session.sessionDir, 'desc-conflict.txt');
+      fs.writeFileSync(descFile, 'File description', 'utf-8');
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', 'df-4',
+        '--subject', 'Task with conflict',
+        '--description', 'Inline description',
+        '--description-file', descFile
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('--description');
+      expect(result.stderr).toContain('--description-file');
+    });
+
+    test('should support -D alias for --description-file', async () => {
+      const descFile = path.join(session.sessionDir, 'desc-alias.txt');
+      fs.writeFileSync(descFile, 'Alias description', 'utf-8');
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', 'df-5',
+        '--subject', 'Task with alias',
+        '-D', descFile
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout.split('\n').slice(1).join('\n'));
+      expect(parsed.description).toBe('Alias description');
+    });
+  });
+
   describe('alias support', () => {
     test('should support --task alias for --id', async () => {
       const result = await runScript(SCRIPT_PATH, [

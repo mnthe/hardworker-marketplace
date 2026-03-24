@@ -32,6 +32,7 @@ const { writeJsonAtomically } = require('../lib/json-ops.js');
  * @property {string} [criteria]
  * @property {string} [blockedBy]
  * @property {TaskApproach} [approach]
+ * @property {string} [descriptionFile]
  * @property {string} [testFile]
  * @property {string} [testScope]
  * @property {boolean} [help]
@@ -42,6 +43,7 @@ const ARG_SPEC = {
   '--id': { key: 'id', aliases: ['-i', '--task', '--task-id'], required: true },
   '--subject': { key: 'subject', aliases: ['-S'], required: true },
   '--description': { key: 'description', aliases: ['-d'] },
+  '--description-file': { key: 'descriptionFile', aliases: ['-D'] },
   '--complexity': { key: 'complexity', aliases: ['-c'], default: 'standard' },
   '--criteria': { key: 'criteria', aliases: ['-C'] },
   '--blocked-by': { key: 'blockedBy', aliases: ['-b'] },
@@ -81,6 +83,18 @@ function validateArgs(args) {
       console.error(`Error: Invalid approach "${args.approach}". Must be: standard or tdd`);
       process.exit(1);
     }
+  }
+
+  // Validate --description and --description-file are mutually exclusive
+  if (args.description && args.descriptionFile) {
+    console.error('Error: --description and --description-file cannot be used together');
+    process.exit(1);
+  }
+
+  // Validate --description-file exists
+  if (args.descriptionFile && !fs.existsSync(args.descriptionFile)) {
+    console.error(`Error: Description file does not exist: ${args.descriptionFile}`);
+    process.exit(1);
   }
 
   // Validate test-file requires tdd approach
@@ -132,6 +146,11 @@ function parseBlockedBy(blockedByStr) {
  * @returns {void}
  */
 function createTask(args) {
+  // Read description from file if --description-file is provided
+  if (args.descriptionFile) {
+    args.description = fs.readFileSync(args.descriptionFile, 'utf-8').trim();
+  }
+
   const sessionDir = getSessionDir(args.session);
   const tasksDir = path.join(sessionDir, 'tasks');
   const taskFile = path.join(tasksDir, `${args.id}.json`);
