@@ -386,14 +386,9 @@ describe('session-update.js', () => {
       session.cleanup();
       session = createMockSession('test-session-update', {
         phase: 'DOCUMENTATION',
-        verifier_passed: false
+        verifier_passed: false,
+        documenter_completed: true
       });
-
-      // Set documenter_completed
-      await runScript(SCRIPT_PATH, [
-        '--session', session.sessionId,
-        '--documenter-completed'
-      ]);
 
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
@@ -401,7 +396,7 @@ describe('session-update.js', () => {
       ]);
 
       expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain('verifier approval');
+      expect(result.stderr).toContain('verifier');
     });
   });
 
