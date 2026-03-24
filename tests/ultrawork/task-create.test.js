@@ -392,6 +392,20 @@ describe('task-create.js', () => {
       expect(result.stderr).toContain('Codex doc-review must pass before creating tasks');
     });
 
+    test('PLANNING + unknown verdict → exit 1', async () => {
+      const resultPath = docResultPath(planningSession.sessionId);
+      fs.writeFileSync(resultPath, JSON.stringify({ verdict: 'UNKNOWN' }), 'utf-8');
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', planningSession.sessionId,
+        '--id', 'gate-unknown',
+        '--subject', 'Gate unknown verdict test'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Codex doc-review returned FAIL');
+    });
+
     test('EXECUTION phase → gate skip (task created)', async () => {
       // session fixture already uses EXECUTION phase
       const result = await runScript(SCRIPT_PATH, [
