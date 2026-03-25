@@ -492,7 +492,7 @@ bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
 
 #### Phase 3-2: Update Files and Transition Phase
 
-**YOU are responsible for transitioning the session phase.** The orchestrator does NOT do this -- only you can, because the transition requires your `--verifier-passed` flag.
+**YOU are responsible for transitioning the session phase.** The orchestrator does NOT do this -- only you can, because the transition requires your `--verifier-passed` flag. Set `--verifier-passed` first, then transition to DOCUMENTATION in a separate call.
 
 **On PASS:**
 
@@ -503,9 +503,10 @@ bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
   --add-evidence "VERDICT: PASS" \
   --add-evidence "All tasks verified with evidence"
 
-# 2. MANDATORY: Transition to DOCUMENTATION phase
-# This is YOUR responsibility -- the orchestrator cannot do this without --verifier-passed
-bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --verifier-passed --phase DOCUMENTATION
+# 2. MANDATORY: Set verifier-passed flag, then transition to DOCUMENTATION phase
+# This is YOUR responsibility -- the orchestrator cannot bypass because flags and phase transitions are separated
+bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --verifier-passed
+bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase DOCUMENTATION
 ```
 
 **On FAIL (Ralph Loop):**

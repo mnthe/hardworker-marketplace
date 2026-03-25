@@ -584,7 +584,7 @@ Verify all criteria...
 
 **Key design**: Verifier and Documenter own their own phase transitions. The orchestrator reads the resulting phase and reacts accordingly.
 
-- **Verifier PASS** → Verifier transitions to `DOCUMENTATION` phase via `session-update.js --verifier-passed --phase DOCUMENTATION`
+- **Verifier PASS** → Verifier transitions to `DOCUMENTATION` phase via `session-update.js --verifier-passed` (step 1: set flag) then `session-update.js --phase DOCUMENTATION` (step 2: transition)
 - **Verifier FAIL** → Verifier transitions to `EXECUTION` phase (Ralph Loop) via `session-update.js --phase EXECUTION`
 
 ```python
@@ -608,8 +608,9 @@ WORKING_DIR: {working_dir}
 DESIGN_DOC: {design_doc}
 """
         )
-    # Documenter transitions to COMPLETE automatically via:
-    #   session-update.js --documenter-completed --phase COMPLETE
+    # Documenter transitions to COMPLETE automatically via two-step protocol:
+    #   session-update.js --documenter-completed  (step 1: set flag)
+    #   session-update.js --phase COMPLETE  (step 2: transition)
     print("## Session Complete")
 
 elif phase.strip() == "EXECUTION":

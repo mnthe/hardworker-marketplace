@@ -11,15 +11,17 @@
 Verifier triggers the transition to DOCUMENTATION on PASS:
 
 ```bash
-# Verifier does this on PASS:
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --verifier-passed --phase DOCUMENTATION
+# Verifier does this on PASS (two-step protocol):
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --verifier-passed
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase DOCUMENTATION
 ```
 
 Documenter triggers the transition to COMPLETE when done:
 
 ```bash
-# Documenter does this when done:
-bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --documenter-completed --phase COMPLETE
+# Documenter does this when done (two-step protocol):
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --documenter-completed
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SESSION_ID} --phase COMPLETE
 ```
 
 Flow: `VERIFICATION → (verifier PASS) → DOCUMENTATION → (documenter done) → COMPLETE`
