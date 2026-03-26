@@ -283,7 +283,7 @@ EOF
 
 **Auto-commit rules:**
 - **Only commit if task resolved** - Do NOT commit failed/partial work
-- **Stage all changes** - Use `git add -A` to include all modifications
+- **Stage ONLY task files** - Use explicit `git add path/to/file` for files YOU modified in this task
 - **Angular format**:
   - Title: `<type>(<scope>): <short description>` (50 chars max)
   - Body: ultrawork metadata, task subject, criteria, files
@@ -293,6 +293,20 @@ EOF
 ```bash
 bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
   --add-evidence "Committed: $(git rev-parse --short HEAD)"
+```
+
+**Commit separation:**
+- One logical change per commit. If the task required both structural (rename/move) and behavioral (logic) changes, create separate commits:
+  1. First commit: structural changes (rename, move, reorganize)
+  2. Second commit: behavioral changes (new logic, bug fix)
+- Each commit must be independently cherry-pickable
+
+**Pre-commit audit:**
+```bash
+# Verify only task-related files are staged
+git diff --cached --name-only
+# If unexpected files appear, unstage them:
+git reset HEAD path/to/unexpected-file
 ```
 
 **Skip commit if:**
