@@ -247,6 +247,7 @@ These cause subtle failures where individual modules work but integration fails:
 | **Manifest reference integrity** | K8s/Docker manifests reference resources that are defined | Pod mounts `webhook-config` ConfigMap but no ConfigMap YAML exists |
 | **Resource cleanup on failure** | Failed operations clean up partially-created resources | Job creation fails after Secret was created → Secret leaks |
 | **Retry bounds** | All retry/backoff loops have maximum attempt limits | 429 retry with `Retry-After` header but no max retry count |
+| **Stale references after rename/move** | Changed symbol, config value, or file path still referenced by old name elsewhere in codebase | Task renames `UserService` → `AccountService` but `tests/old.test.ts` still imports `UserService`. Config changes `model: gpt-4` → `model: gpt-5.4` but `constants.ts` still has `gpt-4` |
 
 ---
 
@@ -304,6 +305,25 @@ For each pair of modules that interact:
 ### Step 3: Generate Integration Issues
 
 Any cross-module mismatch found becomes a P0 or P1 issue in the integration_review section of the verdict.
+
+### Step 4: Stale Reference Check
+
+For each rename, move, or config value change detected in the diff:
+
+1. **Get changed files**: `git diff ${GIT_DIFF_BASE}...HEAD --name-only` (these files are excluded from stale-ref flagging)
+2. **Extract old names/values** from the `-` lines of the diff
+3. **Search codebase** for old references:
+   ```bash
+   grep -r "<old_name>" --include="*.ts" --include="*.js" --include="*.json" --include="*.yaml" --include="*.yml" --include="*.md" . | grep -v node_modules | grep -v dist
+   ```
+4. **Filter results**: Remove matches in files from step 1 (changed files are expected to reference old names during the transition)
+5. **Flag remaining matches** in unchanged files as P1 issues:
+   ```
+   P1: Stale reference detected
+   - Old value: `gpt-4`
+   - Found in: `src/config/constants.ts:15` (not in diff)
+   - Suggestion: Update to new value or verify intentional
+   ```
 
 ---
 
