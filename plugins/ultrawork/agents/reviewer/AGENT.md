@@ -314,7 +314,7 @@ For each rename, move, or config value change detected in the diff:
 2. **Extract old names/values** from the `-` lines of the diff
 3. **Search codebase** for old references:
    ```bash
-   grep -r "<old_name>" --include="*.ts" --include="*.js" --include="*.json" --include="*.yaml" --include="*.yml" --include="*.md" . | grep -v node_modules | grep -v dist
+   grep -rn "<old_name>" --include="*.ts" --include="*.js" --include="*.json" --include="*.yaml" --include="*.yml" --include="*.md" . | grep -v node_modules | grep -v dist
    ```
 4. **Filter results**: Remove matches in files from step 1 (changed files are expected to reference old names during the transition)
 5. **Flag remaining matches** in unchanged files as P1 issues:

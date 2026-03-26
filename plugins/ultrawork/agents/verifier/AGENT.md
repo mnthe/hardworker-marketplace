@@ -373,12 +373,13 @@ If the Codex background task returns a timeout or exec error (not a logic FAIL):
    ```
 2. **Backoff**: Wait 3 seconds
 3. **retry**: Re-launch the same `codex-verify.js` command with identical arguments as a new background task
-4. **Attempt 2 failure**: Classify the failure:
+4. **Attempt 2 failure**: Classify as either transient or logic failure:
    - **Transient** (network error, timeout, exec error): Set Codex verdict to `SKIP`, log warning:
      ```bash
      bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
        --add-evidence "Codex gate: SKIP (transient failure after 2 attempts)"
      ```
+     The verifier writes `{"available":true,"mode":"full","verdict":"SKIP","summary":"Codex transient failure after 2 attempts"}` to `/tmp/codex-${CLAUDE_SESSION_ID}.json` so gate-enforcement.js accepts the transition.
    - **Logic failure** (Codex returned FAIL with findings): Include findings in FAIL verdict as normal
 
 **Integration with Quad Gate:**
