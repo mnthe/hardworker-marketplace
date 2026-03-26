@@ -73,9 +73,10 @@ Evidence:
 | Breaking change   | Major (x.0.0)  | Change state format, remove command |
 | Behavior change   | Minor or Major | Depends on backward compatibility   |
 
-**When to bump version:**
-- Every PR that modifies plugin behavior MUST bump version
-- Multiple fixes in single PR = single version bump
+**⚠️ HARD RULE: When making changes to versioned packages, modules, or charts, always bump the version number as part of the same commit.**
+
+- Every commit that modifies plugin behavior MUST include a version bump in the same commit
+- Multiple fixes in single commit = single version bump
 - Documentation-only changes = no bump required
 
 ### Script Specification
@@ -671,11 +672,11 @@ cat ~/.claude/ultrawork/sessions/{id}/session.json
 
 ### Version Update Process
 
-**CRITICAL: When updating versions, you MUST sync both files!**
+**CRITICAL: Version bump MUST be included in the same commit as the code change, and both files MUST be synced together.**
 
 1. Update `plugins/{plugin}/.claude-plugin/plugin.json` (plugin version)
 2. Update `.claude-plugin/marketplace.json` (marketplace version) - **MUST match!**
-3. Document changes in commit message
+3. Include both version updates in the same commit as the code change
 4. Tag release if significant milestone
 
 ```bash
