@@ -362,6 +362,29 @@ Parse Codex result JSON:
 }
 ```
 
+**Codex Retry with Backoff:**
+
+If the Codex background task returns a timeout or exec error (not a logic FAIL):
+
+1. **Attempt 1 failure**: Log warning in evidence:
+   ```bash
+   bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
+     --add-evidence "Codex attempt 1 failed: <error_type>"
+   ```
+2. **Backoff**: Wait 3 seconds
+3. **Retry**: Re-launch the same `codex-verify.js` command with identical arguments as a new background task
+4. **Attempt 2 failure**: Classify the failure:
+   - **Transient** (network error, timeout, exec error): Set Codex verdict to `SKIP`, log warning:
+     ```bash
+     bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
+       --add-evidence "Codex gate: SKIP (transient failure after 2 attempts)"
+     ```
+   - **Logic failure** (Codex returned FAIL with findings): Include findings in FAIL verdict as normal
+
+**Integration with Quad Gate:**
+- SKIP from transient failure = treated as PASS in Quad Gate (degraded mode, no Codex input)
+- FAIL from logic findings = treated as FAIL in Quad Gate (normal flow)
+
 **Codex verdict handling**:
 - `PASS`: Codex found no issues -> continue to Phase 2-2
 - `FAIL`: Codex found issues -> add to fail reasons in Phase 3-1
