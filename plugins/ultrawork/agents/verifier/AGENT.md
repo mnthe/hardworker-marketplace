@@ -372,7 +372,7 @@ If the Codex background task returns a timeout or exec error (not a logic FAIL):
      --add-evidence "Codex attempt 1 failed: <error_type>"
    ```
 2. **Backoff**: Wait 3 seconds
-3. **Retry**: Re-launch the same `codex-verify.js` command with identical arguments as a new background task
+3. **retry**: Re-launch the same `codex-verify.js` command with identical arguments as a new background task
 4. **Attempt 2 failure**: Classify the failure:
    - **Transient** (network error, timeout, exec error): Set Codex verdict to `SKIP`, log warning:
      ```bash
