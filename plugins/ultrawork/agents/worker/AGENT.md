@@ -111,6 +111,33 @@ Task: "Create market card component with betting UI"
 - Tertiary: security-patterns (input validation on bet amounts)
 ```
 
+### Phase 0.5: External Tool Verification
+
+If the task description references any external CLI tool or API:
+
+1. **Identify tools**: Extract all CLI tools mentioned in the task (e.g., `glab`, `kubectl`, `npm`, custom CLIs)
+2. **Verify availability**: Run `which <tool>` and `<tool> --version`
+3. **Verify API surface**: Run `<tool> --help` or `<tool> <subcommand> --help` for each command the task will use
+4. **Record evidence**: Document actual available flags/options
+
+```bash
+bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
+  --add-evidence "CLI verification: <tool> v<version> ✓" \
+  --add-evidence "Available flags for <tool> <subcommand>: --flag1, --flag2, ..."
+```
+
+5. **Block if mismatch**: If task assumes a flag that doesn't exist, update task status:
+
+```bash
+bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id {TASK_ID} \
+  --status open \
+  --add-evidence "NEEDS_CONTEXT: Task assumes --json flag but <tool> does not support it"
+```
+
+Do NOT proceed with implementation if CLI assumptions are wrong. Leave the task open for the orchestrator to handle.
+
+**Skip this phase if**: Task only uses standard language tooling (npm, bun, tsc, vitest) or file operations.
+
 ### Phase 1: Read Task
 
 ```bash
