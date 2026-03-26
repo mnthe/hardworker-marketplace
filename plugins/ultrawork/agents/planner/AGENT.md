@@ -244,13 +244,32 @@ Parse the result JSON:
 
 - **verdict: "PASS"** → Continue to Phase 4 (Task Decomposition)
 - **verdict: "SKIP"** → Codex not installed, continue (graceful degradation)
-- **verdict: "FAIL"** → Auto-fix loop:
+- **verdict: "FAIL"** → Auto-fix loop with backoff:
   1. Read `doc_issues` from the result
-  2. Fix the design document based on issues (edit the file)
-  3. Delete old result: delete /tmp/codex-doc-${CLAUDE_SESSION_ID}.json
-  4. Re-run codex-verify.js --mode doc-review
-  5. Repeat (max 3 attempts)
-  6. If still FAIL after 3 attempts, leave session in PLANNING and report issues
+  2. Save current issues to `/tmp/codex-doc-issues-${CLAUDE_SESSION_ID}-attempt-N.json` for tracking
+  3. Fix the design document based on issues (edit the file)
+  4. Wait 2 seconds (backoff)
+  5. Re-run codex-verify.js --mode doc-review (auto-cleans previous result)
+  6. On second FAIL:
+     - Compare new issues against previous issues file to identify persistent vs new issues
+     - Fix remaining issues
+     - Wait 5 seconds (backoff)
+     - Re-run codex-verify.js --mode doc-review
+  7. After 3 failures: leave session in PLANNING and report issues to user/orchestrator
+
+**Issue persistence tracking:**
+Between retry attempts, save Codex issues to temporary files (`/tmp/codex-doc-issues-*`). Compare new issues against previous issues to:
+- Skip issues already fixed (don't re-report resolved items)
+- Focus on persistent issues that remain despite fixes
+- Identify new issues introduced by fixes
+
+**Common fix patterns:**
+| Codex Issue | Fix |
+|---|---|
+| "Missing criterion details" | Add `Command` + `Expected Output` columns to each criterion |
+| "Scope not clearly bounded" | Add explicit "In Scope" and "Out of Scope" sections |
+| "Consumer impact unclear" | Add "Changed Files → Consumers" table with handling plan |
+| "No verification strategy" | Add "Criterion → Command → Expected Output" table |
 
 **CLI Error Handling**: If codex-verify.js fails to execute, retry once. On repeated failure, leave session in PLANNING and report.
 
@@ -382,13 +401,32 @@ Parse the result JSON:
 
 - **verdict: "PASS"** → Continue to Phase 4 (Create Phase Tasks)
 - **verdict: "SKIP"** → Codex not installed, continue (graceful degradation)
-- **verdict: "FAIL"** → Auto-fix loop:
+- **verdict: "FAIL"** → Auto-fix loop with backoff:
   1. Read `doc_issues` from the result
-  2. Fix the design document based on issues (edit the file)
-  3. Delete old result: delete /tmp/codex-doc-${CLAUDE_SESSION_ID}.json
-  4. Re-run codex-verify.js --mode doc-review
-  5. Repeat (max 3 attempts)
-  6. If still FAIL after 3 attempts, leave session in PLANNING and report issues
+  2. Save current issues to `/tmp/codex-doc-issues-${CLAUDE_SESSION_ID}-attempt-N.json` for tracking
+  3. Fix the design document based on issues (edit the file)
+  4. Wait 2 seconds (backoff)
+  5. Re-run codex-verify.js --mode doc-review (auto-cleans previous result)
+  6. On second FAIL:
+     - Compare new issues against previous issues file to identify persistent vs new issues
+     - Fix remaining issues
+     - Wait 5 seconds (backoff)
+     - Re-run codex-verify.js --mode doc-review
+  7. After 3 failures: leave session in PLANNING and report issues to user/orchestrator
+
+**Issue persistence tracking:**
+Between retry attempts, save Codex issues to temporary files (`/tmp/codex-doc-issues-*`). Compare new issues against previous issues to:
+- Skip issues already fixed (don't re-report resolved items)
+- Focus on persistent issues that remain despite fixes
+- Identify new issues introduced by fixes
+
+**Common fix patterns:**
+| Codex Issue | Fix |
+|---|---|
+| "Missing criterion details" | Add `Command` + `Expected Output` columns to each criterion |
+| "Scope not clearly bounded" | Add explicit "In Scope" and "Out of Scope" sections |
+| "Consumer impact unclear" | Add "Changed Files → Consumers" table with handling plan |
+| "No verification strategy" | Add "Criterion → Command → Expected Output" table |
 
 **CLI Error Handling**: If codex-verify.js fails to execute, retry once. On repeated failure, leave session in PLANNING and report.
 
