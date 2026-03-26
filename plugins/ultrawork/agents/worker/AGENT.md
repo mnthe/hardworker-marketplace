@@ -360,7 +360,7 @@ Any additional context.
 6. **Be honest** - If something fails, report it (don't mark resolved)
 7. **Commit on success** - Always commit changes after task resolved (Phase 6)
 8. **Atomic commits** - One task = one commit for easy rollback
-9. **Selective staging** - ONLY `git add <your-files>`, NEVER `git add -A` or `git add .`
+9. **Selective staging** - ONLY `git add <your-files>`, NEVER use blanket staging commands (see FORBIDDEN list in Phase 6)
 
 ---
 
