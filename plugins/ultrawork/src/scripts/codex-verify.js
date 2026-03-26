@@ -73,6 +73,47 @@ function resolveSandboxMode(mode, override) {
 }
 
 // ============================================================================
+// Error Classification
+// ============================================================================
+
+/**
+ * Classify an execSync/execFileSync error into a human-readable category.
+ * @param {Error & { status?: number, signal?: string, killed?: boolean }} error
+ * @param {number} timeoutMs - The timeout used for the exec call
+ * @returns {{ category: string, detail: string }}
+ */
+function classifyExecError(error, timeoutMs) {
+  if (error.killed || error.signal === 'SIGTERM') {
+    return {
+      category: 'timeout',
+      detail: `Codex process killed after ${timeoutMs / 1000}s timeout`
+    };
+  }
+  if (error.signal) {
+    return {
+      category: 'signal',
+      detail: `Codex process terminated by signal ${error.signal}`
+    };
+  }
+  if (error.code === 'ENOENT') {
+    return {
+      category: 'not_found',
+      detail: 'Codex binary not found at execution time'
+    };
+  }
+  if (error.status != null && error.status !== 0) {
+    return {
+      category: 'exit_code',
+      detail: `Codex exited with code ${error.status}`
+    };
+  }
+  return {
+    category: 'unknown',
+    detail: error.message || 'Unknown execution error'
+  };
+}
+
+// ============================================================================
 // Codex Availability
 // ============================================================================
 
@@ -172,7 +213,7 @@ function runCodexReview(workingDir, base) {
       cwd: workingDir,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: 180000
+      timeout: 600000
     });
     const output = extractReviewContent(rawOutput);
     return { exit_code: 0, output, issues: [] };
@@ -181,6 +222,7 @@ function runCodexReview(workingDir, base) {
     const stderr = error.stderr ? error.stderr.toString().trim() : '';
     const rawOutput = [stdout, stderr].filter(Boolean).join('\n');
     const output = extractReviewContent(rawOutput);
+    const { category, detail } = classifyExecError(error, 600000);
 
     // Parse issues from extracted content
     const issues = output
@@ -191,7 +233,8 @@ function runCodexReview(workingDir, base) {
     return {
       exit_code: error.status || 1,
       output,
-      issues
+      issues,
+      error_detail: { category, detail, stderr: stderr.slice(0, 500) }
     };
   }
 }
@@ -343,7 +386,7 @@ function runCodexExec(workingDir, criteria, goal, model, designPath, enableFeatu
       cwd: workingDir,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: 300000
+      timeout: 900000
     }).trim();
 
     const criteriaResults = parseExecOutput(output, criteria);
@@ -357,14 +400,20 @@ function runCodexExec(workingDir, criteria, goal, model, designPath, enableFeatu
     const stdout = error.stdout ? error.stdout.toString().trim() : '';
     const stderr = error.stderr ? error.stderr.toString().trim() : '';
     const combinedOutput = [stdout, stderr].filter(Boolean).join('\n');
+    const { category, detail } = classifyExecError(error, 900000);
+
+    // Try to parse valid results from partial output (Codex may exit non-zero but still produce JSON)
+    const parsedResults = combinedOutput ? parseExecOutput(combinedOutput, criteria) : null;
+    const hasValidResults = parsedResults && parsedResults.some(cr => cr.explanation !== 'Could not parse verification result');
 
     return {
       exit_code: error.status || 1,
       output: combinedOutput,
-      criteria_results: criteria.map(c => ({
+      error_detail: { category, detail, stderr: stderr.slice(0, 500) },
+      criteria_results: hasValidResults ? parsedResults : criteria.map(c => ({
         criterion: c,
         result: 'FAIL',
-        explanation: 'Codex exec failed'
+        explanation: `Codex exec failed: ${detail}`
       }))
     };
   }
@@ -506,7 +555,7 @@ function runCodexDocReview(designPath, goal, model, enableFeatures = [], designO
     const output = execFileSync('codex', args, {
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: 300000
+      timeout: 900000
     }).trim();
 
     const { doc_issues, verdict } = parseDocReviewOutput(output);
@@ -516,12 +565,19 @@ function runCodexDocReview(designPath, goal, model, enableFeatures = [], designO
     const stdout = error.stdout ? error.stdout.toString().trim() : '';
     const stderr = error.stderr ? error.stderr.toString().trim() : '';
     const combinedOutput = [stdout, stderr].filter(Boolean).join('\n');
+    const { category, detail } = classifyExecError(error, 900000);
+
+    // Try to parse valid doc_issues from partial output (Codex may exit non-zero but still produce JSON)
+    const parsed = combinedOutput ? parseDocReviewOutput(combinedOutput) : null;
+    const hasValidIssues = parsed && parsed.doc_issues.length > 0
+      && parsed.doc_issues[0].detail !== 'Could not parse doc review result';
 
     return {
       exit_code: error.status || 1,
       output: combinedOutput,
-      doc_issues: [{ category: 'completeness', severity: 'error', detail: 'Codex doc-review exec failed' }],
-      verdict: 'FAIL'
+      error_detail: { category, detail, stderr: stderr.slice(0, 500) },
+      doc_issues: hasValidIssues ? parsed.doc_issues : [{ category: 'exec_error', severity: 'error', detail: `Codex doc-review failed: ${detail}` }],
+      verdict: hasValidIssues ? parsed.verdict : 'FAIL'
     };
   }
 }
@@ -602,20 +658,32 @@ function buildSummary(reviewResult, execResult, docReviewResult, verdict) {
   const parts = [];
 
   if (docReviewResult) {
-    const errorCount = docReviewResult.doc_issues.filter(i => i.severity === 'error').length;
-    const warnCount = docReviewResult.doc_issues.filter(i => i.severity === 'warning').length;
-    parts.push(`Doc review: ${errorCount === 0 ? 'clean' : `${errorCount} error(s), ${warnCount} warning(s)`}`);
+    if (docReviewResult.error_detail) {
+      parts.push(`Doc review: ${docReviewResult.error_detail.category} - ${docReviewResult.error_detail.detail}`);
+    } else {
+      const errorCount = docReviewResult.doc_issues.filter(i => i.severity === 'error').length;
+      const warnCount = docReviewResult.doc_issues.filter(i => i.severity === 'warning').length;
+      parts.push(`Doc review: ${errorCount === 0 ? 'clean' : `${errorCount} error(s), ${warnCount} warning(s)`}`);
+    }
   }
 
   if (reviewResult) {
-    const issueCount = reviewResult.issues.length;
-    parts.push(`Review: ${issueCount === 0 ? 'clean' : `${issueCount} issue(s) found`}`);
+    if (reviewResult.error_detail) {
+      parts.push(`Review: ${reviewResult.error_detail.category} - ${reviewResult.error_detail.detail}`);
+    } else {
+      const issueCount = reviewResult.issues.length;
+      parts.push(`Review: ${issueCount === 0 ? 'clean' : `${issueCount} issue(s) found`}`);
+    }
   }
 
   if (execResult) {
-    const passCount = execResult.criteria_results.filter(cr => cr.result === 'PASS').length;
-    const totalCount = execResult.criteria_results.length;
-    parts.push(`Exec: ${passCount}/${totalCount} criteria passed`);
+    if (execResult.error_detail) {
+      parts.push(`Exec: ${execResult.error_detail.category} - ${execResult.error_detail.detail}`);
+    } else {
+      const passCount = execResult.criteria_results.filter(cr => cr.result === 'PASS').length;
+      const totalCount = execResult.criteria_results.length;
+      parts.push(`Exec: ${passCount}/${totalCount} criteria passed`);
+    }
   }
 
   parts.push(`Verdict: ${verdict}`);
@@ -772,6 +840,9 @@ function main() {
       output: docReviewResult.output,
       doc_issues: docReviewResult.doc_issues
     };
+    if (docReviewResult.error_detail) {
+      result.doc_review.error_detail = docReviewResult.error_detail;
+    }
   }
 
   outputResult(result, args.output);
