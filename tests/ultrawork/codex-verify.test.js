@@ -887,4 +887,80 @@ describe('codex-verify.js', () => {
       expect(prompt).toContain('## Sandbox Constraints (IMPORTANT)');
     });
   });
+
+  describe('buildDocReviewPrompt', () => {
+    const codexVerify = require('../../plugins/ultrawork/src/scripts/codex-verify.js');
+    const fs = require('fs');
+    const os = require('os');
+
+    let tmpDesign;
+
+    beforeEach(() => {
+      tmpDesign = path.join(os.tmpdir(), `codex-test-design-${Date.now()}.md`);
+      fs.writeFileSync(tmpDesign, '# Design\n\n## Overview\nSample design doc content.\n', 'utf-8');
+    });
+
+    afterEach(() => {
+      if (fs.existsSync(tmpDesign)) fs.unlinkSync(tmpDesign);
+    });
+
+    test('buildDocReviewPrompt is exported', () => {
+      expect(typeof codexVerify.buildDocReviewPrompt).toBe('function');
+    });
+
+    test('prompt contains Structural Accuracy, not Section Completeness', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      expect(prompt).toContain('Structural Accuracy');
+      expect(prompt).not.toContain('Section Completeness');
+    });
+
+    test('prompt contains IGNORE block', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      expect(prompt).toContain('IGNORE');
+      expect(prompt).toContain('heading names');
+      expect(prompt).toContain('section order');
+    });
+
+    test('prompt contains REPORT block', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      expect(prompt).toContain('REPORT');
+      expect(prompt).toContain('invalid file references');
+      expect(prompt).toContain('unverifiable success criteria');
+    });
+
+    test('prompt covers all mandatory content areas', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      expect(prompt).toContain('problem');
+      expect(prompt).toContain('goal');
+      expect(prompt).toContain('approach');
+      expect(prompt).toContain('key decisions');
+      expect(prompt).toContain('affected files');
+      expect(prompt).toContain('scope boundaries');
+      expect(prompt).toContain('verification criteria');
+      expect(prompt).toContain('dependency');
+    });
+
+    test('category wire value is completeness', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      // The JSON output format should still use "completeness" as category value
+      expect(prompt).toContain('completeness');
+    });
+
+    test('prompt includes design document content', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      expect(prompt).toContain('Sample design doc content');
+    });
+
+    test('prompt includes goal when provided', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign, 'Build a marketplace');
+
+      expect(prompt).toContain('Build a marketplace');
+    });
+  });
 });

@@ -470,7 +470,9 @@ function buildDocReviewPrompt(designPath, goal) {
   prompt += `## Design Document\n${designContent}\n\n`;
   prompt += '## Review Criteria\n\n';
   prompt += 'Check the following and report issues:\n\n';
-  prompt += '1. **Section Completeness**: Required sections: Overview, Approach/Decisions, Architecture, Testing Strategy, Scope. Report missing sections as errors.\n';
+  prompt += '1. **Structural Accuracy**: Report an error ONLY when content needed to implement or verify the change is missing or wrong. Mandatory content areas: (1) problem/current-state/goal, (2) chosen approach and key decisions, (3) affected files/components/consumers with impact, (4) scope boundaries, (5) executable verification criteria, (6) dependency/data-flow relationships.\n';
+  prompt += '   IGNORE: heading names/numbering/depth, bold-vs-heading, section order, phase/task count differences — unless they hide missing content.\n';
+  prompt += '   REPORT: invalid file references, impossible dependencies, missing verification commands, contradictory decisions/scope, unverifiable success criteria.\n';
   prompt += '2. **Blocked Patterns**: Find any TODO, TBD, FIXME, placeholder, "not yet decided", "to be determined", empty sections. Report as errors.\n';
   prompt += '3. **Internal Consistency**: Check that decisions, architecture, and scope don\'t contradict each other. Report contradictions as errors.\n';
   prompt += '4. **Quality**: Check for vague statements ("should work", "probably", "maybe"), incomplete lists ("etc.", "..."). Report as warnings.\n\n';
@@ -872,4 +874,4 @@ if (require.main === module) {
 }
 
 // Export for testing
-module.exports = { buildVerificationPrompt, getGitContext, runCodexDocReview };
+module.exports = { buildVerificationPrompt, buildDocReviewPrompt, getGitContext, runCodexDocReview };

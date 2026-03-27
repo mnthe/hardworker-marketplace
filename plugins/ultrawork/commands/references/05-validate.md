@@ -59,7 +59,7 @@ The verifier must:
 If a design document exists in `{WORKING_DIR}/docs/plans/`:
 
 1. **Locate**: Find most recent `*-design.md`
-2. **Section check**: Required sections: Overview, Approach/Decisions, Architecture, Testing Strategy, Scope
+2. **Content-area check**: Verify design covers: problem/goal, approach/decisions, affected files/consumers, scope boundaries, verification criteria, dependencies
 3. **Blocked patterns**: TODO, TBD, FIXME, placeholder, "not yet decided"
 4. **Task traceability**: Each task should relate to design content
 

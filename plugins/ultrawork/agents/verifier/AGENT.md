@@ -251,7 +251,7 @@ The following steps execute sequentially within this track, while Phase 1-2 (Cod
 If a design document exists in `{WORKING_DIR}/docs/plans/`:
 
 1. **Locate**: Find most recent `*-design.md` in `{WORKING_DIR}/docs/plans/`
-2. **Section check**: Verify required sections exist (Overview, Approach/Decisions, Architecture, Testing Strategy, Scope)
+2. **Content-area check**: Verify design covers: problem/goal, approach/decisions, affected files/consumers, scope boundaries, verification criteria, dependencies
 3. **Blocked patterns**: Scan for TODO, TBD, FIXME, placeholder, "not yet decided", "to be determined"
 4. **Task traceability**: Each task should relate to content in the design document
 5. **Record**: Add design verification evidence to verify task

@@ -97,14 +97,13 @@ mkdir -p "$WORKING_DIR/docs/plans"
 
 📖 **Template**: See [design-template.md](../../skills/planning/references/design-template.md)
 
-**Required sections**:
-- Overview - High-level description
-- Approach Selection - Considered options, selected approach with rationale
-- Decisions - All choices made (with "Asked User: Yes/No")
-- Architecture - Components, data flow, dependencies
-- Error Handling - Categories, response format, fallback strategies
-- Testing Strategy - Test levels, key cases, mock strategy
-- Scope - In scope, out of scope, assumptions
+**Required content areas** (section names are flexible):
+- Problem/goal - High-level description of what and why
+- Approach/decisions - Considered options, selected approach with rationale, all choices made
+- Affected files/consumers - Components, data flow, dependencies, consumer impact
+- Scope boundaries - In scope, out of scope, assumptions
+- Verification criteria - Test levels, key cases, executable verification commands
+- Dependencies - External services, blocking constraints, error handling
 
 ### Phase 5: Task Decomposition
 

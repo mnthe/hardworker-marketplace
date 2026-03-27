@@ -266,8 +266,8 @@ Between retry attempts, save Codex issues to temporary files (`/tmp/codex-doc-is
 **Common fix patterns:**
 | Codex Issue | Fix |
 |---|---|
-| "Missing criterion details" | Add `Command` + `Expected Output` columns to each criterion |
-| "Scope not clearly bounded" | Add explicit "In Scope" and "Out of Scope" sections |
+| "Verification criteria lack executable commands" | Add `Command` + `Expected Output` columns to each criterion |
+| "Scope boundaries unclear (no in/out distinction)" | Add explicit "In Scope" and "Out of Scope" sections |
 | "Consumer impact unclear" | Add "Changed Files → Consumers" table with handling plan |
 | "No verification strategy" | Add "Criterion → Command → Expected Output" table |
 
@@ -423,8 +423,8 @@ Between retry attempts, save Codex issues to temporary files (`/tmp/codex-doc-is
 **Common fix patterns:**
 | Codex Issue | Fix |
 |---|---|
-| "Missing criterion details" | Add `Command` + `Expected Output` columns to each criterion |
-| "Scope not clearly bounded" | Add explicit "In Scope" and "Out of Scope" sections |
+| "Verification criteria lack executable commands" | Add `Command` + `Expected Output` columns to each criterion |
+| "Scope boundaries unclear (no in/out distinction)" | Add explicit "In Scope" and "Out of Scope" sections |
 | "Consumer impact unclear" | Add "Changed Files → Consumers" table with handling plan |
 | "No verification strategy" | Add "Criterion → Command → Expected Output" table |
 
