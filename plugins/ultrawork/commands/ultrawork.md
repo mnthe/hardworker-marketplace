@@ -389,6 +389,8 @@ See `skills/planning/SKILL.md` Phase 4 for template.
 
 Run Codex doc-review on the design document. The PLANNING→EXECUTION gate requires this result.
 
+**Retry budget: max 5 attempts** with convergence tracking and auto-pass fallback.
+
 ```bash
 # Run Codex doc-review
 bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/codex-verify.js" \
@@ -414,22 +416,82 @@ parsed = JSON.parse(result)
 - Log: "Codex doc-review passed"
 - Proceed to task decomposition
 
-**If verdict is FAIL**:
+**If verdict is FAIL — Bounded Convergence Loop:**
+
 ```python
-# Show issues to user
-AskUserQuestion(questions=[{
-  "question": "Codex doc-review에서 이슈가 발견되었습니다. 수정 방향을 확인해주세요.",
-  "header": "Doc review",
-  "options": [
-    {"label": "자동 수정 후 재리뷰", "description": "발견된 이슈를 바탕으로 문서를 자동 수정"},
-    {"label": "직접 확인", "description": "이슈를 확인하고 직접 수정 방향 지시"}
-  ],
-  "multiSelect": False
-}])
+attempt = 0
+max_attempts = 5
+error_counts = []
+
+while attempt < max_attempts:
+    # Run doc-review
+    run codex-verify.js --mode doc-review ...
+    result = parse result file
+
+    if result.verdict == "PASS":
+        log "Codex doc-review passed on attempt {attempt + 1}"
+        break
+
+    if result.verdict == "SKIP":
+        log "Codex not available, skipping doc-review"
+        break
+
+    # Track error count for convergence detection
+    current_errors = len(result.doc_issues)
+    error_counts.append(current_errors)
+
+    # Early exit on oscillation: if error count increases after a decrease
+    # for 2 consecutive attempts, offer early auto-pass
+    if len(error_counts) >= 3:
+        recent = error_counts[-3:]
+        if recent[1] < recent[0] and recent[2] > recent[1]:
+            # Oscillation detected (decreased then increased)
+            AskUserQuestion(questions=[{
+              "question": f"Doc-review 오류가 수렴하지 않고 진동 중입니다 ({recent}). 자동 통과하시겠습니까?",
+              "header": "Oscillation detected",
+              "options": [
+                {"label": "자동 통과 (auto-pass)", "description": "남은 이슈를 경고로 기록하고 진행"},
+                {"label": "계속 수정", "description": "수동으로 계속 수정 시도"}
+              ]
+            }])
+            if user chose auto-pass:
+                break  # Fall through to auto-pass below
+
+    # Show issues and fix
+    AskUserQuestion(questions=[{
+      "question": f"Doc-review 이슈 {current_errors}건 (attempt {attempt + 1}/{max_attempts}). 수정 방향을 확인해주세요.",
+      "header": "Doc review",
+      "options": [
+        {"label": "자동 수정 후 재리뷰", "description": "발견된 이슈를 바탕으로 문서를 자동 수정"},
+        {"label": "직접 확인", "description": "이슈를 확인하고 직접 수정 방향 지시"}
+      ],
+      "multiSelect": False
+    }])
+
+    # Fix issues based on doc_issues
+    fix_design_document(result.doc_issues)
+    attempt += 1
+
+# Auto-pass fallback when max retries (5) reached without PASS
+if attempt >= max_attempts and result.verdict != "PASS":
+    # Call codex-autopass.js to record auto-pass
+    bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/codex-autopass.js" \
+      --session ${CLAUDE_SESSION_ID}
+
+    # Append Known Doc-Review Issues section to design document
+    append to $DESIGN_PATH:
+    """
+    ## Known Doc-Review Issues (Auto-Passed)
+
+    The following issues were identified by Codex doc-review but could not
+    be resolved within the retry budget. They are recorded as warnings.
+
+    {remaining_issues_formatted}
+    """
+
+    log "Auto-passed after {attempt} attempts. {current_errors} remaining issues as warnings."
+    # Proceed to task decomposition
 ```
-- Fix the design document based on issues
-- Re-run Codex doc-review (old result is automatically cleaned before re-run)
-- Repeat until PASS or SKIP
 
 **If CLI error** (codex-verify.js execution fails):
 - Retry once
