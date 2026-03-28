@@ -26,7 +26,7 @@
       "name": "teamwork",
       "source": "./plugins/teamwork",
       "description": "Native teammate-based collaboration plugin with role-based workers, event-driven coordination, and Claude Code agent teams",
-      "version": "3.3.4",
+      "version": "3.4.0",
       "author": {
         "name": "mnthe"
       },

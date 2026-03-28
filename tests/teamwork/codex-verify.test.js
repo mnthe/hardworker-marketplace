@@ -168,7 +168,7 @@ describe('codex-verify.js', () => {
     test('should inject --enable flags into doc review args array', async () => {
       const source = fs.readFileSync(SCRIPT_PATH, 'utf-8');
       // Verify there are two separate injection points (exec and doc-review)
-      const enableInjections = source.match(/enableFeatures\.forEach/g);
+      const enableInjections = source.match(/for\s+\(const\s+\w+\s+of\s+enableFeatures\)|enableFeatures\.forEach/g);
       expect(enableInjections).not.toBeNull();
       expect(enableInjections.length).toBeGreaterThanOrEqual(2);
     });

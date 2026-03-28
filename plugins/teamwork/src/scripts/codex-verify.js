@@ -1,12 +1,11 @@
 #!/usr/bin/env bun
-
 /**
  * codex-verify.js - Codex CLI wrapper for verification (teamwork plugin)
  *
  * Checks codex availability, runs codex review and codex exec,
  * outputs structured JSON. Gracefully degrades when codex is not installed.
  *
- * Used by teamwork plugin for AI-powered code verification and criteria validation.
+ * Synced from ultrawork plugin v1.14.0 (2026-03-28).
  *
  * Usage: codex-verify.js --mode <check|review|exec|full|doc-review> [options]
  */
@@ -53,13 +52,15 @@ const ARG_SPEC = {
 
 const VALID_MODES = ['check', 'review', 'exec', 'full', 'doc-review'];
 const VALID_SANDBOX_MODES = ['read-only', 'workspace-write', 'danger-full-access'];
-const DEFAULT_ENABLE_FEATURES = ['collab'];
 const DEFAULT_MODEL = 'gpt-5.4';
+const DEFAULT_ENABLE_FEATURES = ['collab'];
 
 /**
  * Determine sandbox mode based on verify mode or explicit override
- * @param {VerifyMode} mode
- * @param {string} [override]
+ * exec/full → workspace-write (tests need /tmp writes)
+ * doc-review/review → read-only (read-only verification)
+ * @param {VerifyMode} mode - Verify mode
+ * @param {string} [override] - Explicit sandbox mode override
  * @returns {string}
  */
 function resolveSandboxMode(mode, override) {
@@ -71,6 +72,47 @@ function resolveSandboxMode(mode, override) {
     return override;
   }
   return ['exec', 'full'].includes(mode) ? 'workspace-write' : 'read-only';
+}
+
+// ============================================================================
+// Error Classification
+// ============================================================================
+
+/**
+ * Classify an execSync/execFileSync error into a human-readable category.
+ * @param {Error & { status?: number, signal?: string, killed?: boolean }} error
+ * @param {number} timeoutMs - The timeout used for the exec call
+ * @returns {{ category: string, detail: string }}
+ */
+function classifyExecError(error, timeoutMs) {
+  if (error.killed || error.signal === 'SIGTERM') {
+    return {
+      category: 'timeout',
+      detail: `Codex process killed after ${timeoutMs / 1000}s timeout`
+    };
+  }
+  if (error.signal) {
+    return {
+      category: 'signal',
+      detail: `Codex process terminated by signal ${error.signal}`
+    };
+  }
+  if (error.code === 'ENOENT') {
+    return {
+      category: 'not_found',
+      detail: 'Codex binary not found at execution time'
+    };
+  }
+  if (error.status != null && error.status !== 0) {
+    return {
+      category: 'exit_code',
+      detail: `Codex exited with code ${error.status}`
+    };
+  }
+  return {
+    category: 'unknown',
+    detail: error.message || 'Unknown execution error'
+  };
 }
 
 // ============================================================================
@@ -102,16 +144,20 @@ function checkCodexAvailability() {
 
 /**
  * Extract the final review text from codex review session log.
+ * Codex review outputs a session log with thinking/exec traces.
+ * The actual review is typically the last assistant message.
  * @param {string} rawOutput - Full codex review session log
  * @returns {string} Extracted review text
  */
 function extractReviewContent(rawOutput) {
+  // Split by common codex session markers and take the last substantial block
   const lines = rawOutput.split('\n');
   const contentLines = [];
   let inContent = false;
 
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i];
+    // Skip session metadata, thinking markers, and exec traces
     if (line.startsWith('--------') || line.startsWith('session id:') ||
         line.startsWith('model:') || line.startsWith('provider:') ||
         line.startsWith('sandbox:') || line.startsWith('approval:') ||
@@ -155,6 +201,8 @@ function detectDefaultBranch(workingDir) {
  *   1. If --base is provided, review against that ref
  *   2. Otherwise, auto-detect default branch and use --base
  *   3. Fall back to --uncommitted if no base found
+ * Note: codex review does not accept a custom prompt (CLI constraint).
+ * For criteria-based verification, use codex exec mode instead.
  * @param {string} workingDir - Project directory
  * @param {string} [base] - Base branch or commit ref to diff against
  * @returns {{ exit_code: number, output: string, issues: string[] }}
@@ -167,7 +215,7 @@ function runCodexReview(workingDir, base) {
       cwd: workingDir,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: 180000
+      timeout: 600000
     });
     const output = extractReviewContent(rawOutput);
     return { exit_code: 0, output, issues: [] };
@@ -176,7 +224,9 @@ function runCodexReview(workingDir, base) {
     const stderr = error.stderr ? error.stderr.toString().trim() : '';
     const rawOutput = [stdout, stderr].filter(Boolean).join('\n');
     const output = extractReviewContent(rawOutput);
+    const { category, detail } = classifyExecError(error, 600000);
 
+    // Parse issues from extracted content
     const issues = output
       .split('\n')
       .filter(line => line.trim().length > 0)
@@ -185,7 +235,8 @@ function runCodexReview(workingDir, base) {
     return {
       exit_code: error.status || 1,
       output,
-      issues
+      issues,
+      error_detail: { category, detail, stderr: stderr.slice(0, 500) }
     };
   }
 }
@@ -235,6 +286,7 @@ function parseCriteria(criteriaStr) {
  * @param {string} [goal] - Optional project goal for context
  * @param {string} [designPath] - Optional path to design document
  * @param {{ diffStat: string, recentCommits: string }} [gitContext] - Optional git context
+ * @param {string} [sandboxMode='read-only'] - Sandbox mode for constraint guidance
  * @returns {string}
  */
 function buildVerificationPrompt(criteria, goal, designPath, gitContext, sandboxMode = 'read-only') {
@@ -244,6 +296,7 @@ function buildVerificationPrompt(criteria, goal, designPath, gitContext, sandbox
     prompt += `Project Goal: ${goal}\n\n`;
   }
 
+  // Include design document content if provided
   if (designPath) {
     try {
       const designContent = fs.readFileSync(designPath, 'utf-8');
@@ -316,6 +369,7 @@ function buildVerificationPrompt(criteria, goal, designPath, gitContext, sandbox
  * @param {string} [goal] - Optional project goal
  * @param {string} [model] - Optional model override
  * @param {string} [designPath] - Optional path to design document
+ * @param {string[]} [enableFeatures=[]] - Optional features to enable via --enable flags
  * @returns {{ exit_code: number, output: string, criteria_results: Array }}
  */
 function runCodexExec(workingDir, criteria, goal, model, designPath, enableFeatures = [], sandboxMode = 'workspace-write') {
@@ -324,17 +378,17 @@ function runCodexExec(workingDir, criteria, goal, model, designPath, enableFeatu
 
   try {
     const effectiveModel = model || DEFAULT_MODEL;
-    const args = ['exec', '--sandbox', sandboxMode];
-    enableFeatures.forEach(feature => {
-      args.push('--enable', feature);
-    });
-    args.push('-m', effectiveModel, prompt);
+    const enableArgs = [];
+    for (const feature of enableFeatures) {
+      enableArgs.push('--enable', feature);
+    }
+    const args = ['exec', '--sandbox', sandboxMode, ...enableArgs, '-m', effectiveModel, prompt];
 
     const output = execFileSync('codex', args, {
       cwd: workingDir,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: 300000
+      timeout: 900000
     }).trim();
 
     const criteriaResults = parseExecOutput(output, criteria);
@@ -348,14 +402,20 @@ function runCodexExec(workingDir, criteria, goal, model, designPath, enableFeatu
     const stdout = error.stdout ? error.stdout.toString().trim() : '';
     const stderr = error.stderr ? error.stderr.toString().trim() : '';
     const combinedOutput = [stdout, stderr].filter(Boolean).join('\n');
+    const { category, detail } = classifyExecError(error, 900000);
+
+    // Try to parse valid results from partial output (Codex may exit non-zero but still produce JSON)
+    const parsedResults = combinedOutput ? parseExecOutput(combinedOutput, criteria) : null;
+    const hasValidResults = parsedResults && parsedResults.some(cr => cr.explanation !== 'Could not parse verification result');
 
     return {
       exit_code: error.status || 1,
       output: combinedOutput,
-      criteria_results: criteria.map(c => ({
+      error_detail: { category, detail, stderr: stderr.slice(0, 500) },
+      criteria_results: hasValidResults ? parsedResults : criteria.map(c => ({
         criterion: c,
         result: 'FAIL',
-        explanation: 'Codex exec failed'
+        explanation: `Codex exec failed: ${detail}`
       }))
     };
   }
@@ -403,7 +463,7 @@ function parseExecOutput(output, criteria) {
 function buildDocReviewPrompt(designPath, goal) {
   const designContent = fs.readFileSync(designPath, 'utf-8');
 
-  let prompt = 'You are reviewing a design document for quality and completeness.\n\n';
+  let prompt = 'You are reviewing a design document for alignment and implementability.\n\n';
 
   if (goal) {
     prompt += `## Goal\n${goal}\n\n`;
@@ -412,14 +472,13 @@ function buildDocReviewPrompt(designPath, goal) {
   prompt += `## Design Document\n${designContent}\n\n`;
   prompt += '## Review Criteria\n\n';
   prompt += 'Check the following and report issues:\n\n';
-  prompt += '1. **Section Completeness**: Required sections: Overview, Approach/Decisions, Architecture, Testing Strategy, Scope. Report missing sections as errors.\n';
-  prompt += '2. **Blocked Patterns**: Find any TODO, TBD, FIXME, placeholder, "not yet decided", "to be determined", empty sections. Report as errors.\n';
-  prompt += '3. **Internal Consistency**: Check that decisions, architecture, and scope don\'t contradict each other. Report contradictions as errors.\n';
-  prompt += '4. **Quality**: Check for vague statements ("should work", "probably", "maybe"), incomplete lists ("etc.", "..."). Report as warnings.\n\n';
+  prompt += '1. **Context Sufficiency**: Can an AI worker implement each task using ONLY this document + the referenced source files? Report missing context that would force the worker to make undocumented decisions. IGNORE tool permissions, JSON field names, test file internals — those are implementation concerns, not design concerns.\n';
+  prompt += '2. **Goal-Result Alignment**: Does the document define a clear path from Goal to concrete Results? Check: problem statement connects to approach, approach connects to changed files, changed files connect to verification criteria. Report broken chains.\n';
+  prompt += '3. **Blocked Patterns**: Find TODO, TBD, FIXME, placeholder, empty sections, vague statements ("should work", "probably", "maybe"). Report as errors.\n\n';
   prompt += '## Output Format (JSON)\n';
   prompt += '{\n';
   prompt += '  "doc_issues": [\n';
-  prompt += '    { "category": "completeness|blocked_pattern|consistency|quality", "severity": "error|warning", "detail": "description" }\n';
+  prompt += '    { "category": "context_sufficiency|goal_alignment|blocked_pattern", "severity": "error|warning", "detail": "description" }\n';
   prompt += '  ],\n';
   prompt += '  "overall_verdict": "PASS|FAIL",\n';
   prompt += '  "summary": "one-line summary"\n';
@@ -452,7 +511,7 @@ function parseDocReviewOutput(output) {
   }
 
   return {
-    doc_issues: [{ category: 'completeness', severity: 'error', detail: 'Could not parse doc review result' }],
+    doc_issues: [{ category: 'context_sufficiency', severity: 'error', detail: 'Could not parse doc review result' }],
     verdict: 'FAIL'
   };
 }
@@ -462,6 +521,7 @@ function parseDocReviewOutput(output) {
  * @param {string} designPath - Path to design document
  * @param {string} [goal] - Optional project goal
  * @param {string} [model] - Optional model override
+ * @param {string[]} [enableFeatures=[]] - Optional features to enable via --enable flags
  * @returns {{ exit_code: number, output: string, doc_issues: Array, verdict: string }}
  */
 function runCodexDocReview(designPath, goal, model, enableFeatures = [], designOptional = false, sandboxMode = 'read-only') {
@@ -478,7 +538,7 @@ function runCodexDocReview(designPath, goal, model, enableFeatures = [], designO
     return {
       exit_code: 1,
       output: `Design file not found: ${designPath}`,
-      doc_issues: [{ category: 'completeness', severity: 'error', detail: `Design file not found: ${designPath}` }],
+      doc_issues: [{ category: 'context_sufficiency', severity: 'error', detail: `Design file not found: ${designPath}` }],
       verdict: 'FAIL'
     };
   }
@@ -487,16 +547,16 @@ function runCodexDocReview(designPath, goal, model, enableFeatures = [], designO
 
   try {
     const effectiveModel = model || DEFAULT_MODEL;
-    const args = ['exec', '--sandbox', sandboxMode];
-    enableFeatures.forEach(feature => {
-      args.push('--enable', feature);
-    });
-    args.push('-m', effectiveModel, prompt);
+    const enableArgs = [];
+    for (const feature of enableFeatures) {
+      enableArgs.push('--enable', feature);
+    }
+    const args = ['exec', '--sandbox', sandboxMode, ...enableArgs, '-m', effectiveModel, prompt];
 
     const output = execFileSync('codex', args, {
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: 300000
+      timeout: 900000
     }).trim();
 
     const { doc_issues, verdict } = parseDocReviewOutput(output);
@@ -506,12 +566,19 @@ function runCodexDocReview(designPath, goal, model, enableFeatures = [], designO
     const stdout = error.stdout ? error.stdout.toString().trim() : '';
     const stderr = error.stderr ? error.stderr.toString().trim() : '';
     const combinedOutput = [stdout, stderr].filter(Boolean).join('\n');
+    const { category, detail } = classifyExecError(error, 900000);
+
+    // Try to parse valid doc_issues from partial output (Codex may exit non-zero but still produce JSON)
+    const parsed = combinedOutput ? parseDocReviewOutput(combinedOutput) : null;
+    const hasValidIssues = parsed && parsed.doc_issues.length > 0
+      && parsed.doc_issues[0].detail !== 'Could not parse doc review result';
 
     return {
       exit_code: error.status || 1,
       output: combinedOutput,
-      doc_issues: [{ category: 'completeness', severity: 'error', detail: 'Codex doc-review exec failed' }],
-      verdict: 'FAIL'
+      error_detail: { category, detail, stderr: stderr.slice(0, 500) },
+      doc_issues: hasValidIssues ? parsed.doc_issues : [{ category: 'exec_error', severity: 'error', detail: `Codex doc-review failed: ${detail}` }],
+      verdict: hasValidIssues ? parsed.verdict : 'FAIL'
     };
   }
 }
@@ -592,20 +659,32 @@ function buildSummary(reviewResult, execResult, docReviewResult, verdict) {
   const parts = [];
 
   if (docReviewResult) {
-    const errorCount = docReviewResult.doc_issues.filter(i => i.severity === 'error').length;
-    const warnCount = docReviewResult.doc_issues.filter(i => i.severity === 'warning').length;
-    parts.push(`Doc review: ${errorCount === 0 ? 'clean' : `${errorCount} error(s), ${warnCount} warning(s)`}`);
+    if (docReviewResult.error_detail) {
+      parts.push(`Doc review: ${docReviewResult.error_detail.category} - ${docReviewResult.error_detail.detail}`);
+    } else {
+      const errorCount = docReviewResult.doc_issues.filter(i => i.severity === 'error').length;
+      const warnCount = docReviewResult.doc_issues.filter(i => i.severity === 'warning').length;
+      parts.push(`Doc review: ${errorCount === 0 ? 'clean' : `${errorCount} error(s), ${warnCount} warning(s)`}`);
+    }
   }
 
   if (reviewResult) {
-    const issueCount = reviewResult.issues.length;
-    parts.push(`Review: ${issueCount === 0 ? 'clean' : `${issueCount} issue(s) found`}`);
+    if (reviewResult.error_detail) {
+      parts.push(`Review: ${reviewResult.error_detail.category} - ${reviewResult.error_detail.detail}`);
+    } else {
+      const issueCount = reviewResult.issues.length;
+      parts.push(`Review: ${issueCount === 0 ? 'clean' : `${issueCount} issue(s) found`}`);
+    }
   }
 
   if (execResult) {
-    const passCount = execResult.criteria_results.filter(cr => cr.result === 'PASS').length;
-    const totalCount = execResult.criteria_results.length;
-    parts.push(`Exec: ${passCount}/${totalCount} criteria passed`);
+    if (execResult.error_detail) {
+      parts.push(`Exec: ${execResult.error_detail.category} - ${execResult.error_detail.detail}`);
+    } else {
+      const passCount = execResult.criteria_results.filter(cr => cr.result === 'PASS').length;
+      const totalCount = execResult.criteria_results.length;
+      parts.push(`Exec: ${passCount}/${totalCount} criteria passed`);
+    }
   }
 
   parts.push(`Verdict: ${verdict}`);
@@ -674,7 +753,12 @@ function main() {
   const args = parseArgs(ARG_SPEC);
   validateModeArgs(args);
 
-  // Parse enable features into array; collab is always enabled
+  // Pre-cleanup: remove existing output file before running new verification
+  if (args.output && fs.existsSync(args.output)) {
+    fs.unlinkSync(args.output);
+  }
+
+  // Parse enable features from comma-separated string; collab is always enabled
   const userFeatures = args.enableFeatures
     ? args.enableFeatures.split(',').map(f => f.trim()).filter(Boolean)
     : [];
@@ -757,6 +841,9 @@ function main() {
       output: docReviewResult.output,
       doc_issues: docReviewResult.doc_issues
     };
+    if (docReviewResult.error_detail) {
+      result.doc_review.error_detail = docReviewResult.error_detail;
+    }
   }
 
   outputResult(result, args.output);
@@ -786,4 +873,4 @@ if (require.main === module) {
 }
 
 // Export for testing
-module.exports = { buildVerificationPrompt, getGitContext, runCodexDocReview };
+module.exports = { buildVerificationPrompt, buildDocReviewPrompt, parseDocReviewOutput, getGitContext, runCodexDocReview };

@@ -16,7 +16,7 @@ Key features:
 - Event-driven coordination via hooks (`TaskCompleted`, `TeammateIdle`)
 - Project-based state management with shared task files
 - Structured evidence collection and validation
-- 6 scripts for project lifecycle and verification (setup, create, get, status, clean, codex-verify)
+- 7 scripts for project lifecycle and verification (setup, create, get, status, clean, codex-verify, codex-autopass)
 
 ## File Structure
 
@@ -80,6 +80,7 @@ All scripts use Bun runtime with flag-based parameters. Project scripts use `--p
 | **project-clean.js** | Clean project state | `--project <name>` `--team <name>` |
 | **project-status.js** | Get project dashboard status | `--project <name>` `--team <name>` `[--format json|table]` `[--field <path>]` |
 | **codex-verify.js** | Run Codex CLI as auxiliary verifier (dual gate) | `--mode check\|review\|exec\|full\|doc-review` `--working-dir <dir>` `--criteria "c1\|c2"` `--output <file>` `--base <ref>` `--design <path>` `--model <model>` `--goal "..."` `--enable <features>` |
+| **codex-autopass.js** | Transform FAIL doc-review to PASS (convergence fallback) | `--session <ID>` |
 
 **Supporting files:**
 - `codex-output-schema.json` - JSON schema for Codex verification output format
