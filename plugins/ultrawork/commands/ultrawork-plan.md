@@ -379,7 +379,7 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/session-update.js" --session ${CLAUDE_SES
 
 See `skills/planning/SKILL.md` Phase 4 for template.
 
-#### 3f. Codex Doc-Review
+#### 3f. Codex Doc-Review (Convergence-Aware)
 
 Run Codex doc-review on the design document before proceeding to task decomposition.
 
@@ -395,19 +395,53 @@ Parse the result JSON:
 
 - **verdict: "PASS"** --> Continue to Step 3g (Task Decomposition)
 - **verdict: "SKIP"** --> Codex not installed, continue (graceful degradation)
-- **verdict: "FAIL"** --> Fix loop:
-  1. Show `doc_issues` from the result to the user
-  2. Ask user for confirmation or feedback on fixes
-  3. Fix the design document based on issues
-  4. Re-run `codex-verify.js --mode doc-review`
-  5. Repeat (max 3 attempts)
-  6. If still FAIL after 3 attempts, leave session in PLANNING and report issues
+- **verdict: "FAIL"** --> Enter convergence-aware fix loop (max 5 attempts)
+
+**Convergence-Aware Fix Loop:**
+
+Track error counts across attempts to detect convergence patterns:
 
 ```python
-# Interactive mode: show issues to user
-if verdict == "FAIL":
+error_history = []  # Track error count per attempt
+max_attempts = 5
+attempt = 0
+
+while attempt < max_attempts:
+    attempt += 1
+    result = parse_result("/tmp/codex-doc-${CLAUDE_SESSION_ID}.json")
+
+    if result.verdict in ["PASS", "SKIP"]:
+        break  # Success
+
+    # Track error count for convergence detection
+    error_count = len([i for i in result.doc_issues if i.severity == "error"])
+    error_history.append(error_count)
+
+    # Detect convergence pattern (requires 2+ data points)
+    if len(error_history) >= 2:
+        trend = detect_trend(error_history)
+        # trend: "converging" (errors decreasing), "oscillating" (up/down),
+        #        "diverging" (errors increasing), "stable" (no change)
+
+        # Early exit: sustained oscillation (2+ consecutive oscillating attempts)
+        if trend == "oscillating" and len(error_history) >= 3:
+            consecutive_oscillations = count_tail_oscillations(error_history)
+            if consecutive_oscillations >= 2:
+                AskUserQuestion(questions=[{
+                  "question": f"Doc-review is oscillating ({error_history}). Auto-pass remaining issues?",
+                  "header": "Convergence",
+                  "options": [
+                    {"label": "Auto-pass", "description": "Downgrade remaining errors to warnings and proceed"},
+                    {"label": "Keep trying", "description": "Continue fix attempts"}
+                  ],
+                  "multiSelect": False
+                }])
+                if user_chose_autopass:
+                    break  # Fall through to auto-pass below
+
+    # Show issues to user
     AskUserQuestion(questions=[{
-      "question": f"Doc-review found issues:\n{doc_issues}\n\nHow to proceed?",
+      "question": f"Doc-review found {error_count} issues (attempt {attempt}/{max_attempts}):\n{doc_issues}\n\nHow to proceed?",
       "header": "Doc Review",
       "options": [
         {"label": "Fix and re-review", "description": "Apply fixes and run doc-review again"},
@@ -415,6 +449,72 @@ if verdict == "FAIL":
       ],
       "multiSelect": False
     }])
+
+    # Fix design document based on issues, then re-run codex-verify.js
+```
+
+**Convergence Detection Logic:**
+
+```python
+def detect_trend(error_history):
+    """Analyze error count trend across attempts."""
+    if len(error_history) < 2:
+        return "insufficient"
+
+    deltas = [error_history[i] - error_history[i-1] for i in range(1, len(error_history))]
+
+    if all(d < 0 for d in deltas):
+        return "converging"      # Errors consistently decreasing
+    if all(d > 0 for d in deltas):
+        return "diverging"       # Errors consistently increasing
+    if all(d == 0 for d in deltas):
+        return "stable"          # No change
+
+    # Check for oscillation (alternating up/down)
+    sign_changes = sum(1 for i in range(1, len(deltas)) if deltas[i] * deltas[i-1] < 0)
+    if sign_changes >= len(deltas) - 1:
+        return "oscillating"     # Errors bouncing up and down
+
+    return "mixed"
+
+def count_tail_oscillations(error_history):
+    """Count consecutive oscillating pairs from the tail."""
+    count = 0
+    for i in range(len(error_history) - 1, 1, -1):
+        d1 = error_history[i] - error_history[i-1]
+        d2 = error_history[i-1] - error_history[i-2]
+        if d1 * d2 < 0:  # Sign changed = oscillation
+            count += 1
+        else:
+            break
+    return count
+```
+
+**Auto-Pass Fallback (when max retries reached or user accepts):**
+
+If the loop exits without PASS after max 5 attempts (or user chose auto-pass on oscillation):
+
+```bash
+# 1. Transform FAIL result to PASS (downgrade errors to warnings)
+bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/codex-autopass.js" --session ${CLAUDE_SESSION_ID}
+
+# 2. Append known issues section to design document
+```
+
+```python
+# Read remaining doc_issues from the auto-passed result
+autopass_result = parse_result("/tmp/codex-doc-${CLAUDE_SESSION_ID}.json")
+remaining_issues = [i for i in autopass_result.doc_issues if "[auto-pass]" in i.detail]
+
+if remaining_issues:
+    # Append to design document
+    issues_section = "\n\n## Known Doc-Review Issues (Auto-Passed)\n\n"
+    issues_section += "The following issues were auto-passed after convergence control:\n\n"
+    for issue in remaining_issues:
+        issues_section += f"- **{issue.criterion}**: {issue.detail.replace('[auto-pass] ', '')}\n"
+
+    # Edit design document to append
+    Edit(file_path=DESIGN_PATH, append=issues_section)
 ```
 
 **CLI Error Handling**: If codex-verify.js fails to execute, retry once. On repeated failure, leave session in PLANNING and report.
