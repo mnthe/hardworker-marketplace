@@ -414,7 +414,7 @@ while attempt < max_attempts:
         break  # Success
 
     # Track error count for convergence detection
-    error_count = len([i for i in result.doc_issues if i.severity == "error"])
+    error_count = len([i for i in result.doc_review.doc_issues if i.severity == "error"])
     error_history.append(error_count)
 
     # Detect convergence pattern (requires 2+ data points)
@@ -504,14 +504,14 @@ bun "${CLAUDE_PLUGIN_ROOT}/src/scripts/codex-autopass.js" --session ${CLAUDE_SES
 ```python
 # Read remaining doc_issues from the auto-passed result
 autopass_result = parse_result("/tmp/codex-doc-${CLAUDE_SESSION_ID}.json")
-remaining_issues = [i for i in autopass_result.doc_issues if "[auto-pass]" in i.detail]
+remaining_issues = [i for i in autopass_result.doc_review.doc_issues if "[auto-pass]" in i.detail]
 
 if remaining_issues:
     # Append to design document
     issues_section = "\n\n## Known Doc-Review Issues (Auto-Passed)\n\n"
     issues_section += "The following issues were auto-passed after convergence control:\n\n"
     for issue in remaining_issues:
-        issues_section += f"- **{issue.criterion}**: {issue.detail.replace('[auto-pass] ', '')}\n"
+        issues_section += f"- **{issue.category}**: {issue.detail.replace('[auto-pass] ', '')}\n"
 
     # Edit design document to append
     Edit(file_path=DESIGN_PATH, append=issues_section)

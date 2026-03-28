@@ -437,7 +437,7 @@ while attempt < max_attempts:
         break
 
     # Track error count for convergence detection
-    current_errors = len(result.doc_issues)
+    current_errors = len(result.doc_review.doc_issues)
     error_counts.append(current_errors)
 
     # Early exit on oscillation: if error count increases after a decrease
@@ -469,7 +469,7 @@ while attempt < max_attempts:
     }])
 
     # Fix issues based on doc_issues
-    fix_design_document(result.doc_issues)
+    fix_design_document(result.doc_review.doc_issues)
     attempt += 1
 
 # Auto-pass fallback when max retries (5) reached without PASS
