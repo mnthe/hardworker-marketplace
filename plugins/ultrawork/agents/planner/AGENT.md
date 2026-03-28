@@ -244,24 +244,32 @@ Parse the result JSON:
 
 - **verdict: "PASS"** → Continue to Phase 4 (Task Decomposition)
 - **verdict: "SKIP"** → Codex not installed, continue (graceful degradation)
-- **verdict: "FAIL"** → Auto-fix loop with backoff:
+- **verdict: "FAIL"** → Auto-fix loop with convergence detection (max 3 attempts):
   1. Read `doc_issues` from the result
-  2. Save current issues to `/tmp/codex-doc-issues-${CLAUDE_SESSION_ID}-attempt-N.json` for tracking
+  2. Record the error count in conversation context: `error_counts = [N]`
   3. Fix the design document based on issues (edit the file)
-  4. Wait 2 seconds (backoff)
-  5. Re-run codex-verify.js --mode doc-review (auto-cleans previous result)
-  6. On second FAIL:
-     - Compare new issues against previous issues file to identify persistent vs new issues
-     - Fix remaining issues
-     - Wait 5 seconds (backoff)
-     - Re-run codex-verify.js --mode doc-review
-  7. After 3 failures: leave session in PLANNING and report issues to user/orchestrator
+  4. Re-run codex-verify.js --mode doc-review (auto-cleans previous result)
+  5. On subsequent FAILs, append new error count: `error_counts = [N, M, ...]`
+  6. **Detect convergence trend:**
+     - **converging**: error count strictly decreasing (e.g., `[8, 5, 3]`) — keep retrying
+     - **oscillating**: error count goes up and down (e.g., `[5, 3, 6]`) — stop retrying
+     - **diverging**: error count strictly increasing (e.g., `[3, 5, 8]`) — stop retrying
+  7. **Stop conditions** (trigger auto-pass handoff):
+     - Max 3 attempts reached, OR
+     - Oscillating trend detected for 2+ consecutive attempts
+  8. **Auto-pass handoff**: When a stop condition is met, return to orchestrator with:
+     ```
+     Doc-review max retries reached. Error trend: [error_counts].
+     Remaining issues: [list of current doc_issues].
+     Run codex-autopass.js to proceed.
+     ```
+     The orchestrator (not planner) calls `codex-autopass.js --session ${CLAUDE_SESSION_ID}` to append Known Doc-Review Issues to the design doc and allow phase transition.
 
-**Issue persistence tracking:**
-Between retry attempts, save Codex issues to temporary files (`/tmp/codex-doc-issues-*`). Compare new issues against previous issues to:
-- Skip issues already fixed (don't re-report resolved items)
-- Focus on persistent issues that remain despite fixes
-- Identify new issues introduced by fixes
+**Convergence tracking:**
+Track error counts in conversation context (not on disk). After each doc-review attempt, compare error counts to detect the trend:
+- converging → continue fixing, the design is improving
+- oscillating → fixes are introducing new issues; stop and hand off
+- diverging → fixes are making things worse; stop and hand off
 
 **Common fix patterns:**
 | Codex Issue | Fix |
@@ -401,24 +409,32 @@ Parse the result JSON:
 
 - **verdict: "PASS"** → Continue to Phase 4 (Create Phase Tasks)
 - **verdict: "SKIP"** → Codex not installed, continue (graceful degradation)
-- **verdict: "FAIL"** → Auto-fix loop with backoff:
+- **verdict: "FAIL"** → Auto-fix loop with convergence detection (max 3 attempts):
   1. Read `doc_issues` from the result
-  2. Save current issues to `/tmp/codex-doc-issues-${CLAUDE_SESSION_ID}-attempt-N.json` for tracking
+  2. Record the error count in conversation context: `error_counts = [N]`
   3. Fix the design document based on issues (edit the file)
-  4. Wait 2 seconds (backoff)
-  5. Re-run codex-verify.js --mode doc-review (auto-cleans previous result)
-  6. On second FAIL:
-     - Compare new issues against previous issues file to identify persistent vs new issues
-     - Fix remaining issues
-     - Wait 5 seconds (backoff)
-     - Re-run codex-verify.js --mode doc-review
-  7. After 3 failures: leave session in PLANNING and report issues to user/orchestrator
+  4. Re-run codex-verify.js --mode doc-review (auto-cleans previous result)
+  5. On subsequent FAILs, append new error count: `error_counts = [N, M, ...]`
+  6. **Detect convergence trend:**
+     - **converging**: error count strictly decreasing (e.g., `[8, 5, 3]`) — keep retrying
+     - **oscillating**: error count goes up and down (e.g., `[5, 3, 6]`) — stop retrying
+     - **diverging**: error count strictly increasing (e.g., `[3, 5, 8]`) — stop retrying
+  7. **Stop conditions** (trigger auto-pass handoff):
+     - Max 3 attempts reached, OR
+     - Oscillating trend detected for 2+ consecutive attempts
+  8. **Auto-pass handoff**: When a stop condition is met, return to orchestrator with:
+     ```
+     Doc-review max retries reached. Error trend: [error_counts].
+     Remaining issues: [list of current doc_issues].
+     Run codex-autopass.js to proceed.
+     ```
+     The orchestrator (not planner) calls `codex-autopass.js --session ${CLAUDE_SESSION_ID}` to append Known Doc-Review Issues to the design doc and allow phase transition.
 
-**Issue persistence tracking:**
-Between retry attempts, save Codex issues to temporary files (`/tmp/codex-doc-issues-*`). Compare new issues against previous issues to:
-- Skip issues already fixed (don't re-report resolved items)
-- Focus on persistent issues that remain despite fixes
-- Identify new issues introduced by fixes
+**Convergence tracking:**
+Track error counts in conversation context (not on disk). After each doc-review attempt, compare error counts to detect the trend:
+- converging → continue fixing, the design is improving
+- oscillating → fixes are introducing new issues; stop and hand off
+- diverging → fixes are making things worse; stop and hand off
 
 **Common fix patterns:**
 | Codex Issue | Fix |
