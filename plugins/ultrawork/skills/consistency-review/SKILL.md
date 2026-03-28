@@ -4,6 +4,7 @@ description: |
   Code consistency and pattern adherence review skill.
   Naming conventions, style consistency, pattern usage, and project standards validation.
   Use during VERIFICATION to ensure codebase uniformity and maintainability.
+user-invocable: false
 ---
 
 # Consistency Review

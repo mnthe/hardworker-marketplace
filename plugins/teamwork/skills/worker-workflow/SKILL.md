@@ -4,6 +4,7 @@ description: |
   8-phase task execution lifecycle for teamwork workers using native Claude Code APIs.
   Covers task discovery, claiming, structured description parsing, TDD workflow,
   implementation, verification, selective commit, and completion reporting.
+user-invocable: false
 ---
 
 # Task Execution Workflow

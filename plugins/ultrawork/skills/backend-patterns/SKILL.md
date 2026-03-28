@@ -1,6 +1,7 @@
 ---
 name: backend-patterns
 description: API design, database operations, error handling, and backend architecture patterns. Use when creating APIs, database schemas, or server-side logic.
+user-invocable: false
 ---
 
 # Backend Patterns

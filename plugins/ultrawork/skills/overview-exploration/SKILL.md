@@ -1,6 +1,7 @@
 ---
 name: overview-exploration
 description: "This skill should be used when performing quick project overview exploration at the start of ultrawork sessions. Executes directly without agent spawn for fast codebase understanding."
+user-invocable: false
 ---
 
 # Overview Exploration Skill

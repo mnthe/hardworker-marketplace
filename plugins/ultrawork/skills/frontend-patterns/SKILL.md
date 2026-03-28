@@ -1,6 +1,7 @@
 ---
 name: frontend-patterns
 description: React component patterns, state management, accessibility, and frontend best practices. Use when building UI components or implementing client-side features.
+user-invocable: false
 ---
 
 # Frontend Patterns

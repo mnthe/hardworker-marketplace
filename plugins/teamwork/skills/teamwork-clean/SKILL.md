@@ -1,6 +1,7 @@
 ---
 name: teamwork-clean
 description: "Reset and clean up teamwork project state. Use when project is stuck, failed, or needs a fresh start. Uses native TeamDelete API for cleanup."
+user-invocable: false
 ---
 
 # Teamwork Clean

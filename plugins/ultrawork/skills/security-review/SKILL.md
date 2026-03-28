@@ -4,6 +4,7 @@ description: |
   Security vulnerability detection skill for reviewer agents.
   OWASP Top 10 checklist, secrets detection, input validation, authentication patterns.
   CRITICAL for code handling user input, authentication, APIs, or sensitive data.
+user-invocable: false
 ---
 
 # Security Review

@@ -4,6 +4,7 @@ description: |
   Architecture design review skill for reviewer agents.
   Component boundaries, separation of concerns, modularity, and design pattern validation.
   Use during PLANNING phase to validate design decisions and VERIFICATION to ensure adherence.
+user-invocable: false
 ---
 
 # Architecture Review

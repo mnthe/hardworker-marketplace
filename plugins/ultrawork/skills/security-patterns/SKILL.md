@@ -1,6 +1,7 @@
 ---
 name: security-patterns
 description: Security best practices for authentication, input validation, OWASP patterns, and secure coding. Use when handling user input, auth, secrets, or sensitive data.
+user-invocable: false
 ---
 
 # Security Patterns

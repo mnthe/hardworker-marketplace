@@ -4,6 +4,7 @@ description: |
   Test-Driven Development (TDD) workflow for ultrawork tasks with approach: "tdd".
   Enforces RED-GREEN-REFACTOR cycle with gate hooks and evidence requirements.
   Required knowledge for worker agents implementing TDD tasks.
+user-invocable: false
 ---
 
 # TDD Workflow

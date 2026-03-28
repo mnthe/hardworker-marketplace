@@ -1,6 +1,7 @@
 ---
 name: testing-patterns
 description: Testing patterns for unit, integration, and E2E tests. Mock patterns for Supabase, Redis, OpenAI. Use when writing tests or setting up test infrastructure.
+user-invocable: false
 ---
 
 # Testing Patterns

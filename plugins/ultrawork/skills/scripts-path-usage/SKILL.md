@@ -3,6 +3,7 @@ name: scripts-path-usage
 description: |
   This skill provides guidance for ultrawork agents on using SCRIPTS_PATH and accessing session data via scripts.
   Required knowledge for all ultrawork agents (explorer, planner, worker, verifier, reviewer, scope-analyzer).
+user-invocable: false
 ---
 
 # Scripts Path Usage

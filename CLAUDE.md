@@ -274,6 +274,7 @@ Guidelines for effective skill usage.
 **Frontmatter fields:**
 - `name`: Skill identifier (lowercase, hyphen-separated, must match directory name)
 - `description`: Multi-line or single-line description (use `|` for multi-line)
+- `user-invocable`: Boolean (default: `true`). Set to `false` for agent-only skills that should not appear as `/` menu slash commands
 
 **Skill Directory Structure:**
 

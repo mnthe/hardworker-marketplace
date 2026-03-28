@@ -1,6 +1,7 @@
 ---
 name: task-decomposition
 description: Hybrid task decomposition strategy for teamwork projects. Covers plan-based and semantic decomposition, granularity rules, role assignment, dependency management, and complexity assessment.
+user-invocable: false
 ---
 
 # Task Decomposition Strategy

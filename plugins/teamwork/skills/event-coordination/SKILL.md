@@ -3,6 +3,7 @@ name: event-coordination
 description: |
   Event-driven coordination for teamwork orchestrators.
   Replaces polling-based monitoring loop with TeammateIdle and TaskCompleted hooks.
+user-invocable: false
 ---
 
 # Event-Driven Coordination

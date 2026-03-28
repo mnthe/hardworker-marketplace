@@ -4,6 +4,7 @@ description: |
   This skill provides guidance on accessing session data efficiently in ultrawork.
   Covers JSON vs Markdown rules, token efficiency rationale, and common patterns.
   Required knowledge for all ultrawork agents (explorer, planner, worker, verifier, reviewer).
+user-invocable: false
 ---
 
 # Data Access Patterns

@@ -4,6 +4,7 @@ description: |
   Code quality verification skill for reviewer agents.
   Provides checklists for logic clarity, error handling, maintainability, and performance.
   Use during VERIFICATION phase to assess implementation quality.
+user-invocable: false
 ---
 
 # Code Quality Review
