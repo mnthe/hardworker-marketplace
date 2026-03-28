@@ -461,7 +461,7 @@ function parseExecOutput(output, criteria) {
 function buildDocReviewPrompt(designPath, goal) {
   const designContent = fs.readFileSync(designPath, 'utf-8');
 
-  let prompt = 'You are reviewing a design document for quality and completeness.\n\n';
+  let prompt = 'You are reviewing a design document for alignment and implementability.\n\n';
 
   if (goal) {
     prompt += `## Goal\n${goal}\n\n`;
@@ -470,16 +470,13 @@ function buildDocReviewPrompt(designPath, goal) {
   prompt += `## Design Document\n${designContent}\n\n`;
   prompt += '## Review Criteria\n\n';
   prompt += 'Check the following and report issues:\n\n';
-  prompt += '1. **Structural Accuracy**: Report an error ONLY when content needed to implement or verify the change is missing or wrong. Mandatory content areas: (1) problem/current-state/goal, (2) chosen approach and key decisions, (3) affected files/components/consumers with impact, (4) scope boundaries, (5) executable verification criteria, (6) dependency/data-flow relationships.\n';
-  prompt += '   IGNORE: heading names/numbering/depth, bold-vs-heading, section order, phase/task count differences — unless they hide missing content.\n';
-  prompt += '   REPORT: invalid file references, impossible dependencies, missing verification commands, contradictory decisions/scope, unverifiable success criteria.\n';
-  prompt += '2. **Blocked Patterns**: Find any TODO, TBD, FIXME, placeholder, "not yet decided", "to be determined", empty sections. Report as errors.\n';
-  prompt += '3. **Internal Consistency**: Check that decisions, architecture, and scope don\'t contradict each other. Report contradictions as errors.\n';
-  prompt += '4. **Quality**: Check for vague statements ("should work", "probably", "maybe"), incomplete lists ("etc.", "..."). Report as warnings.\n\n';
+  prompt += '1. **Context Sufficiency**: Can an AI worker implement each task using ONLY this document + the referenced source files? Report missing context that would force the worker to make undocumented decisions. IGNORE tool permissions, JSON field names, test file internals — those are implementation concerns, not design concerns.\n';
+  prompt += '2. **Goal-Result Alignment**: Does the document define a clear path from Goal to concrete Results? Check: problem statement connects to approach, approach connects to changed files, changed files connect to verification criteria. Report broken chains.\n';
+  prompt += '3. **Blocked Patterns**: Find TODO, TBD, FIXME, placeholder, empty sections, vague statements ("should work", "probably", "maybe"). Report as errors.\n\n';
   prompt += '## Output Format (JSON)\n';
   prompt += '{\n';
   prompt += '  "doc_issues": [\n';
-  prompt += '    { "category": "completeness|blocked_pattern|consistency|quality", "severity": "error|warning", "detail": "description" }\n';
+  prompt += '    { "category": "context_sufficiency|goal_alignment|blocked_pattern", "severity": "error|warning", "detail": "description" }\n';
   prompt += '  ],\n';
   prompt += '  "overall_verdict": "PASS|FAIL",\n';
   prompt += '  "summary": "one-line summary"\n';
@@ -512,7 +509,7 @@ function parseDocReviewOutput(output) {
   }
 
   return {
-    doc_issues: [{ category: 'completeness', severity: 'error', detail: 'Could not parse doc review result' }],
+    doc_issues: [{ category: 'context_sufficiency', severity: 'error', detail: 'Could not parse doc review result' }],
     verdict: 'FAIL'
   };
 }
@@ -539,7 +536,7 @@ function runCodexDocReview(designPath, goal, model, enableFeatures = [], designO
     return {
       exit_code: 1,
       output: `Design file not found: ${designPath}`,
-      doc_issues: [{ category: 'completeness', severity: 'error', detail: `Design file not found: ${designPath}` }],
+      doc_issues: [{ category: 'context_sufficiency', severity: 'error', detail: `Design file not found: ${designPath}` }],
       verdict: 'FAIL'
     };
   }
@@ -874,4 +871,4 @@ if (require.main === module) {
 }
 
 // Export for testing
-module.exports = { buildVerificationPrompt, buildDocReviewPrompt, getGitContext, runCodexDocReview };
+module.exports = { buildVerificationPrompt, buildDocReviewPrompt, parseDocReviewOutput, getGitContext, runCodexDocReview };

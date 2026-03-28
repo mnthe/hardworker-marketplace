@@ -908,47 +908,107 @@ describe('codex-verify.js', () => {
       expect(typeof codexVerify.buildDocReviewPrompt).toBe('function');
     });
 
-    test('prompt contains Structural Accuracy, not Section Completeness', () => {
+    // --- Alignment-based criteria ---
+
+    test('prompt contains Context Sufficiency criterion', () => {
       const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
 
-      expect(prompt).toContain('Structural Accuracy');
-      expect(prompt).not.toContain('Section Completeness');
+      expect(prompt).toContain('Context Sufficiency');
     });
 
-    test('prompt contains IGNORE block', () => {
+    test('prompt contains Goal-Result Alignment criterion', () => {
       const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
 
-      expect(prompt).toContain('IGNORE');
-      expect(prompt).toContain('heading names');
-      expect(prompt).toContain('section order');
+      expect(prompt).toContain('Goal-Result Alignment');
     });
 
-    test('prompt contains REPORT block', () => {
+    test('prompt contains Blocked Patterns criterion', () => {
       const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
 
-      expect(prompt).toContain('REPORT');
-      expect(prompt).toContain('invalid file references');
-      expect(prompt).toContain('unverifiable success criteria');
+      expect(prompt).toContain('Blocked Patterns');
     });
 
-    test('prompt covers all mandatory content areas', () => {
+    test('prompt does NOT contain old Structural Accuracy criterion', () => {
       const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
 
-      expect(prompt).toContain('problem');
-      expect(prompt).toContain('goal');
+      expect(prompt).not.toContain('Structural Accuracy');
+    });
+
+    test('prompt does NOT contain old Internal Consistency criterion', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      expect(prompt).not.toContain('Internal Consistency');
+    });
+
+    test('prompt does NOT contain old Quality criterion as a numbered item', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      // Old criterion 4 was "Quality" - should be removed
+      expect(prompt).not.toMatch(/\d+\.\s+\*\*Quality\*\*/);
+    });
+
+    test('category enum uses new values: context_sufficiency, goal_alignment, blocked_pattern', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      expect(prompt).toContain('context_sufficiency');
+      expect(prompt).toContain('goal_alignment');
+      expect(prompt).toContain('blocked_pattern');
+    });
+
+    test('category enum does NOT use old values: completeness, consistency, quality', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      // The category enum in the JSON output format should not use old values
+      expect(prompt).not.toMatch(/category.*completeness/);
+      expect(prompt).not.toMatch(/category.*consistency/);
+      expect(prompt).not.toMatch(/category.*quality/);
+    });
+
+    test('JSON output format preserved: doc_issues array with category/severity/detail', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      expect(prompt).toContain('doc_issues');
+      expect(prompt).toContain('category');
+      expect(prompt).toContain('severity');
+      expect(prompt).toContain('detail');
+      expect(prompt).toContain('overall_verdict');
+      expect(prompt).toContain('summary');
+      expect(prompt).toContain('PASS|FAIL');
+    });
+
+    test('Context Sufficiency describes AI worker implementation context', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      // Should mention AI worker can implement using only the document
+      expect(prompt).toContain('implement');
+      expect(prompt).toContain('missing context');
+    });
+
+    test('Context Sufficiency has IGNORE clause for implementation concerns', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      expect(prompt).toContain('tool permissions');
+      expect(prompt).toContain('JSON field names');
+      expect(prompt).toContain('implementation concerns');
+    });
+
+    test('Goal-Result Alignment describes chain from Goal to Results', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      expect(prompt).toContain('problem statement');
       expect(prompt).toContain('approach');
-      expect(prompt).toContain('key decisions');
-      expect(prompt).toContain('affected files');
-      expect(prompt).toContain('scope boundaries');
+      expect(prompt).toContain('changed files');
       expect(prompt).toContain('verification criteria');
-      expect(prompt).toContain('dependency');
+      expect(prompt).toContain('broken chains');
     });
 
-    test('category wire value is completeness', () => {
+    test('Blocked Patterns includes vague statement detection', () => {
       const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
 
-      // The JSON output format should still use "completeness" as category value
-      expect(prompt).toContain('completeness');
+      // Blocked Patterns now also covers what was "Quality" criterion
+      expect(prompt).toContain('should work');
+      expect(prompt).toContain('probably');
+      expect(prompt).toContain('maybe');
     });
 
     test('prompt includes design document content', () => {
@@ -961,6 +1021,47 @@ describe('codex-verify.js', () => {
       const prompt = codexVerify.buildDocReviewPrompt(tmpDesign, 'Build a marketplace');
 
       expect(prompt).toContain('Build a marketplace');
+    });
+
+    test('exactly 3 numbered criteria (not 4)', () => {
+      const prompt = codexVerify.buildDocReviewPrompt(tmpDesign);
+
+      // Count numbered criteria patterns like "1. **...**"
+      const criteriaMatches = prompt.match(/\d+\.\s+\*\*/g);
+      expect(criteriaMatches).not.toBeNull();
+      expect(criteriaMatches.length).toBe(3);
+    });
+  });
+
+  describe('parseDocReviewOutput - new category handling', () => {
+    const codexVerify = require('../../plugins/ultrawork/src/scripts/codex-verify.js');
+
+    test('parseDocReviewOutput handles new category values correctly', () => {
+      const output = JSON.stringify({
+        doc_issues: [
+          { category: 'context_sufficiency', severity: 'error', detail: 'Missing API schema' },
+          { category: 'goal_alignment', severity: 'warning', detail: 'Weak chain from goal to files' },
+          { category: 'blocked_pattern', severity: 'error', detail: 'Found TODO in section 3' }
+        ],
+        overall_verdict: 'FAIL',
+        summary: 'Issues found'
+      });
+
+      const result = codexVerify.parseDocReviewOutput(output);
+
+      expect(result.doc_issues.length).toBe(3);
+      expect(result.doc_issues[0].category).toBe('context_sufficiency');
+      expect(result.doc_issues[1].category).toBe('goal_alignment');
+      expect(result.doc_issues[2].category).toBe('blocked_pattern');
+      expect(result.verdict).toBe('FAIL');
+    });
+
+    test('parseDocReviewOutput default fallback uses context_sufficiency category', () => {
+      const result = codexVerify.parseDocReviewOutput('not valid json at all');
+
+      expect(result.doc_issues.length).toBe(1);
+      expect(result.doc_issues[0].category).toBe('context_sufficiency');
+      expect(result.verdict).toBe('FAIL');
     });
   });
 });
