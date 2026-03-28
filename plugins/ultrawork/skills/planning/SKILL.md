@@ -150,21 +150,63 @@ bun $SCRIPTS/codex-verify.js \
 |---------|--------|
 | PASS | Continue to Phase 5 (Task Decomposition) |
 | SKIP | Codex not installed — continue (graceful degradation) |
-| FAIL | Fix loop based on mode |
+| FAIL (converging) | Fix issues and retry |
+| FAIL (max retries) | Auto-pass via `codex-autopass.js` |
 
-**Interactive Mode (default):**
+### Retry Budget
+
+| Mode | Max Retries |
+|------|-------------|
+| Interactive (default) | 5 |
+| Auto (`--auto`) | 3 |
+
+### Convergence Detection
+
+Track error counts across attempts to detect trends:
+
+- **Converging**: Error count decreasing across attempts (fixes are working)
+- **Oscillating**: Error count fluctuating up and down (fixes introduce new issues)
+- **Diverging**: Error count increasing across attempts (fixes make things worse)
+
+On each FAIL, record the error count from `doc_issues`. Compare with previous attempts:
+
+```
+Attempt 1: 5 errors
+Attempt 2: 3 errors  → converging (continue)
+Attempt 3: 4 errors  → oscillating (warn, continue)
+Attempt 4: 2 errors  → converging (continue)
+Attempt 5: 2 errors  → stalled (max retries reached → auto-pass)
+```
+
+### Interactive Mode (default)
+
 1. Show `doc_issues` to user via AskUserQuestion
 2. User confirms fix direction
 3. Edit design document
-4. Delete result file, re-run doc-review
-5. Repeat until PASS or user skips
+4. Re-run doc-review
+5. Track convergence: compare error count with previous attempt
+6. Repeat until PASS, user skips, or max retries (5) reached
+7. On max retries → execute auto-pass protocol
 
-**Auto Mode (--auto):**
+### Auto Mode (--auto)
+
 1. Read `doc_issues` from result
 2. Auto-fix design document
-3. Delete result file, re-run doc-review
-4. Repeat (max 3 attempts)
-5. If still FAIL → leave session in PLANNING, report
+3. Re-run doc-review
+4. Track convergence: compare error count with previous attempt
+5. Repeat until PASS or max retries (3) reached
+6. On max retries → execute auto-pass protocol
+
+### Auto-Pass Protocol
+
+When max retries reached without achieving PASS:
+
+1. Run `codex-autopass.js --session ${CLAUDE_SESSION_ID}`
+2. Script creates a PASS result file at `/tmp/codex-doc-${CLAUDE_SESSION_ID}.json`
+3. Append a "Known Doc-Review Issues (Auto-Passed)" section to the design document listing unresolved issues
+4. Proceed to Phase 5 (Task Decomposition)
+
+The auto-pass section in the design document serves as a record that doc-review did not fully pass, allowing workers and verifier to be aware of known gaps.
 
 **CLI Error:** Retry once on execution failure. On repeated failure, report to user.
 
