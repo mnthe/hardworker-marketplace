@@ -112,7 +112,7 @@
                 "properties": {
                   "category": {
                     "type": "string",
-                    "enum": ["completeness", "blocked_pattern", "consistency", "quality"],
+                    "enum": ["context_sufficiency", "goal_alignment", "blocked_pattern"],
                     "description": "Issue category"
                   },
                   "severity": {

@@ -398,7 +398,7 @@ If the Codex background task returns a timeout or exec error (not a logic FAIL):
 - Include in fix task creation
 
 **Doc review result** (when `--design` was provided):
-- `doc_review.doc_issues[]` contains completeness, blocked_pattern, consistency, and quality issues
+- `doc_review.doc_issues[]` contains context_sufficiency, goal_alignment, and blocked_pattern issues
 - Issues with `severity: "error"` contribute to FAIL verdict
 - Issues with `severity: "warning"` are informational only
 
