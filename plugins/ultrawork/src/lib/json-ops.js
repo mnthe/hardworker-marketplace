@@ -45,9 +45,14 @@ function writeJsonAtomically(filePath, data, options = {}) {
     data.updated_at = new Date().toISOString();
   }
 
-  const tmpFile = `${filePath}.tmp`;
-  fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf-8');
-  fs.renameSync(tmpFile, filePath);
+  const tmpFile = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf-8');
+    fs.renameSync(tmpFile, filePath);
+  } catch (err) {
+    try { fs.unlinkSync(tmpFile); } catch { /* ignore cleanup failure */ }
+    throw err;
+  }
 }
 
 module.exports = { readJsonSafe, writeJsonAtomically };
