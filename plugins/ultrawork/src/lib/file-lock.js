@@ -7,6 +7,7 @@ const fs = require('fs');
 
 const DEFAULT_TIMEOUT = 10000; // 10 seconds
 const POLL_INTERVAL = 100; // 100ms
+const STALE_LOCK_AGE_MS = 30000; // 30 seconds
 
 /**
  * Acquire a lock on a file using mkdir-based atomic locking.
@@ -25,7 +26,19 @@ async function acquireLock(filePath, timeout = DEFAULT_TIMEOUT) {
       return true;
     } catch (err) {
       if (err.code === 'EEXIST') {
-        // Lock exists, wait and retry
+        // Check if lock is stale (older than STALE_LOCK_AGE_MS)
+        try {
+          const stat = fs.statSync(lockPath);
+          const lockAge = Date.now() - stat.mtimeMs;
+          if (lockAge > STALE_LOCK_AGE_MS) {
+            fs.rmdirSync(lockPath);
+            continue; // Retry immediately after removing stale lock
+          }
+        } catch {
+          // Lock may have been removed by another process; retry
+          continue;
+        }
+        // Lock is fresh, wait and retry
         await sleep(POLL_INTERVAL);
         continue;
       }

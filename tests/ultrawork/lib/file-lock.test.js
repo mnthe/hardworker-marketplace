@@ -107,6 +107,44 @@ describe('file-lock.js', () => {
     });
   });
 
+  describe('stale lock cleanup', () => {
+    test('should auto-clean stale lock (>30s) and acquire successfully', async () => {
+      const lockPath = `${testFile}.lock`;
+
+      // Create lock dir manually
+      fs.mkdirSync(lockPath);
+
+      // Set mtime to 60 seconds ago (well past the 30s threshold)
+      const pastTime = new Date(Date.now() - 60000);
+      const pastTimeSec = pastTime.getTime() / 1000;
+      fs.utimesSync(lockPath, pastTimeSec, pastTimeSec);
+
+      // acquireLock should detect stale lock, remove it, and succeed
+      const acquired = await acquireLock(testFile, 2000);
+      expect(acquired).toBe(true);
+
+      // Cleanup
+      releaseLock(testFile);
+    });
+
+    test('should NOT clean fresh lock (<30s) and timeout', async () => {
+      const lockPath = `${testFile}.lock`;
+
+      // Create lock dir manually (mtime is "now" by default — fresh lock)
+      fs.mkdirSync(lockPath);
+
+      // acquireLock should NOT remove a fresh lock, and should timeout
+      const acquired = await acquireLock(testFile, 500);
+      expect(acquired).toBe(false);
+
+      // Lock dir should still exist (was not cleaned)
+      expect(fs.existsSync(lockPath)).toBe(true);
+
+      // Cleanup
+      fs.rmdirSync(lockPath);
+    });
+  });
+
   describe('withLock', () => {
     test('should execute function with lock protection', async () => {
       let executed = false;
