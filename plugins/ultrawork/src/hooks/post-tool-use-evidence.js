@@ -340,5 +340,10 @@ async function main() {
   outputAndExit(createPostToolUse());
 }
 
-// Entry point
-runHook(main, createPostToolUse);
+// Entry point - only run when executed directly
+if (require.main === module) {
+  runHook(main, createPostToolUse);
+}
+
+// Export for testing
+module.exports = { buildBashEvidence, buildFileEvidence, truncateOutput, isTestCommand, parseTestOutput, toolResponseToString, NOISE_PATTERNS };

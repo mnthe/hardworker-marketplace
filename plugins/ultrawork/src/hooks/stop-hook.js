@@ -329,5 +329,10 @@ Commands:
     }));
 }
 
-// Entry point
-runHook(main, createStopResponse);
+// Entry point - only run when executed directly
+if (require.main === module) {
+  runHook(main, createStopResponse);
+}
+
+// Export for testing
+module.exports = { countCompletedTasks, countActiveTasks, checkBlockedPhrases, readEvidenceFromLog };
