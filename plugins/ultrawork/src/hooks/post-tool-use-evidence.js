@@ -17,6 +17,7 @@ const {
   runHook
 } = require('../lib/hook-utils.js');
 const { parseHookInput } = require('../lib/hook-guards.js');
+const { acquireLock, releaseLock } = require('../lib/file-lock.js');
 
 /**
  * @typedef {import('../lib/types.js').EvidenceEntry} EvidenceEntry
@@ -331,9 +332,24 @@ async function main() {
       fs.mkdirSync(evidenceDir, { recursive: true });
     }
 
-    // Append evidence as single JSON line (no file locking needed)
+    // Append evidence with file lock for concurrent safety
     const line = JSON.stringify(evidence) + '\n';
-    fs.appendFileSync(evidenceLog, line, 'utf-8');
+    try {
+      const acquired = await acquireLock(evidenceLog, 5000);
+      if (acquired) {
+        try {
+          fs.appendFileSync(evidenceLog, line, 'utf-8');
+        } finally {
+          releaseLock(evidenceLog);
+        }
+      } else {
+        // Lock timeout — append without lock as fallback (data > consistency)
+        fs.appendFileSync(evidenceLog, line, 'utf-8');
+      }
+    } catch (lockErr) {
+      // Lock error — append without lock as fallback
+      fs.appendFileSync(evidenceLog, line, 'utf-8');
+    }
   }
 
   // Output required hook response

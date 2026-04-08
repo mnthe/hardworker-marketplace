@@ -16,6 +16,7 @@ const {
   runHook
 } = require('../lib/hook-utils.js');
 const { parseHookInput, guardSession } = require('../lib/hook-guards.js');
+const { acquireLock, releaseLock } = require('../lib/file-lock.js');
 
 /**
  * @typedef {import('../lib/types.js').Session} Session
@@ -278,7 +279,21 @@ async function main() {
             fs.mkdirSync(evidenceDir, { recursive: true });
           }
           const logLine = JSON.stringify(completedEvidence) + '\n';
-          fs.appendFileSync(evidenceLogFile, logLine, 'utf-8');
+          try {
+            const acquired = await acquireLock(evidenceLogFile, 5000);
+            if (acquired) {
+              try {
+                fs.appendFileSync(evidenceLogFile, logLine, 'utf-8');
+              } finally {
+                releaseLock(evidenceLogFile);
+              }
+            } else {
+              // Lock timeout — append without lock as fallback (data > consistency)
+              fs.appendFileSync(evidenceLogFile, logLine, 'utf-8');
+            }
+          } catch (lockErr) {
+            fs.appendFileSync(evidenceLogFile, logLine, 'utf-8');
+          }
         } catch (logErr) {
           console.error(`Failed to append to evidence log:`, logErr);
         }
