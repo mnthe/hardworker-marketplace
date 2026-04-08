@@ -41,6 +41,19 @@ const ARG_SPEC = {
 };
 
 // ============================================================================
+// Status Validation
+// ============================================================================
+
+const VALID_STATUSES = ['open', 'in_progress', 'resolved', 'blocked'];
+
+const VALID_TRANSITIONS = {
+  open: ['in_progress', 'blocked'],
+  in_progress: ['resolved', 'blocked', 'open'],
+  blocked: ['open', 'in_progress'],
+  resolved: ['open'],  // Ralph loop: verifier reopens tasks
+};
+
+// ============================================================================
 // Main Logic
 // ============================================================================
 
@@ -91,6 +104,19 @@ async function main() {
 
       // Update status if provided
       if (args.status) {
+        // Validate status value
+        if (!VALID_STATUSES.includes(args.status)) {
+          console.error(`Error: Invalid status "${args.status}". Must be: ${VALID_STATUSES.join(', ')}`);
+          process.exit(1);
+        }
+
+        // Validate transition
+        const allowed = VALID_TRANSITIONS[task.status];
+        if (allowed && !allowed.includes(args.status)) {
+          console.error(`Error: Invalid transition ${task.status} → ${args.status}. Allowed: ${allowed.join(', ')}`);
+          process.exit(1);
+        }
+
         // Check for blocked patterns before allowing status=resolved
         if (args.status === 'resolved') {
           // Collect all evidence text for scanning

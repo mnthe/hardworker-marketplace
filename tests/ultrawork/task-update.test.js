@@ -37,6 +37,13 @@ describe('task-update.js', () => {
 
   describe('update status', () => {
     test('should update status to resolved', async () => {
+      // Must go through in_progress first (valid transition path)
+      await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', '1',
+        '--status', 'in_progress'
+      ]);
+
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
         '--id', '1',
@@ -107,6 +114,13 @@ describe('task-update.js', () => {
 
   describe('combined updates', () => {
     test('should update status and add evidence together', async () => {
+      // Must go through in_progress first (valid transition path)
+      await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', '1',
+        '--status', 'in_progress'
+      ]);
+
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
         '--id', '1',
@@ -133,7 +147,7 @@ describe('task-update.js', () => {
       await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
         '--id', '1',
-        '--status', 'resolved'
+        '--status', 'in_progress'
       ]);
 
       const after = JSON.parse(fs.readFileSync(taskFile, 'utf-8'));
@@ -179,7 +193,7 @@ describe('task-update.js', () => {
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
         '--task', '1',
-        '--status', 'resolved'
+        '--status', 'in_progress'
       ]);
 
       expect(result.exitCode).toBe(0);
@@ -189,10 +203,83 @@ describe('task-update.js', () => {
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
         '--task-id', '1',
-        '--status', 'resolved'
+        '--status', 'in_progress'
       ]);
 
       expect(result.exitCode).toBe(0);
+    });
+  });
+
+  describe('status validation', () => {
+    test('should reject invalid status value', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', '1',
+        '--status', 'banana'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Invalid status');
+    });
+
+    test('should reject invalid transition resolved -> in_progress', async () => {
+      // Set task to resolved first (open -> in_progress -> resolved)
+      createMockTask(session.sessionId, '2', {
+        subject: 'Resolved task',
+        status: 'resolved',
+        evidence: []
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', '2',
+        '--status', 'in_progress'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Invalid transition');
+    });
+
+    test('should allow resolved -> open (Ralph loop)', async () => {
+      createMockTask(session.sessionId, '3', {
+        subject: 'Ralph loop task',
+        status: 'resolved',
+        evidence: []
+      });
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', '3',
+        '--status', 'open'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+
+      const taskFile = path.join(session.sessionDir, 'tasks', '3.json');
+      const taskData = JSON.parse(fs.readFileSync(taskFile, 'utf-8'));
+      expect(taskData.status).toBe('open');
+    });
+
+    test('should allow open -> in_progress -> resolved happy path', async () => {
+      // open -> in_progress
+      let result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', '1',
+        '--status', 'in_progress'
+      ]);
+      expect(result.exitCode).toBe(0);
+
+      // in_progress -> resolved
+      result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', '1',
+        '--status', 'resolved'
+      ]);
+      expect(result.exitCode).toBe(0);
+
+      const taskFile = path.join(session.sessionDir, 'tasks', '1.json');
+      const taskData = JSON.parse(fs.readFileSync(taskFile, 'utf-8'));
+      expect(taskData.status).toBe('resolved');
     });
   });
 });
