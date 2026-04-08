@@ -112,7 +112,7 @@ describe('task-get.js', () => {
     test('should fail for non-existent task', async () => {
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
-        '--task-id', 'non-existent'
+        '--task-id', '999'
       ]);
 
       expect(result.exitCode).toBe(1);
@@ -128,6 +128,47 @@ describe('task-get.js', () => {
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('not found');
+    });
+  });
+
+  describe('task ID validation (path traversal prevention)', () => {
+    test('should reject path traversal task ID', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--task-id', '../../etc/passwd'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Invalid task ID');
+    });
+
+    test('should accept numeric task ID', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--task-id', '1'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+    });
+
+    test('should reject alphabetic task ID', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--task-id', 'abc'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Invalid task ID');
+    });
+
+    test('should reject negative task ID', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--task-id', '-1'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Invalid task ID');
     });
   });
 

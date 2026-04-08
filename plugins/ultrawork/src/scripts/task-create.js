@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getSessionDir, readSession } = require('../lib/session-utils.js');
-const { parseArgs, generateHelp } = require('../lib/args.js');
+const { parseArgs, generateHelp, validateTaskId } = require('../lib/args.js');
 const { writeJsonAtomically } = require('../lib/json-ops.js');
 
 // ============================================================================
@@ -257,6 +257,7 @@ function main() {
     }
 
     const args = parseArgs(ARG_SPEC);
+    validateTaskId(args.id);
 
     validateArgs(args);
     createTask(args);

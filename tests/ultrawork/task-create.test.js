@@ -59,11 +59,11 @@ describe('task-create.js', () => {
     test('should create task file in tasks directory', async () => {
       await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
-        '--id', 'test-id',
+        '--id', '10',
         '--subject', 'File test'
       ]);
 
-      const taskFile = path.join(session.sessionDir, 'tasks', 'test-id.json');
+      const taskFile = path.join(session.sessionDir, 'tasks', '10.json');
       expect(fs.existsSync(taskFile)).toBe(true);
     });
   });
@@ -211,19 +211,64 @@ describe('task-create.js', () => {
       // Create first task
       await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
-        '--id', 'duplicate',
+        '--id', '99',
         '--subject', 'First task'
       ]);
 
       // Try to create duplicate
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
-        '--id', 'duplicate',
+        '--id', '99',
         '--subject', 'Second task'
       ]);
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('already exists');
+    });
+  });
+
+  describe('task ID validation (path traversal prevention)', () => {
+    test('should reject path traversal task ID', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', '../../etc/passwd',
+        '--subject', 'Malicious task'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Invalid task ID');
+    });
+
+    test('should accept numeric task ID', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', '1',
+        '--subject', 'Valid task'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+    });
+
+    test('should reject alphabetic task ID', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', 'abc',
+        '--subject', 'Alphabetic ID task'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Invalid task ID');
+    });
+
+    test('should reject negative task ID', async () => {
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--id', '-1',
+        '--subject', 'Negative ID task'
+      ]);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('Invalid task ID');
     });
   });
 
@@ -235,7 +280,7 @@ describe('task-create.js', () => {
 
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
-        '--id', 'df-1',
+        '--id', '20',
         '--subject', 'Task with description file',
         '--description-file', descFile
       ]);
@@ -251,7 +296,7 @@ describe('task-create.js', () => {
 
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
-        '--id', 'df-2',
+        '--id', '21',
         '--subject', 'Task with trimmed description',
         '--description-file', descFile
       ]);
@@ -264,7 +309,7 @@ describe('task-create.js', () => {
     test('should fail when file does not exist', async () => {
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
-        '--id', 'df-3',
+        '--id', '22',
         '--subject', 'Task with missing file',
         '--description-file', '/nonexistent/path/desc.txt'
       ]);
@@ -279,7 +324,7 @@ describe('task-create.js', () => {
 
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
-        '--id', 'df-4',
+        '--id', '23',
         '--subject', 'Task with conflict',
         '--description', 'Inline description',
         '--description-file', descFile
@@ -296,7 +341,7 @@ describe('task-create.js', () => {
 
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
-        '--id', 'df-5',
+        '--id', '24',
         '--subject', 'Task with alias',
         '-D', descFile
       ]);
@@ -311,13 +356,13 @@ describe('task-create.js', () => {
     test('should support --task alias for --id', async () => {
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
-        '--task', 'alias-test',
+        '--task', '30',
         '--subject', 'Alias test'
       ]);
 
       expect(result.exitCode).toBe(0);
       const parsed = JSON.parse(result.stdout.split('\n').slice(1).join('\n'));
-      expect(parsed.id).toBe('alias-test');
+      expect(parsed.id).toBe('30');
     });
   });
 
@@ -344,12 +389,12 @@ describe('task-create.js', () => {
 
       const result = await runScript(SCRIPT_PATH, [
         '--session', planningSession.sessionId,
-        '--id', 'gate-pass',
+        '--id', '40',
         '--subject', 'Gate pass test'
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('OK: Task gate-pass created');
+      expect(result.stdout).toContain('OK: Task 40 created');
     });
 
     test('PLANNING + SKIP result → task created', async () => {
@@ -358,12 +403,12 @@ describe('task-create.js', () => {
 
       const result = await runScript(SCRIPT_PATH, [
         '--session', planningSession.sessionId,
-        '--id', 'gate-skip',
+        '--id', '41',
         '--subject', 'Gate skip test'
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('OK: Task gate-skip created');
+      expect(result.stdout).toContain('OK: Task 41 created');
     });
 
     test('PLANNING + FAIL result → exit 1', async () => {
@@ -372,7 +417,7 @@ describe('task-create.js', () => {
 
       const result = await runScript(SCRIPT_PATH, [
         '--session', planningSession.sessionId,
-        '--id', 'gate-fail',
+        '--id', '42',
         '--subject', 'Gate fail test'
       ]);
 
@@ -384,12 +429,12 @@ describe('task-create.js', () => {
       // No result file exists - advisory gate allows through
       const result = await runScript(SCRIPT_PATH, [
         '--session', planningSession.sessionId,
-        '--id', 'gate-no-result',
+        '--id', '43',
         '--subject', 'Gate no result test'
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('OK: Task gate-no-result created');
+      expect(result.stdout).toContain('OK: Task 43 created');
     });
 
     test('PLANNING + unknown verdict → exit 1', async () => {
@@ -398,7 +443,7 @@ describe('task-create.js', () => {
 
       const result = await runScript(SCRIPT_PATH, [
         '--session', planningSession.sessionId,
-        '--id', 'gate-unknown',
+        '--id', '44',
         '--subject', 'Gate unknown verdict test'
       ]);
 
@@ -412,24 +457,24 @@ describe('task-create.js', () => {
 
       const result = await runScript(SCRIPT_PATH, [
         '--session', planningSession.sessionId,
-        '--id', 'gate-corrupt',
+        '--id', '45',
         '--subject', 'Gate corrupt file test'
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('OK: Task gate-corrupt created');
+      expect(result.stdout).toContain('OK: Task 45 created');
     });
 
     test('EXECUTION phase → gate skip (task created)', async () => {
       // session fixture already uses EXECUTION phase
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
-        '--id', 'gate-execution',
+        '--id', '46',
         '--subject', 'Execution phase test'
       ]);
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('OK: Task gate-execution created');
+      expect(result.stdout).toContain('OK: Task 46 created');
     });
   });
 });

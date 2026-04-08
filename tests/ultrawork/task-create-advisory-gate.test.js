@@ -33,12 +33,12 @@ describe('task-create.js - advisory doc-review gate', () => {
     // No result file exists - previously this would block, now it should allow
     const result = await runScript(SCRIPT_PATH, [
       '--session', session.sessionId,
-      '--id', 'advisory-1',
+      '--id', '1',
       '--subject', 'Advisory gate test'
     ]);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('OK: Task advisory-1 created');
+    expect(result.stdout).toContain('OK: Task 1 created');
   });
 
   test('PLANNING + FAIL result -> still blocks (quality check preserved)', async () => {
@@ -47,7 +47,7 @@ describe('task-create.js - advisory doc-review gate', () => {
 
     const result = await runScript(SCRIPT_PATH, [
       '--session', session.sessionId,
-      '--id', 'advisory-2',
+      '--id', '2',
       '--subject', 'Fail result test'
     ]);
 
@@ -61,12 +61,12 @@ describe('task-create.js - advisory doc-review gate', () => {
 
     const result = await runScript(SCRIPT_PATH, [
       '--session', session.sessionId,
-      '--id', 'advisory-3',
+      '--id', '3',
       '--subject', 'Pass result test'
     ]);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('OK: Task advisory-3 created');
+    expect(result.stdout).toContain('OK: Task 3 created');
   });
 
   test('PLANNING + SKIP result -> task created', async () => {
@@ -75,11 +75,11 @@ describe('task-create.js - advisory doc-review gate', () => {
 
     const result = await runScript(SCRIPT_PATH, [
       '--session', session.sessionId,
-      '--id', 'advisory-4',
+      '--id', '4',
       '--subject', 'Skip result test'
     ]);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('OK: Task advisory-4 created');
+    expect(result.stdout).toContain('OK: Task 4 created');
   });
 });

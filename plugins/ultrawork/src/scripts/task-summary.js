@@ -16,7 +16,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getSessionDir, getSessionFile, readSessionField } = require('../lib/session-utils.js');
-const { parseArgs, generateHelp } = require('../lib/args.js');
+const { parseArgs, generateHelp, validateTaskId } = require('../lib/args.js');
 
 // ============================================================================
 // CLI Argument Parsing
@@ -286,6 +286,7 @@ function main() {
 
     if (args.taskId) {
       // Single task detail
+      validateTaskId(args.taskId);
       const task = readTask(args.sessionId, args.taskId);
       if (!task) {
         console.error(`Error: Task ${args.taskId} not found`);

@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const { getSessionDir, resolveSessionId } = require('../lib/session-utils.js');
 const { acquireLock, releaseLock } = require('../lib/file-lock.js');
-const { parseArgs, generateHelp } = require('../lib/args.js');
+const { parseArgs, generateHelp, validateTaskId } = require('../lib/args.js');
 const { scanForBlockedPatterns, shouldBlockCompletion } = require('../lib/blocked-patterns.js');
 const { writeJsonAtomically } = require('../lib/json-ops.js');
 
@@ -69,6 +69,7 @@ async function main() {
   }
 
   const args = parseArgs(ARG_SPEC);
+  validateTaskId(args.id);
 
   try {
     // Validate session exists

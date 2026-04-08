@@ -181,7 +181,7 @@ describe('task-summary.js', () => {
     test('should fail for non-existent task', async () => {
       const result = await runScript(SCRIPT_PATH, [
         '--session', session.sessionId,
-        '--task', 'non-existent'
+        '--task', '999'
       ]);
 
       expect(result.exitCode).toBe(1);
