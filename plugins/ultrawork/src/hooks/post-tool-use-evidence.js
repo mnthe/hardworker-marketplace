@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// Lock ordering: session.json → evidence/log.jsonl (see CLAUDE.md Lock Ordering section)
 /**
  * Ultrawork PostToolUse Evidence Hook
  * Automatically captures evidence from tool executions
@@ -335,7 +336,7 @@ async function main() {
     // Append evidence with file lock for concurrent safety
     const line = JSON.stringify(evidence) + '\n';
     try {
-      const acquired = await acquireLock(evidenceLog, 5000);
+      const acquired = await acquireLock(evidenceLog, 15000);
       if (acquired) {
         try {
           fs.appendFileSync(evidenceLog, line, 'utf-8');
@@ -343,12 +344,12 @@ async function main() {
           releaseLock(evidenceLog);
         }
       } else {
-        // Lock timeout — append without lock as fallback (data > consistency)
-        fs.appendFileSync(evidenceLog, line, 'utf-8');
+        // Lock timeout — skip write to prevent corruption (log warning instead)
+        console.error(`Warning: evidence log lock timeout, skipping write`);
       }
     } catch (lockErr) {
-      // Lock error — append without lock as fallback
-      fs.appendFileSync(evidenceLog, line, 'utf-8');
+      // Lock error — skip write to prevent corruption
+      console.error(`Warning: evidence log lock error, skipping write: ${lockErr.message}`);
     }
   }
 

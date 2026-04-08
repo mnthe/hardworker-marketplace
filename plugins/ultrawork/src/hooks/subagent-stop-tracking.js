@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// Lock ordering: session.json → evidence/log.jsonl (see CLAUDE.md Lock Ordering section)
 
 /**
  * Subagent Stop Tracking Hook
@@ -280,7 +281,7 @@ async function main() {
           }
           const logLine = JSON.stringify(completedEvidence) + '\n';
           try {
-            const acquired = await acquireLock(evidenceLogFile, 5000);
+            const acquired = await acquireLock(evidenceLogFile, 15000);
             if (acquired) {
               try {
                 fs.appendFileSync(evidenceLogFile, logLine, 'utf-8');
@@ -288,11 +289,12 @@ async function main() {
                 releaseLock(evidenceLogFile);
               }
             } else {
-              // Lock timeout — append without lock as fallback (data > consistency)
-              fs.appendFileSync(evidenceLogFile, logLine, 'utf-8');
+              // Lock timeout — skip write to prevent corruption (log warning instead)
+              console.error(`Warning: evidence log lock timeout, skipping write`);
             }
           } catch (lockErr) {
-            fs.appendFileSync(evidenceLogFile, logLine, 'utf-8');
+            // Lock error — skip write to prevent corruption
+            console.error(`Warning: evidence log lock error, skipping write: ${lockErr.message}`);
           }
         } catch (logErr) {
           console.error(`Failed to append to evidence log:`, logErr);

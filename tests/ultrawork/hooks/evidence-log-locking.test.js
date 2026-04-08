@@ -4,7 +4,7 @@
  *
  * Verifies that post-tool-use-evidence.js and subagent-stop-tracking.js
  * use acquireLock/releaseLock around JSONL evidence log appends,
- * with fallback to unlocked append on lock timeout.
+ * and skip writes on lock failure (no unlocked fallback).
  */
 
 const fs = require('fs');
@@ -103,30 +103,35 @@ describe('evidence log locking', () => {
     });
   });
 
-  describe('fallback behavior on lock timeout', () => {
-    test('post-tool-use-evidence.js has fallback append without lock', () => {
+  describe('lock failure behavior', () => {
+    test('post-tool-use-evidence.js skips write on lock failure (no unlocked fallback)', () => {
       const hookSource = fs.readFileSync(
         path.join(__dirname, '../../../plugins/ultrawork/src/hooks/post-tool-use-evidence.js'),
         'utf-8'
       );
 
-      // Should have a fallback pattern: if lock not acquired, append anyway
-      // Count appendFileSync calls - should be more than 1 (locked + fallback)
+      // Should have exactly 1 appendFileSync call (inside lock only)
       const appendCalls = hookSource.match(/fs\.appendFileSync\(evidenceLog/g);
       expect(appendCalls).not.toBeNull();
-      expect(appendCalls.length).toBeGreaterThanOrEqual(2); // locked path + fallback path
+      expect(appendCalls.length).toBe(1); // only locked path, no fallback
+
+      // Should log warning on lock timeout
+      expect(hookSource).toContain('evidence log lock timeout, skipping write');
     });
 
-    test('subagent-stop-tracking.js has fallback append without lock', () => {
+    test('subagent-stop-tracking.js skips write on lock failure (no unlocked fallback)', () => {
       const hookSource = fs.readFileSync(
         path.join(__dirname, '../../../plugins/ultrawork/src/hooks/subagent-stop-tracking.js'),
         'utf-8'
       );
 
-      // Should have a fallback pattern: if lock not acquired, append anyway
+      // Should have exactly 1 appendFileSync call (inside lock only)
       const appendCalls = hookSource.match(/fs\.appendFileSync\(evidenceLogFile/g);
       expect(appendCalls).not.toBeNull();
-      expect(appendCalls.length).toBeGreaterThanOrEqual(2); // locked path + fallback path
+      expect(appendCalls.length).toBe(1); // only locked path, no fallback
+
+      // Should log warning on lock timeout
+      expect(hookSource).toContain('evidence log lock timeout, skipping write');
     });
 
     test('locked append followed by unlock actually writes data', async () => {
@@ -151,11 +156,9 @@ describe('evidence log locking', () => {
       expect(parsed.type).toBe('test');
     });
 
-    test('fallback append without lock still writes data', async () => {
-      // Simulate lock timeout scenario: hold lock, then fallback
+    test('write is skipped when lock cannot be acquired', async () => {
+      // Simulate lock timeout scenario: hold lock, second acquire fails
       const logFile = path.join(tempDir.path, 'log.jsonl');
-      const evidence = { type: 'fallback_test', timestamp: new Date().toISOString() };
-      const line = JSON.stringify(evidence) + '\n';
 
       // Hold a lock to simulate contention
       const firstLock = await acquireLock(logFile, 1000);
@@ -165,17 +168,76 @@ describe('evidence log locking', () => {
       const secondLock = await acquireLock(logFile, 200);
       expect(secondLock).toBe(false);
 
-      // Fallback: append without lock (data > consistency)
-      fs.appendFileSync(logFile, line, 'utf-8');
-
       // Release original lock
       releaseLock(logFile);
 
-      // Verify data was written despite lock failure
-      const content = fs.readFileSync(logFile, 'utf-8');
-      expect(content).toBe(line);
-      const parsed = JSON.parse(content.trim());
-      expect(parsed.type).toBe('fallback_test');
+      // File should not exist (no write happened since lock failed)
+      expect(fs.existsSync(logFile)).toBe(false);
+    });
+  });
+
+  describe('lock ordering', () => {
+    test('post-tool-use-evidence.js documents lock ordering convention', () => {
+      const hookSource = fs.readFileSync(
+        path.join(__dirname, '../../../plugins/ultrawork/src/hooks/post-tool-use-evidence.js'),
+        'utf-8'
+      );
+
+      expect(hookSource).toContain('Lock ordering: session.json');
+      expect(hookSource).toContain('evidence/log.jsonl');
+    });
+
+    test('subagent-stop-tracking.js documents lock ordering convention', () => {
+      const hookSource = fs.readFileSync(
+        path.join(__dirname, '../../../plugins/ultrawork/src/hooks/subagent-stop-tracking.js'),
+        'utf-8'
+      );
+
+      expect(hookSource).toContain('Lock ordering: session.json');
+      expect(hookSource).toContain('evidence/log.jsonl');
+    });
+
+    test('subagent-stop-tracking.js acquires session lock before evidence lock', () => {
+      const hookSource = fs.readFileSync(
+        path.join(__dirname, '../../../plugins/ultrawork/src/hooks/subagent-stop-tracking.js'),
+        'utf-8'
+      );
+
+      // updateSession acquires session.json lock internally
+      const sessionLockIndex = hookSource.indexOf('await updateSession(sessionId');
+      // evidence log lock acquired after
+      const evidenceLockIndex = hookSource.indexOf('acquireLock(evidenceLogFile');
+
+      expect(sessionLockIndex).toBeGreaterThan(-1);
+      expect(evidenceLockIndex).toBeGreaterThan(-1);
+      expect(sessionLockIndex).toBeLessThan(evidenceLockIndex);
+    });
+
+    test('post-tool-use-evidence.js only acquires evidence lock (no session lock)', () => {
+      const hookSource = fs.readFileSync(
+        path.join(__dirname, '../../../plugins/ultrawork/src/hooks/post-tool-use-evidence.js'),
+        'utf-8'
+      );
+
+      // Should NOT call updateSession (which acquires session lock)
+      expect(hookSource).not.toContain('updateSession(');
+
+      // Should only acquire evidence log lock
+      expect(hookSource).toContain('acquireLock(evidenceLog');
+    });
+
+    test('both hooks use 15000ms lock timeout', () => {
+      const postHookSource = fs.readFileSync(
+        path.join(__dirname, '../../../plugins/ultrawork/src/hooks/post-tool-use-evidence.js'),
+        'utf-8'
+      );
+      const subagentHookSource = fs.readFileSync(
+        path.join(__dirname, '../../../plugins/ultrawork/src/hooks/subagent-stop-tracking.js'),
+        'utf-8'
+      );
+
+      expect(postHookSource).toContain('acquireLock(evidenceLog, 15000)');
+      expect(subagentHookSource).toContain('acquireLock(evidenceLogFile, 15000)');
     });
   });
 });
