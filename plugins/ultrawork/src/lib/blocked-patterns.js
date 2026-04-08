@@ -24,7 +24,7 @@
  * Blocked patterns indicating incomplete or unprofessional work
  * @type {BlockedPattern[]}
  */
-export const BLOCKED_PATTERNS = [
+const BLOCKED_PATTERNS = [
   // CRITICAL patterns (severity: error)
   {
     regex: /should work/i,
@@ -90,7 +90,7 @@ export const BLOCKED_PATTERNS = [
  * @param {string} text - Text to scan for blocked patterns
  * @returns {BlockedPatternMatch[]} Array of pattern matches with severity and message
  */
-export function scanForBlockedPatterns(text) {
+function scanForBlockedPatterns(text) {
   if (!text || typeof text !== 'string') {
     return [];
   }
@@ -117,6 +117,8 @@ export function scanForBlockedPatterns(text) {
  * @param {BlockedPatternMatch[]} matches - Array of pattern matches
  * @returns {boolean} True if any match has error severity
  */
-export function shouldBlockCompletion(matches) {
+function shouldBlockCompletion(matches) {
   return matches.some(match => match.severity === 'error');
 }
+
+module.exports = { BLOCKED_PATTERNS, scanForBlockedPatterns, shouldBlockCompletion };

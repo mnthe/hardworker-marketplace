@@ -4,7 +4,7 @@
  */
 
 const { describe, test, expect } = require('bun:test');
-const { parseArgs, generateHelp } = require('../../../plugins/ultrawork/src/lib/args.js');
+const { parseArgs, generateHelp, validateTaskId } = require('../../../plugins/ultrawork/src/lib/args.js');
 
 describe('args.js', () => {
   describe('parseArgs', () => {
@@ -125,6 +125,62 @@ describe('args.js', () => {
       const result = parseArgs(spec, argv);
 
       expect(result.format).toBe('json');
+    });
+
+    test('should exit with error when flag has no value (bounds check)', () => {
+      const spec = {
+        '--session': { key: 'session', required: true }
+      };
+      const argv = ['node', 'script.js', '--session'];
+
+      const originalExit = process.exit;
+      const originalError = console.error;
+      let exitCode = null;
+      let errorMessage = '';
+
+      process.exit = (code) => { exitCode = code; throw new Error('EXIT'); };
+      console.error = (msg) => { errorMessage = msg; };
+
+      try {
+        parseArgs(spec, argv);
+      } catch (e) {
+        // Expected to throw
+      }
+
+      process.exit = originalExit;
+      console.error = originalError;
+
+      expect(exitCode).toBe(1);
+      expect(errorMessage).toContain('--session');
+      expect(errorMessage).toContain('requires a value');
+    });
+
+    test('should exit with error when alias flag has no value', () => {
+      const spec = {
+        '--session': { key: 'session', aliases: ['-s'], required: true }
+      };
+      const argv = ['node', 'script.js', '-s'];
+
+      const originalExit = process.exit;
+      const originalError = console.error;
+      let exitCode = null;
+      let errorMessage = '';
+
+      process.exit = (code) => { exitCode = code; throw new Error('EXIT'); };
+      console.error = (msg) => { errorMessage = msg; };
+
+      try {
+        parseArgs(spec, argv);
+      } catch (e) {
+        // Expected to throw
+      }
+
+      process.exit = originalExit;
+      console.error = originalError;
+
+      expect(exitCode).toBe(1);
+      expect(errorMessage).toContain('--session');
+      expect(errorMessage).toContain('requires a value');
     });
   });
 

@@ -41,7 +41,7 @@
  * // With custom argv
  * const args = parseArgs(spec, ['node', 'script.js', '--session', 'abc']);
  */
-export function parseArgs(spec, argv = process.argv) {
+function parseArgs(spec, argv = process.argv) {
     const args = {};
 
     // Build alias map: alias -> primary flag
@@ -79,6 +79,10 @@ export function parseArgs(spec, argv = process.argv) {
         if (opt.flag) {
             args[opt.key] = true;
         } else {
+            if (i + 1 >= argv.length) {
+                console.error(`Error: ${arg} requires a value`);
+                process.exit(1);
+            }
             args[opt.key] = argv[++i];
         }
     }
@@ -103,7 +107,7 @@ export function parseArgs(spec, argv = process.argv) {
  * @param {string} [description] - Script description
  * @returns {string} Formatted help text
  */
-export function generateHelp(scriptName, spec, description = '') {
+function generateHelp(scriptName, spec, description = '') {
     let help = `Usage: ${scriptName} [options]\n`;
     if (description) {
         help += `\n${description}\n`;
@@ -120,3 +124,20 @@ export function generateHelp(scriptName, spec, description = '') {
 
     return help;
 }
+
+/**
+ * Validate that a task ID is a positive integer.
+ * Prevents path traversal attacks (e.g., "../../etc/passwd").
+ *
+ * @param {string} id - Task ID to validate
+ * @returns {string} Validated task ID
+ */
+function validateTaskId(id) {
+    if (!/^\d+$/.test(String(id))) {
+        console.error(`Error: Invalid task ID "${id}". Task ID must be a positive integer.`);
+        process.exit(1);
+    }
+    return String(id);
+}
+
+module.exports = { parseArgs, generateHelp, validateTaskId };
