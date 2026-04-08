@@ -162,6 +162,42 @@ describe('context-add.js', () => {
     });
   });
 
+  describe('concurrent writes', () => {
+    test('should not lose data when multiple explorers added concurrently', async () => {
+      const results = await Promise.all([
+        runScript(SCRIPT_PATH, [
+          '--session', session.sessionId,
+          '--explorer-id', 'overview',
+          '--summary', 'Overview summary',
+          '--key-files', 'a.ts'
+        ]),
+        runScript(SCRIPT_PATH, [
+          '--session', session.sessionId,
+          '--explorer-id', 'exp-1',
+          '--summary', 'Exp 1 summary',
+          '--key-files', 'b.ts'
+        ])
+      ]);
+
+      // Both should succeed
+      for (const result of results) {
+        expect(result.exitCode).toBe(0);
+      }
+
+      // Both explorers should be present (no lost updates)
+      const contextFile = path.join(session.sessionDir, 'context.json');
+      const context = JSON.parse(fs.readFileSync(contextFile, 'utf-8'));
+      expect(context.explorers.length).toBe(2);
+
+      const ids = context.explorers.map(e => e.id).sort();
+      expect(ids).toEqual(['exp-1', 'overview']);
+
+      // Both key_files should be merged
+      expect(context.key_files).toContain('a.ts');
+      expect(context.key_files).toContain('b.ts');
+    });
+  });
+
   describe('error cases', () => {
     test('should fail when session ID missing', async () => {
       const result = await runScript(SCRIPT_PATH, [

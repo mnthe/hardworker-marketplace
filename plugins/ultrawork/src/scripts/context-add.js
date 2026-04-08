@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const { getSessionDir } = require('../lib/session-utils.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
+const { acquireLock, releaseLock } = require('../lib/file-lock.js');
 
 // ============================================================================
 // Types
@@ -95,7 +96,7 @@ function arraysEqual(arr1, arr2) {
  * Main execution function
  * @returns {void}
  */
-function main() {
+async function main() {
   // Check for help flag first (before validation)
   if (process.argv.includes('--help') || process.argv.includes('-h')) {
     console.log(generateHelp('context-add.js', ARG_SPEC, 'Add explorer summary to context.json with key files and patterns'));
@@ -126,52 +127,63 @@ function main() {
       fs.writeFileSync(contextFile, JSON.stringify(initialContext, null, 2), 'utf-8');
     }
 
-    // Read current context
-    const content = fs.readFileSync(contextFile, 'utf-8');
-    /** @type {ContextFile} */
-    const context = JSON.parse(content);
-
-    // Check if explorer already exists (avoid duplicates)
-    const existingExplorer = context.explorers.find((exp) => exp.id === explorerId);
-    if (existingExplorer) {
-      console.log(`Warning: Explorer ${explorerId} already exists, skipping`);
-      process.exit(0);
+    // Acquire lock for read-modify-write on context.json
+    const acquired = await acquireLock(contextFile);
+    if (!acquired) {
+      console.error('Error: Failed to acquire lock for context.json');
+      process.exit(1);
     }
 
-    // Parse key files and patterns
-    const newKeyFiles = parseCommaSeparated(keyFiles);
-    const newPatterns = parseCommaSeparated(patterns);
+    try {
+      // Read current context
+      const content = fs.readFileSync(contextFile, 'utf-8');
+      /** @type {ContextFile} */
+      const context = JSON.parse(content);
 
-    // Build new explorer entry (lightweight - just summary and link)
-    /** @type {Explorer} */
-    const newExplorer = {
-      id: explorerId,
-      hint: hint || '',
-      file: file || '',
-      summary: summary || '',
-    };
+      // Check if explorer already exists (avoid duplicates)
+      const existingExplorer = context.explorers.find((exp) => exp.id === explorerId);
+      if (existingExplorer) {
+        console.log(`Warning: Explorer ${explorerId} already exists, skipping`);
+        process.exit(0);
+      }
 
-    // Add explorer to context
-    context.explorers.push(newExplorer);
+      // Parse key files and patterns
+      const newKeyFiles = parseCommaSeparated(keyFiles);
+      const newPatterns = parseCommaSeparated(patterns);
 
-    // Merge and deduplicate key_files
-    context.key_files = mergeUnique(context.key_files || [], newKeyFiles);
+      // Build new explorer entry (lightweight - just summary and link)
+      /** @type {Explorer} */
+      const newExplorer = {
+        id: explorerId,
+        hint: hint || '',
+        file: file || '',
+        summary: summary || '',
+      };
 
-    // Merge and deduplicate patterns
-    context.patterns = mergeUnique(context.patterns || [], newPatterns);
+      // Add explorer to context
+      context.explorers.push(newExplorer);
 
-    // Check if all expected explorers are complete
-    if (context.expected_explorers && context.expected_explorers.length > 0) {
-      const actualIds = context.explorers.map((exp) => exp.id);
-      if (arraysEqual(context.expected_explorers, actualIds)) {
-        context.exploration_complete = true;
-        fs.writeFileSync(contextFile, JSON.stringify(context, null, 2), 'utf-8');
-        console.log('OK: All expected explorers complete. exploration_complete=true');
+      // Merge and deduplicate key_files
+      context.key_files = mergeUnique(context.key_files || [], newKeyFiles);
+
+      // Merge and deduplicate patterns
+      context.patterns = mergeUnique(context.patterns || [], newPatterns);
+
+      // Check if all expected explorers are complete
+      if (context.expected_explorers && context.expected_explorers.length > 0) {
+        const actualIds = context.explorers.map((exp) => exp.id);
+        if (arraysEqual(context.expected_explorers, actualIds)) {
+          context.exploration_complete = true;
+          fs.writeFileSync(contextFile, JSON.stringify(context, null, 2), 'utf-8');
+          console.log('OK: All expected explorers complete. exploration_complete=true');
+        } else {
+          fs.writeFileSync(contextFile, JSON.stringify(context, null, 2), 'utf-8');
+        }
       } else {
         fs.writeFileSync(contextFile, JSON.stringify(context, null, 2), 'utf-8');
       }
-    } else {
-      fs.writeFileSync(contextFile, JSON.stringify(context, null, 2), 'utf-8');
+    } finally {
+      releaseLock(contextFile);
     }
 
     console.log(`OK: Explorer ${explorerId} added to context.json`);
