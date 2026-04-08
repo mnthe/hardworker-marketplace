@@ -104,6 +104,34 @@ describe('evidence-summary.js', () => {
     });
   });
 
+  describe('corrupted JSONL handling', () => {
+    test('should skip corrupted lines without crashing', async () => {
+      const evidenceDir = path.join(session.sessionDir, 'evidence');
+      const evidenceLog = path.join(evidenceDir, 'log.jsonl');
+
+      const lines = [
+        JSON.stringify({ type: 'command_execution', timestamp: new Date().toISOString(), command: 'npm test', exit_code: 0 }),
+        '{corrupted line here',
+        JSON.stringify({ type: 'test_result', timestamp: new Date().toISOString(), passed: true, framework: 'jest' })
+      ];
+      fs.writeFileSync(evidenceLog, lines.join('\n'), 'utf-8');
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--format', 'json'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+
+      // Should produce valid output despite corrupted line
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.evidenceCount).toBe(2);
+
+      // Should warn on stderr
+      expect(result.stderr).toContain('Warning: skipping corrupted JSONL line');
+    });
+  });
+
   describe('error cases', () => {
     test('should fail when session ID missing', async () => {
       const result = await runScript(SCRIPT_PATH, []);

@@ -150,6 +150,53 @@ describe('evidence-query.js', () => {
     });
   });
 
+  describe('corrupted JSONL handling', () => {
+    test('should skip corrupted lines without crashing', async () => {
+      // Overwrite evidence log with a corrupted line in the middle
+      const evidenceDir = path.join(session.sessionDir, 'evidence');
+      const evidenceLog = path.join(evidenceDir, 'log.jsonl');
+
+      const lines = [
+        JSON.stringify({ type: 'command_execution', timestamp: '2026-01-17T10:00:00Z', command: 'npm test', exit_code: 0 }),
+        '{invalid json',
+        JSON.stringify({ type: 'test_result', timestamp: '2026-01-17T10:01:00Z', passed: true, framework: 'jest' })
+      ];
+      fs.writeFileSync(evidenceLog, lines.join('\n'), 'utf-8');
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--format', 'json'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+
+      // Should return 2 valid entries, skipping the corrupted one
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.length).toBe(2);
+      expect(parsed[0].type).toBe('command_execution');
+      expect(parsed[1].type).toBe('test_result');
+
+      // Should warn about the corrupted line on stderr
+      expect(result.stderr).toContain('Warning: skipping corrupted JSONL line');
+    });
+
+    test('should return empty array when all lines are corrupted', async () => {
+      const evidenceDir = path.join(session.sessionDir, 'evidence');
+      const evidenceLog = path.join(evidenceDir, 'log.jsonl');
+
+      fs.writeFileSync(evidenceLog, '{bad\n{also bad', 'utf-8');
+
+      const result = await runScript(SCRIPT_PATH, [
+        '--session', session.sessionId,
+        '--format', 'json'
+      ]);
+
+      expect(result.exitCode).toBe(0);
+      const parsed = JSON.parse(result.stdout);
+      expect(parsed.length).toBe(0);
+    });
+  });
+
   describe('empty results', () => {
     test('should handle no matching evidence', async () => {
       const result = await runScript(SCRIPT_PATH, [

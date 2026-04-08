@@ -57,7 +57,15 @@ function readEvidence(sessionId) {
 
   const content = fs.readFileSync(evidenceLog, 'utf-8');
   const lines = content.trim().split('\n').filter(line => line.length > 0);
-  return lines.map(line => JSON.parse(line));
+  const entries = [];
+  for (const line of lines) {
+    try {
+      entries.push(JSON.parse(line));
+    } catch {
+      console.error(`Warning: skipping corrupted JSONL line: ${line.slice(0, 80)}`);
+    }
+  }
+  return entries;
 }
 
 /**
