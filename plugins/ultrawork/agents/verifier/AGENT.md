@@ -205,11 +205,11 @@ Parse the JSON result:
 
 ### Phase 1: Verification (Parallel)
 
-#### Phase 1-2: Codex Track (Background)
+#### Phase 1-2: Guardrail Agent Track (Background)
 
 Runs in parallel with Phase 1-1.
 
-Launch Codex verification in background before starting main verification:
+Spawn the Guardrail Agent in background before starting main verification:
 
 ```bash
 # Build criteria list from all tasks
@@ -219,8 +219,36 @@ bun "{SCRIPTS_PATH}/task-list.js" --session ${CLAUDE_SESSION_ID} --format json
 # Read design doc path from session state (stored by planner)
 DESIGN_DOC=$(bun "{SCRIPTS_PATH}/session-get.js" --session ${CLAUDE_SESSION_ID} --field plan.design_doc)
 
-# Launch Codex in background (non-blocking)
-# --design passes design doc for both doc-review and exec context
+# Get git diff information
+GIT_DIFF_STAT=$(git diff --stat $(git merge-base HEAD main)..HEAD)
+GIT_DIFF_BASE=$(git merge-base HEAD main 2>/dev/null || git rev-list --max-parents=0 HEAD)
+```
+
+Spawn via Task():
+
+```
+Task(subagent_type="ultrawork:guardrail", prompt="""
+GOAL: ${GOAL}
+DESIGN_DOC: ${DESIGN_DOC}
+GIT_DIFF_STAT: ${GIT_DIFF_STAT}
+GIT_DIFF_BASE: ${GIT_DIFF_BASE}
+CRITERIA: ${CRITERIA_LIST}
+WORKING_DIR: ${WORKING_DIR}
+""", run_in_background=True)
+```
+
+**Important**:
+- Use `run_in_background=True` as a **Task tool parameter**
+- Store background task reference for Phase 2-1
+- Guardrail Agent (Phase 1-2) runs in parallel with Phase 1-1
+- The Guardrail Agent returns a JSON result with `verdict`, `findings[]`, and `summary`
+
+#### Phase 1-3: Codex Safety Net (Background, Non-blocking)
+
+Codex runs as a background advisory. Its results are informational only and NEVER trigger a FAIL verdict.
+
+```bash
+# Launch Codex in background (advisory only)
 # IMPORTANT: Use run_in_background=True as a Bash TOOL PARAMETER, not in the command string
 bun "{SCRIPTS_PATH}/codex-verify.js" \
   --mode full \
@@ -233,18 +261,13 @@ bun "{SCRIPTS_PATH}/codex-verify.js" \
 ```
 
 **Important**:
-- `--enable` accepts comma-separated feature flags (e.g., `--enable shell_snapshot`); `collab` is always enabled by default
-- `--design-optional` makes the design file optional -- if the file was deleted (e.g., by documenter), doc-review is skipped instead of failing. Always use this flag when running in `full` mode during verification, since the design document may have been intentionally removed after ADR creation.
-- Use `run_in_background=True` as a **Bash tool parameter** (not in the command string). Example: `Bash(command="bun ...", run_in_background=True)`
-- Store background task reference for Phase 2-1
-- Codex (Phase 1-2) runs in parallel with Phase 1-1
+- Codex is **non-blocking advisory** -- results are included in the report but never affect the verdict
+- Launch once in background. If it completes, read results. If it times out or fails, log `"Codex advisory: skipped (non-blocking)"` and move on. Do NOT retry.
 - If codex CLI not available, script returns `verdict: "SKIP"` (exit 0)
-- If `--design` is provided in `full` mode, Codex also runs doc-review and includes results in output
-- The verification prompt now includes **Sandbox Constraints** (warns about read-only filesystem, EPERM/EROFS handling) and **Recent Changes** (git diff --stat + recent commits) to reduce false positives
 
 #### Phase 1-1: Primary Track
 
-The following steps execute sequentially within this track, while Phase 1-2 (Codex) runs in parallel.
+The following steps execute sequentially within this track, while Phase 1-2 (Guardrail) and Phase 1-3 (Codex) run in parallel.
 
 ##### Design Document Verification
 
@@ -334,77 +357,73 @@ Record ALL outputs as final evidence.
 
 ### Phase 2: Review
 
-#### Phase 2-1: Join Codex Result (MANDATORY -- hook-enforced)
+#### Phase 2-1: Join Guardrail Result (MANDATORY)
 
-> **BLOCKING GATE**: A PreToolUse hook blocks `--verifier-passed` unless the Codex result file exists.
-> If you skip this step, the phase transition will be rejected. You MUST wait for Codex.
-
-Await the background Codex verification result:
+Await the background Guardrail Agent result:
 
 ```bash
-# Wait for Codex to complete (timeout: 5 minutes)
+# Wait for Guardrail Agent to complete
 TaskOutput(background_task_from_phase_1_2, block=True, timeout=300000)
-
-# Read Codex result
-codex_result=$(cat /tmp/codex-${CLAUDE_SESSION_ID}.json)
 ```
 
-Parse Codex result JSON:
+Parse Guardrail Agent result JSON:
 
 ```json
 {
-  "available": true,
-  "verdict": "PASS" | "FAIL" | "SKIP",
-  "review": { "issues": [...] },
-  "exec": { "criteria_results": [...] },
-  "doc_review": { "exit_code": 0, "output": "...", "doc_issues": [...] },
+  "verdict": "PASS" | "FAIL",
+  "findings": [
+    {
+      "axis": "goal-alignment | scope-drift | design-divergence",
+      "severity": "error | warning",
+      "file": "src/auth.ts",
+      "line": 42,
+      "message": "Implementation diverges from design document"
+    }
+  ],
   "summary": "..."
 }
 ```
 
-**Codex Retry with Backoff:**
-
-If the Codex background task returns a timeout or exec error (not a logic FAIL):
-
-1. **Attempt 1 failure**: Log warning in evidence:
-   ```bash
-   bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
-     --add-evidence "Codex attempt 1 failed: <error_type>"
-   ```
-2. **Backoff**: Wait 3 seconds
-3. **retry**: Re-launch the same `codex-verify.js` command with identical arguments as a new background task
-4. **Attempt 2 failure**: Classify as either transient or logic failure:
-   - **Transient** (network error, timeout, exec error): Set Codex verdict to `SKIP`, log warning:
-     ```bash
-     bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
-       --add-evidence "Codex gate: SKIP (transient failure after 2 attempts)"
-     ```
-     The verifier writes `{"available":true,"mode":"full","verdict":"SKIP","summary":"Codex transient failure after 2 attempts"}` to `/tmp/codex-${CLAUDE_SESSION_ID}.json` so gate-enforcement.js accepts the transition.
-   - **Logic failure** (Codex returned FAIL with findings): Include findings in FAIL verdict as normal
-
-**Integration with Quad Gate:**
-- SKIP from transient failure = treated as PASS in Quad Gate (degraded mode, no Codex input)
-- FAIL from logic findings = treated as FAIL in Quad Gate (normal flow)
-
-**Codex verdict handling**:
-- `PASS`: Codex found no issues -> continue to Phase 2-2
-- `FAIL`: Codex found issues -> add to fail reasons in Phase 3-1
-- `SKIP`: Codex not installed -> treat as pass-through (no additional checks)
+**Guardrail verdict handling**:
+- `PASS`: Zero goal-alignment errors -> continue to Phase 2-1b
+- `FAIL`: Goal-alignment errors found -> create fix tasks for each error-severity finding
 
 **If verdict is FAIL**:
-- Extract issues from `review.issues[]` and `exec.criteria_results[]`
-- Extract design issues from `doc_review.doc_issues[]` (if present)
-- Add Codex findings to overall fail reasons
-- Include in fix task creation
+- Extract findings with `severity: "error"` from `findings[]`
+- Add Guardrail findings to overall fail reasons in Phase 3-1
+- Create fix tasks for each error finding:
+  ```bash
+  bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
+    --subject "Fix: Guardrail - [finding.axis] in [finding.file]" \
+    --description "Guardrail Agent found goal-alignment issue: [finding.message]. File: [finding.file]:[finding.line]." \
+    --criteria '["Issue resolved with evidence"]'
+  ```
 
-**Doc review result** (when `--design` was provided):
-- `doc_review.doc_issues[]` contains context_sufficiency, goal_alignment, and blocked_pattern issues
-- Issues with `severity: "error"` contribute to FAIL verdict
-- Issues with `severity: "warning"` are informational only
+#### Phase 2-1b: Collect Codex Advisory (Non-blocking)
+
+Check if the Codex background task (Phase 1-3) completed. This is advisory only -- results are included in the report but NEVER affect the verdict.
+
+```bash
+# Check if Codex result file exists
+if [ -f /tmp/codex-${CLAUDE_SESSION_ID}.json ]; then
+  codex_result=$(cat /tmp/codex-${CLAUDE_SESSION_ID}.json)
+  # Include findings in report as informational
+else
+  # Codex did not complete -- this is fine, it's non-blocking
+  bun "{SCRIPTS_PATH}/task-update.js" --session ${CLAUDE_SESSION_ID} --id verify \
+    --add-evidence "Codex advisory: skipped (non-blocking)"
+fi
+```
+
+**Codex advisory handling**:
+- Completed with findings: Include in report under "Codex Advisory" section (informational only)
+- Completed with no findings: Note "Codex advisory: no issues found"
+- Did not complete / timed out / failed: Log `"Codex advisory: skipped (non-blocking)"` and continue
+- Do NOT retry. Do NOT block on Codex completion.
 
 #### Phase 2-2: Mandatory Reviewer (Code Correctness Gate)
 
-> **MANDATORY**: This phase runs after Codex and before the final gate. The reviewer checks P0+P1 code correctness that process-based verification cannot catch.
+> **MANDATORY**: This phase runs after Guardrail and before the final gate. The reviewer checks P0+P1 code correctness that process-based verification cannot catch.
 
 **Why this exists**: The verifier checks process compliance (evidence format, test pass, blocked phrases). But P0 issues (code that can't run) and P1 issues (cross-module mismatches) require reading actual code and tracing logic flow. The reviewer does this.
 
@@ -472,36 +491,36 @@ bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
 
 ### Phase 3: Decision
 
-#### Phase 3-1: Quad Gate Decision
+#### Phase 3-1: Triple Gate + Advisory Decision
 
-**PASS Requirements (ALL must be true):**
+**PASS Requirements (ALL three gates must pass):**
 
-| Check | Requirement |
-|-------|-------------|
-| **Claude Gate: Evidence Complete** | Every criterion has concrete evidence |
-| **Claude Gate: Evidence Valid** | All evidence has command + output + exit code |
-| **Claude Gate: No Speculation** | Zero blocked patterns found |
-| **Claude Gate: Commands Pass** | All verification commands exit 0 |
-| **Claude Gate: Tasks Closed** | All tasks (except verify) status="resolved" |
-| **Codex Gate: PASS or SKIP** | Codex verification passed OR not installed |
-| **Reviewer Gate: APPROVE** | Reviewer found zero P0/P1 issues |
+| Gate | Requirement |
+|------|-------------|
+| **Gate 1 (Claude)** | Evidence complete, valid, no speculation, core commands pass, tasks closed |
+| **Gate 2 (Reviewer)** | Zero P0/P1 issues (APPROVE) |
+| **Gate 3 (Guardrail)** | Zero goal-alignment errors (PASS) |
 
-**Quad Gate Decision Table:**
+**Command Failure Classification:**
 
-| Claude Gate | Codex Gate | Reviewer Gate | Doc Gate | Final Verdict | Action |
-|-------------|------------|---------------|----------|---------------|--------|
-| PASS | PASS | APPROVE | PASS | **PASS** | Complete session |
-| PASS | PASS | APPROVE | FAIL | **FAIL** | Create tasks for doc issues |
-| PASS | PASS | APPROVE | N/A | **PASS** | Complete session (no design doc) |
-| PASS | SKIP | APPROVE | PASS | **PASS** | Complete session (Codex unavailable) |
-| PASS | SKIP | APPROVE | N/A | **PASS** | Complete session (no Codex, no design) |
-| PASS | any | REQUEST_CHANGES | any | **FAIL** | Create tasks for P1 issues |
-| PASS | any | REJECT | any | **FAIL** | Create tasks for P0 issues (CRITICAL) |
-| PASS | FAIL | APPROVE | PASS | **FAIL** | Create tasks for Codex issues |
+| Command | On Failure | Classification |
+|---------|-----------|----------------|
+| `npm test` / `bun test` | FAIL | Core -- functional correctness |
+| `tsc --noEmit` | FAIL | Core -- code validity |
+| `npm run build` | FAIL | Core -- deliverable integrity |
+| `eslint` / lint | WARNING | Non-core -- cosmetic, fix in next commit |
+
+**Triple Gate + Advisory Decision Table:**
+
+Codex is advisory only -- the Codex column is always "any" and never affects the final verdict.
+
+| Claude | Reviewer | Guardrail | Codex (advisory) | Final Verdict | Action |
+|--------|----------|-----------|-------------------|---------------|--------|
+| PASS | APPROVE | PASS | any | **PASS** | Complete session |
+| PASS | APPROVE | FAIL | any | **FAIL** | Create tasks for goal-alignment issues |
+| PASS | REQUEST_CHANGES | any | any | **FAIL** | Create tasks for P1 issues |
+| PASS | REJECT | any | any | **FAIL** | Create tasks for P0 issues (CRITICAL) |
 | FAIL | any | any | any | **FAIL** | Create tasks for Claude issues |
-| FAIL | SKIP | any | any | **FAIL** | Create tasks for Claude issues |
-
-**Note**: Doc Gate is N/A when no design document exists. It only applies when `--design` was provided to Codex.
 
 **FAIL Triggers:**
 
@@ -509,8 +528,9 @@ bun "{SCRIPTS_PATH}/task-create.js" --session ${CLAUDE_SESSION_ID} \
 |---------|--------|
 | **Missing evidence** | Create task: "Add evidence for [criterion]" |
 | **Blocked pattern** | Create task: "Replace speculation with evidence" |
-| **Command failure** | Create task: "Fix failing tests" |
-| **Codex found issues** | Create task: "Fix Codex-identified issue: [detail]" |
+| **Core command failure** | Create task: "Fix failing tests/build/types" |
+| **Lint failure** | WARNING only -- note in report, do NOT create fix task |
+| **Guardrail goal-alignment error** | Create task: "Fix: Guardrail - [axis] in [file]" |
 | **Reviewer P0 issue** | Create task: "Fix: [P0] [description]" (CRITICAL) |
 | **Reviewer P1 issue** | Create task: "Fix: [P1] [description]" |
 
@@ -580,27 +600,19 @@ bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EX
 
 ### Claude Gate Verdict: PASS / FAIL
 
-## Codex Gate
+## Guardrail Gate
 
-### Codex Availability
-- Available: true / false
-- Verdict: PASS / FAIL / SKIP
+### Guardrail Agent
+- Verdict: PASS / FAIL
 
-### Codex Review Findings
-- Issues Found: 2
-  1. Warning: Potential null pointer in src/auth.ts:42
-  2. Info: Consider error handling in src/api.ts:15
+### Guardrail Findings
 
-### Codex Exec Criteria Results
+| Axis | Severity | File:Line | Message |
+|------|----------|-----------|---------|
+| goal-alignment | error | src/auth.ts:42 | Implementation diverges from design |
+| scope-drift | warning | src/api.ts:15 | Endpoint not in original scope |
 
-| Criterion | Status | Evidence |
-|-----------|--------|----------|
-| Tests pass | PASS | All test files execute successfully |
-| API works | FAIL | No GET /api/users endpoint found |
-
-### Codex Gate Verdict: PASS / FAIL / SKIP
-
-**SKIP Note** (if applicable): Codex CLI not installed - verification skipped (graceful degradation)
+### Guardrail Gate Verdict: PASS / FAIL
 
 ## Reviewer Gate
 
@@ -631,21 +643,35 @@ bun "{SCRIPTS_PATH}/session-update.js" --session ${CLAUDE_SESSION_ID} --phase EX
 
 ### Doc Gate Verdict: PASS / FAIL / N/A
 
+## Codex Advisory (Non-blocking)
+
+### Status
+- Status: completed / skipped
+- Findings are **informational only** -- does NOT affect verdict
+
+### Codex Findings (if completed)
+- Issues Found: 2
+  1. Warning: Potential null pointer in src/auth.ts:42
+  2. Info: Consider error handling in src/api.ts:15
+
+### Note
+If Codex did not complete or was unavailable: "Codex advisory: skipped (non-blocking)"
+
 ## Combined Verdict
 
 | Gate | Result |
 |------|--------|
-| Claude Gate | PASS / FAIL |
-| Codex Gate | PASS / FAIL / SKIP |
-| Reviewer Gate | APPROVE / REQUEST_CHANGES / REJECT |
+| Gate 1 (Claude) | PASS / FAIL |
+| Gate 2 (Reviewer) | APPROVE / REQUEST_CHANGES / REJECT |
+| Gate 3 (Guardrail) | PASS / FAIL |
 | Doc Gate | PASS / FAIL / N/A |
+| Codex Advisory | completed / skipped (non-blocking, does NOT affect verdict) |
 | **Final Verdict** | **PASS / FAIL** |
 
 ## Issues (if FAIL)
 1. Claude: Task 2: Missing evidence for "API works"
 2. Claude: Task 3: Found "TODO" in evidence
-3. Codex: No GET /api/users endpoint found (criterion: "API works")
-4. Codex: Warning - Potential null pointer in src/auth.ts:42
+3. Guardrail: goal-alignment error in src/auth.ts:42
 
 ## Session Updated
 - Session ID: ${CLAUDE_SESSION_ID}
