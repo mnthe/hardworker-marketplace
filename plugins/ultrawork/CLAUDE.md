@@ -75,6 +75,7 @@ plugins/ultrawork/
 │   ├── worker/
 │   ├── verifier/
 │   ├── reviewer/
+│   ├── guardrail/
 │   └── scope-analyzer/
 ├── commands/                  # Command definitions
 ├── hooks/
@@ -162,7 +163,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **session-context-hook.js**     | UserPromptSubmit        | Inject session variables into context           | Adds SESSION_ID and CLAUDE_PLUGIN_ROOT to agent prompts                                                                                                            |
 | **agent-lifecycle-tracking.js** | PreToolUse              | Track agent execution for evidence              | Records which agents are active (for subagent tracking)                                                                                                            |
 | **post-tool-use-evidence.js**   | PostToolUse             | Collect evidence from tool usage                | Records command execution (Bash), file operations (Write/Edit), test results                                                                                       |
-| **gate-enforcement.js**         | PreToolUse (Edit/Write/Bash) | Enforce phase restrictions, TDD order, and dual Codex gates | Blocks code edits during PLANNING; blocks implementation before tests in TDD; blocks `--phase EXECUTION` without doc-review result file; blocks `--verifier-passed` without verification result file |
+| **gate-enforcement.js**         | PreToolUse (Edit/Write/Bash) | Enforce phase restrictions, TDD order, and doc-review gate | Blocks code edits during PLANNING; blocks implementation before tests in TDD; blocks `--phase EXECUTION` without doc-review result file |
 | **gate-status-notification.js** | PostToolUse (Task)      | Notify about gate enforcement status            | Displays session phase and gate rules after Task tool usage                                                                                                        |
 | **subagent-start-tracking.js**  | SubagentStart (ultrawork:.*) | Track subagent spawn                        | Records agent_id, agent_type to session.active_agents[]                                                                                                            |
 | **subagent-stop-tracking.js**   | SubagentStop            | Track subagent completion                       | Uses agent_type for filtering, removes from active_agents[], records completion with agent_type in evidence                                                        |
@@ -179,6 +180,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **verifier**       | opus    | Quality gatekeeper   | Audit evidence, scan for blocked patterns, run final tests, PASS/FAIL determination, trigger Ralph loop on fail. Transitions to DOCUMENTATION (PASS) or EXECUTION (FAIL). |
 | **reviewer**       | opus    | Code review + correctness gate | Deep verification with P0/P1 correctness checks. Mandatory in verification pipeline (Phase 2-2). Task-level + integration review. |
 | **documenter**       | opus    | Documentation | Create ADR, update permanent docs, delete plan doc. Transitions session to COMPLETE. |
+| **guardrail**      | opus    | Goal-alignment gate  | Independent goal-alignment verification. 4 axes: goal-result alignment, critical omissions, security holes, breaking changes. |
 | **scope-analyzer** | haiku   | Dependency detection | Analyze cross-layer deps, output to context.json scopeExpansion                                                 |
 
 ## State Management
@@ -557,12 +559,12 @@ DOCUMENTATION → COMPLETE
 2. TDD-GREEN: Implementation created, test executed, exit code 0
 3. TDD-REFACTOR: (Optional) Improvements made, tests still pass
 
-**VERIFICATION Phase (Mandatory Reviewer Gate)**:
+**VERIFICATION Phase (Reviewer + Guardrail Gates)**:
 
-- Verifier spawns reviewer agent as Phase 2-2
-- Reviewer performs task-level + integration review for P0+P1 issues
-- Reviewer verdict (APPROVE/REQUEST_CHANGES/REJECT) feeds into Quad Gate
-- Not hook-enforced: managed internally by verifier agent logic
+- Verifier spawns reviewer agent for task-level + integration review (P0+P1 issues)
+- Verifier spawns guardrail agent for independent goal-alignment verification (4 axes)
+- Codex result file is no longer required for `--verifier-passed` transition
+- Reviewer and Guardrail verdicts feed into Triple Gate (not hook-enforced: managed internally by verifier agent logic)
 
 ### Blocked Patterns
 
@@ -577,9 +579,9 @@ Verifier scans all evidence for these patterns. If found → instant FAIL:
 - "not implemented"
 - "placeholder"
 
-## Codex Dual-Phase Gate Verification
+## Verification Pipeline
 
-Ultrawork integrates Codex CLI at two phase transition points:
+Ultrawork uses a multi-layer verification pipeline combining deterministic checks, LLM-based review, and independent goal-alignment verification.
 
 ### Gate 1: PLANNING → EXECUTION (Doc-Review Gate)
 
@@ -590,51 +592,62 @@ Ultrawork integrates Codex CLI at two phase transition points:
 **How It Works:**
 1. After design document is written, orchestrator/planner runs `codex-verify.js --mode doc-review`
 2. Gate in `gate-enforcement.js` blocks `session-update --phase EXECUTION` without result file
-3. Verdict handling:
+3. Codex doc-review is advisory: allows through when result file is missing (graceful degradation), but blocks on FAIL verdict
+4. Verdict handling:
 
 | Verdict | Gate Action | Next Step |
 |---------|-------------|-----------|
 | SKIP | Allow (Codex not installed) | Proceed to EXECUTION |
 | PASS | Allow | Proceed to EXECUTION |
 | FAIL | Block | Fix document → re-review |
-| No file | Block | Run doc-review first |
+| No file | Allow (advisory — graceful degradation) | Proceed to EXECUTION |
 
 **Fix Loop:**
 - Interactive: AskUserQuestion with issues → user confirms → fix → re-review
 - Auto: Auto-fix → re-review (max 3 attempts)
 
-### Gate 2: VERIFICATION → DOCUMENTATION (Full Verification Gate)
+### Gate 2: VERIFICATION → DOCUMENTATION (Guardrail Agent + Codex Advisory)
 
-**Purpose**: Verify code quality and criteria after implementation.
+**Purpose**: Verify goal-alignment, code quality, and criteria after implementation.
 
-**Result file**: `/tmp/codex-{sessionId}.json`
+**Primary**: Guardrail Agent (independent goal-alignment verification)
+**Advisory**: Codex CLI (code quality safety net)
 
-**Fork-Join Pattern:**
-1. **Phase 1-2 (Fork)**: Verifier spawns background Codex process via `codex-verify.js`
-2. **Phase 1-1**: Verifier performs primary checks (evidence audit, tests, blocked patterns)
-3. **Phase 2-1 (Join)**: Verifier waits for Codex completion, reads results from output file
-4. **Phase 3-1**: Combined verdict (both gates must pass)
+**Pipeline:**
+1. **Verifier** performs primary checks (evidence audit, tests, blocked patterns)
+2. **Reviewer** performs task-level + integration code review (P0/P1 correctness)
+3. **Guardrail Agent** performs independent goal-alignment verification across 4 axes:
+   - Goal-result alignment
+   - Critical omissions
+   - Security holes
+   - Breaking changes
+4. **Codex** (advisory safety net): If installed, results are logged but do not gate the transition
+
+**Guardrail Agent:**
+- Spawned by verifier as part of the verification pipeline
+- Managed internally by verifier agent logic (not hook-enforced)
+- Provides PASS/FAIL determination based on goal-alignment analysis
+- FAIL triggers Ralph loop (back to EXECUTION)
+
+**Codex Advisory:**
+- Result file `/tmp/codex-{sessionId}.json` is no longer required for `--verifier-passed` transition
+- If Codex is installed, results are included in evidence for informational purposes
+- If Codex is not installed or fails, verification proceeds without it
+
+**Triple Gate Architecture:**
+
+| Layer | Type | Enforcer | Purpose |
+|-------|------|----------|---------|
+| Gate 0 | Deterministic | `deterministic-verify.js` | Rule-based checks (task status, evidence) |
+| Gate 1 | LLM (Verifier) | Verifier agent | Evidence audit, tests, blocked patterns |
+| Gate 2 | LLM (Reviewer) | Reviewer agent | P0/P1 code correctness |
+| Gate 3 | LLM (Guardrail) | Guardrail agent | Independent goal-alignment |
+| Advisory | CLI | Codex | Code quality safety net (non-blocking) |
 
 **Graceful Degradation:**
-- If Codex not installed: Verifier continues with primary checks only
-- If Codex fails: Logged as warning, primary gate verdict takes precedence
+- If Codex not installed: Verification proceeds with Triple Gate only
+- If Codex fails: Logged as warning, does not affect verdict
 - Script detects Codex availability via `which codex` check
-
-**Verification Modes:**
-- `check`: Quick lint-style checks
-- `review`: Code quality review
-- `exec`: Run tests and validation
-- `full`: Complete verification (check + review + exec)
-
-**Output Format:**
-- Codex writes JSON to temporary file (schema: `codex-output-schema.json`)
-- Verifier parses results and integrates into final verdict
-- Both gate results included in evidence log
-
-**Why Dual Gate?**
-- Ultrawork verifier focuses on evidence completeness and test execution
-- Codex provides code quality analysis and pattern detection
-- Two independent verifiers increase confidence in PASS verdict
 
 ### File Lifecycle and Cleanup
 
@@ -643,10 +656,10 @@ Ultrawork integrates Codex CLI at two phase transition points:
 - This ensures fresh results on every invocation and prevents stale results from interfering with gate enforcement
 - Location: `main()` function in codex-verify.js deletes `--output` file before mode-specific logic
 
-**Manual Deletion Blocking:**
-- `gate-enforcement.js` PreToolUse hook blocks Bash commands attempting `rm` or `unlink` of codex result files
-- Prevents bypassing automatic cleanup mechanisms that maintain consistency
-- Helpful error message guides users to re-run codex-verify.js instead (which auto-cleans)
+**Codex Result Files:**
+- Codex result files are advisory artifacts and are not protected from manual deletion
+- `gate-enforcement.js` does not block deletion of Codex result files
+- Codex result files are automatically cleaned up on script re-invocation
 
 **Cleanup on Phase Transition (Ralph Loop):**
 - When transitioning from EXECUTION back to EXECUTION (Ralph loop for verification failure):
