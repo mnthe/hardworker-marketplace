@@ -170,6 +170,14 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 | **stop-hook.js**                | Stop                    | Validate evidence on stop                       | Checks stop_hook_active to prevent loops, validates evidence sufficiency, enforces zero-tolerance rules                                                            |
 | **keyword-detector.js**         | UserPromptSubmit        | Detect ultrawork keywords and transform prompts | Transforms "ultrawork X", "ulw X", "uw X" to /ultrawork commands; supports --auto and --plan-only modes                                                            |
 
+### Lock Ordering Convention
+
+When acquiring multiple file locks, always use this order:
+1. session.json
+2. evidence/log.jsonl
+
+This prevents deadlock between concurrent hooks. If a lock cannot be acquired within the timeout (15s), the write is skipped and a warning is logged to stderr. Never fall back to writing without a lock.
+
 ## Agent Inventory
 
 | Agent              | Model   | Role                 | Key Responsibilities                                                                                            |
@@ -211,31 +219,35 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 ```json
 {
-  "version": "6.1",
+  "version": "7.0",
   "session_id": "abc-123",
   "working_dir": "/path/to/project",
   "original_dir": null,
   "goal": "Implement user authentication",
+  "goal_brief": "implement-user-authentication",
+  "planning_tier": "PLANNING",
   "started_at": "2026-01-12T10:00:00Z",
   "updated_at": "2026-01-12T10:05:00Z",
   "phase": "PLANNING",
   "exploration_stage": "overview",
   "iteration": 1,
   "plan": {
-    "approved_at": null
+    "approved_at": null,
+    "design_doc": null
   },
   "options": {
     "max_workers": 0,
     "max_iterations": 5,
-    "skip_verify": false,
     "plan_only": false,
     "auto_mode": false
   },
   "worktree": null,
   "verifier_passed": false,
   "documenter_completed": false,
+  "cancelled_at": null,
   "evidence_log": [],
-  "cancelled_at": null
+  "active_agents": [],
+  "workers": []
 }
 ```
 
@@ -243,7 +255,7 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 
 ```json
 {
-  "version": "6.1",
+  "version": "7.0",
   "working_dir": "/project/.worktrees/user-auth-2026-01-17",
   "original_dir": "/project",
   "worktree": {
@@ -258,6 +270,13 @@ All hooks run on `bun` runtime. Hooks are idempotent and non-blocking.
 **Phase values**: `PLANNING` | `EXECUTION` | `VERIFICATION` | `DOCUMENTATION` | `COMPLETE` | `CANCELLED` | `FAILED`
 
 **Exploration stages**: `not_started` | `overview` | `analyzing` | `targeted` | `complete`
+
+**Planning tier values**: `NO_PLANNING` | `PLANNING` | `HIERARCHICAL_PLANNING` (auto-detected from goal text)
+
+**Dynamic fields** (added by hooks at runtime, not in initial session.json):
+- `evidence_log`: Array of evidence entries appended by lifecycle hooks (agent-lifecycle-tracking, subagent-stop-tracking)
+- `active_agents`: Array of currently running agent descriptors (managed by subagent-start/stop tracking hooks)
+- `workers`: Array of worker completion records (managed by subagent-stop-tracking hook)
 
 ### Task State Format
 
