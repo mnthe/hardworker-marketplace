@@ -24,7 +24,8 @@
     "./agents/scope-analyzer/AGENT.md",
     "./agents/verifier/AGENT.md",
     "./agents/worker/AGENT.md",
-    "./agents/documenter/AGENT.md"
+    "./agents/documenter/AGENT.md",
+    "./agents/guardrail/AGENT.md"
   ],
   "skills": "./skills/"
 }
