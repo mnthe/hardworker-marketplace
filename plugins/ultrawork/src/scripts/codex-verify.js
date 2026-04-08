@@ -53,6 +53,11 @@ const VALID_SANDBOX_MODES = ['read-only', 'workspace-write', 'danger-full-access
 const DEFAULT_MODEL = 'gpt-5.4';
 const DEFAULT_ENABLE_FEATURES = ['collab'];
 
+// Timeout and truncation constants
+const CODEX_TIMEOUT_SHORT = 600000;   // 10 minutes - review operations
+const CODEX_TIMEOUT_LONG = 900000;    // 15 minutes - exec operations
+const STDERR_MAX_LENGTH = 500;
+
 /**
  * Determine sandbox mode based on verify mode or explicit override
  * exec/full → workspace-write (tests need /tmp writes)
@@ -111,6 +116,17 @@ function classifyExecError(error, timeoutMs) {
     category: 'unknown',
     detail: error.message || 'Unknown execution error'
   };
+}
+
+/**
+ * Build a standardized error_detail object from stderr and classification.
+ * @param {string} stderr - Raw stderr output
+ * @param {string} category - Error category from classifyExecError
+ * @param {string} detail - Error detail from classifyExecError
+ * @returns {{ stderr: string, category: string, detail: string }}
+ */
+function buildErrorDetail(stderr, category, detail) {
+  return { category, detail, stderr: stderr.slice(0, STDERR_MAX_LENGTH) };
 }
 
 // ============================================================================
@@ -188,7 +204,9 @@ function detectDefaultBranch(workingDir) {
         stdio: ['pipe', 'pipe', 'pipe']
       });
       return branch;
-    } catch (_) {}
+    } catch (_) {
+      // Intentional: branch does not exist in this repo
+    }
   }
   return null;
 }
@@ -213,7 +231,7 @@ function runCodexReview(workingDir, base) {
       cwd: workingDir,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: 600000
+      timeout: CODEX_TIMEOUT_SHORT
     });
     const output = extractReviewContent(rawOutput);
     return { exit_code: 0, output, issues: [] };
@@ -222,7 +240,7 @@ function runCodexReview(workingDir, base) {
     const stderr = error.stderr ? error.stderr.toString().trim() : '';
     const rawOutput = [stdout, stderr].filter(Boolean).join('\n');
     const output = extractReviewContent(rawOutput);
-    const { category, detail } = classifyExecError(error, 600000);
+    const { category, detail } = classifyExecError(error, CODEX_TIMEOUT_SHORT);
 
     // Parse issues from extracted content
     const issues = output
@@ -234,7 +252,7 @@ function runCodexReview(workingDir, base) {
       exit_code: error.status || 1,
       output,
       issues,
-      error_detail: { category, detail, stderr: stderr.slice(0, 500) }
+      error_detail: buildErrorDetail(stderr, category, detail)
     };
   }
 }
@@ -253,13 +271,17 @@ function getGitContext(workingDir) {
       { cwd: workingDir, encoding: 'utf-8', timeout: 10000, shell: true,
         stdio: ['pipe', 'pipe', 'pipe'] }
     ).trim();
-  } catch (_) {}
+  } catch (_) {
+    // Intentional: graceful degradation when git diff is unavailable
+  }
   try {
     recentCommits = execSync('git log --oneline -5', {
       cwd: workingDir, encoding: 'utf-8', timeout: 10000,
       stdio: ['pipe', 'pipe', 'pipe']
     }).trim();
-  } catch (_) {}
+  } catch (_) {
+    // Intentional: graceful degradation when git log is unavailable
+  }
   return { diffStat, recentCommits };
 }
 
@@ -386,7 +408,7 @@ function runCodexExec(workingDir, criteria, goal, model, designPath, enableFeatu
       cwd: workingDir,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: 900000
+      timeout: CODEX_TIMEOUT_LONG
     }).trim();
 
     const criteriaResults = parseExecOutput(output, criteria);
@@ -400,7 +422,7 @@ function runCodexExec(workingDir, criteria, goal, model, designPath, enableFeatu
     const stdout = error.stdout ? error.stdout.toString().trim() : '';
     const stderr = error.stderr ? error.stderr.toString().trim() : '';
     const combinedOutput = [stdout, stderr].filter(Boolean).join('\n');
-    const { category, detail } = classifyExecError(error, 900000);
+    const { category, detail } = classifyExecError(error, CODEX_TIMEOUT_LONG);
 
     // Try to parse valid results from partial output (Codex may exit non-zero but still produce JSON)
     const parsedResults = combinedOutput ? parseExecOutput(combinedOutput, criteria) : null;
@@ -409,7 +431,7 @@ function runCodexExec(workingDir, criteria, goal, model, designPath, enableFeatu
     return {
       exit_code: error.status || 1,
       output: combinedOutput,
-      error_detail: { category, detail, stderr: stderr.slice(0, 500) },
+      error_detail: buildErrorDetail(stderr, category, detail),
       criteria_results: hasValidResults ? parsedResults : criteria.map(c => ({
         criterion: c,
         result: 'FAIL',
@@ -554,7 +576,7 @@ function runCodexDocReview(designPath, goal, model, enableFeatures = [], designO
     const output = execFileSync('codex', args, {
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: 900000
+      timeout: CODEX_TIMEOUT_LONG
     }).trim();
 
     const { doc_issues, verdict } = parseDocReviewOutput(output);
@@ -564,7 +586,7 @@ function runCodexDocReview(designPath, goal, model, enableFeatures = [], designO
     const stdout = error.stdout ? error.stdout.toString().trim() : '';
     const stderr = error.stderr ? error.stderr.toString().trim() : '';
     const combinedOutput = [stdout, stderr].filter(Boolean).join('\n');
-    const { category, detail } = classifyExecError(error, 900000);
+    const { category, detail } = classifyExecError(error, CODEX_TIMEOUT_LONG);
 
     // Try to parse valid doc_issues from partial output (Codex may exit non-zero but still produce JSON)
     const parsed = combinedOutput ? parseDocReviewOutput(combinedOutput) : null;
@@ -574,7 +596,7 @@ function runCodexDocReview(designPath, goal, model, enableFeatures = [], designO
     return {
       exit_code: error.status || 1,
       output: combinedOutput,
-      error_detail: { category, detail, stderr: stderr.slice(0, 500) },
+      error_detail: buildErrorDetail(stderr, category, detail),
       doc_issues: hasValidIssues ? parsed.doc_issues : [{ category: 'exec_error', severity: 'error', detail: `Codex doc-review failed: ${detail}` }],
       verdict: hasValidIssues ? parsed.verdict : 'FAIL'
     };
@@ -734,10 +756,10 @@ function validateModeArgs(args) {
 // ============================================================================
 
 /**
- * Main execution function
- * @returns {void}
+ * Parse CLI args, validate, and prepare enable features.
+ * @returns {{ args: CliArgs, enableFeatures: string[] }}
  */
-function main() {
+function parseAndValidateArgs() {
   // Check for help flag first (before validation)
   if (process.argv.includes('--help') || process.argv.includes('-h')) {
     console.log(generateHelp('codex-verify.js', ARG_SPEC,
@@ -762,35 +784,21 @@ function main() {
     : [];
   const enableFeatures = [...new Set([...DEFAULT_ENABLE_FEATURES, ...userFeatures])];
 
-  // Check codex availability
-  const availability = checkCodexAvailability();
+  return { args, enableFeatures };
+}
 
-  // If codex not available, output SKIP result
-  if (!availability.available) {
-    const result = buildSkipResult(args.mode);
-    outputResult(result, args.output);
-    return;
-  }
-
-  // Codex is available - execute requested mode
+/**
+ * Execute the verification flow based on mode.
+ * @param {CliArgs} args - Parsed CLI arguments
+ * @param {string[]} enableFeatures - Features to enable
+ * @param {{ available: boolean, version: string|null, path: string|null }} availability - Codex availability
+ * @returns {{ reviewResult: Object|null, execResult: Object|null, docReviewResult: Object|null }}
+ */
+function executeVerification(args, enableFeatures, availability) {
+  const sandboxMode = resolveSandboxMode(args.mode, args.sandbox);
   let reviewResult = null;
   let execResult = null;
   let docReviewResult = null;
-
-  if (args.mode === 'check') {
-    const result = {
-      available: true,
-      mode: 'check',
-      codex_version: availability.version,
-      codex_path: availability.path,
-      verdict: 'PASS',
-      summary: `Codex CLI available: ${availability.version || 'unknown version'}`
-    };
-    outputResult(result, args.output);
-    return;
-  }
-
-  const sandboxMode = resolveSandboxMode(args.mode, args.sandbox);
 
   if (args.mode === 'doc-review') {
     docReviewResult = runCodexDocReview(args.design, args.goal, args.model, enableFeatures, args.designOptional, sandboxMode);
@@ -815,12 +823,24 @@ function main() {
     // designOptional + file absent -> docReviewResult remains null
   }
 
+  return { reviewResult, execResult, docReviewResult };
+}
+
+/**
+ * Build final result object from mode results.
+ * @param {VerifyMode} mode - Requested mode
+ * @param {Object|null} reviewResult
+ * @param {Object|null} execResult
+ * @param {Object|null} docReviewResult
+ * @returns {Object} Result JSON
+ */
+function buildResultObject(mode, reviewResult, execResult, docReviewResult) {
   const verdict = determineVerdict(reviewResult, execResult, docReviewResult);
   const summary = buildSummary(reviewResult, execResult, docReviewResult, verdict);
 
   const result = {
     available: true,
-    mode: args.mode,
+    mode,
     verdict,
     summary
   };
@@ -844,6 +864,37 @@ function main() {
     }
   }
 
+  return result;
+}
+
+/**
+ * Main execution function
+ * @returns {void}
+ */
+function main() {
+  const { args, enableFeatures } = parseAndValidateArgs();
+
+  const availability = checkCodexAvailability();
+
+  if (!availability.available) {
+    outputResult(buildSkipResult(args.mode), args.output);
+    return;
+  }
+
+  if (args.mode === 'check') {
+    outputResult({
+      available: true,
+      mode: 'check',
+      codex_version: availability.version,
+      codex_path: availability.path,
+      verdict: 'PASS',
+      summary: `Codex CLI available: ${availability.version || 'unknown version'}`
+    }, args.output);
+    return;
+  }
+
+  const { reviewResult, execResult, docReviewResult } = executeVerification(args, enableFeatures, availability);
+  const result = buildResultObject(args.mode, reviewResult, execResult, docReviewResult);
   outputResult(result, args.output);
 }
 
