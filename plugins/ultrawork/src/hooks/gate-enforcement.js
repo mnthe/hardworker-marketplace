@@ -10,30 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 const { isSessionActive, readSessionField, getSessionDir } = require('../lib/session-utils.js');
-
-/**
- * Check if codex CLI is available on the system
- * @returns {boolean}
- */
-function isCodexInstalled() {
-  try {
-    execSync('which codex', { stdio: ['pipe', 'pipe', 'pipe'] });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Get the Codex result file path for a session
- * @param {string} sessionId
- * @returns {string}
- */
-function getCodexResultPath(sessionId) {
-  return `/tmp/codex-${sessionId}.json`;
-}
 
 /**
  * Get the Codex doc-review result file path for a session
@@ -295,24 +272,8 @@ function checkCodexDocGate(sessionId, command) {
   const resultPath = getCodexDocResultPath(sessionId);
 
   if (!fs.existsSync(resultPath)) {
-    // If Codex is not installed, allow through (graceful degradation)
-    if (!isCodexInstalled()) {
-      return null;
-    }
-    return createPreToolUseBlock(
-      'Codex doc-review not completed',
-      `⛔ CODEX DOC-REVIEW GATE: doc-review result not found
-
-Expected file: ${resultPath}
-
-Codex CLI is installed but doc-review has not been run.
-The Codex doc-review must complete before transitioning from PLANNING to EXECUTION.
-
-WHAT TO DO:
-1. Run codex doc-review on the design document
-2. Wait for the result file to be created
-3. Retry this command`
-    );
+    // Advisory: allow through when result file is missing
+    return null;
   }
 
   try {
@@ -405,114 +366,6 @@ async function main() {
   }
 
   // =========================================================================
-  // Codex result file protection: block manual rm of codex result files
-  // =========================================================================
-  if (toolNameLower === 'bash' && sessionId) {
-    const command = hookInput.tool_input?.command || '';
-
-    const codexResultPath = getCodexResultPath(sessionId);
-    const codexDocResultPath = getCodexDocResultPath(sessionId);
-
-    // Detect rm/unlink as a command (at start or after shell separators like &&, ||, ;, |)
-    const isRmCommand = /(^|[;&|]\s*)(rm|unlink)\b/.test(command.trim());
-    const targetsCodexFile = command.includes(codexResultPath) || command.includes(codexDocResultPath) ||
-      command.includes(`/tmp/codex-${sessionId}`) || command.includes(`/tmp/codex-doc-${sessionId}`);
-
-    if (isRmCommand && targetsCodexFile) {
-      outputAndExit(createPreToolUseBlock(
-        'Manual deletion of Codex result files is not allowed',
-        `CODEX FILE PROTECTION: Manual deletion blocked
-
-Target: ${command}
-
-WHY BLOCKED:
-Codex result files are managed automatically by codex-verify.js.
-Manual deletion can bypass verification gates and create inconsistent state.
-
-WHAT TO DO INSTEAD:
-- Re-run codex-verify.js (it auto-cleans old results before running)
-- Or use session-update.js --phase EXECUTION (auto-cleans on phase transition)`
-      ));
-      return;
-    }
-  }
-
-  // =========================================================================
-  // Codex gate: block --verifier-passed without Codex result
-  // =========================================================================
-  if (toolNameLower === 'bash' && sessionId) {
-    const command = hookInput.tool_input?.command || '';
-
-    if (command.includes('session-update') && command.includes('--verifier-passed')) {
-      const resultPath = getCodexResultPath(sessionId);
-
-      if (!fs.existsSync(resultPath)) {
-        // If Codex is not installed, allow through (graceful degradation)
-        if (!isCodexInstalled()) {
-          // No Codex, no gate — allow verifier-passed
-        } else {
-          outputAndExit(createPreToolUseBlock(
-            'Codex verification not completed',
-            `⛔ CODEX GATE: Codex verification result not found
-
-Expected file: ${resultPath}
-
-Codex CLI is installed but verification has not been run.
-The Codex verification must complete before transitioning to DOCUMENTATION.
-
-WHAT TO DO:
-1. Launch Codex verification in Phase 1-2
-2. Wait for completion: TaskOutput(background_task_id, block=True, timeout=300000)
-3. Read the result: cat ${resultPath}
-4. Retry this command`
-          ));
-          return;
-        }
-      }
-
-      try {
-        const result = JSON.parse(fs.readFileSync(resultPath, 'utf-8'));
-
-        if (result.verdict === 'FAIL') {
-          const issues = [];
-          if (result.review?.issues?.length) {
-            issues.push(...result.review.issues.slice(0, 5));
-          }
-          if (result.exec?.criteria_results) {
-            for (const cr of result.exec.criteria_results) {
-              if (cr.result === 'FAIL') issues.push(`${cr.criterion}: ${cr.explanation}`);
-            }
-          }
-          if (result.doc_review?.doc_issues) {
-            for (const i of result.doc_review.doc_issues) {
-              if (i.severity === 'error') issues.push(`[${i.category}] ${i.detail}`);
-            }
-          }
-
-          const issueList = issues.length > 0
-            ? '\n\nIssues:\n' + issues.map((item, idx) => `  ${idx + 1}. ${item}`).join('\n')
-            : '';
-
-          outputAndExit(createPreToolUseBlock(
-            'Codex verification FAIL',
-            `⛔ CODEX GATE: Codex verification returned FAIL
-
-Verdict: FAIL
-Summary: ${result.summary || 'No summary'}${issueList}
-
-Create fix tasks and transition to EXECUTION instead.`
-          ));
-          return;
-        }
-
-        // PASS or SKIP — allow through
-      } catch {
-        // Corrupt result file — allow (graceful degradation)
-      }
-    }
-  }
-
-  // =========================================================================
   // Codex doc-review gate: block PLANNING→EXECUTION without doc-review result
   // =========================================================================
   if (toolNameLower === 'bash' && sessionId) {
@@ -597,4 +450,4 @@ if (require.main === module) {
 }
 
 // Export for testing
-module.exports = { getCodexResultPath, getCodexDocResultPath, checkCodexDocGate, isCodexInstalled };
+module.exports = { getCodexDocResultPath, checkCodexDocGate };

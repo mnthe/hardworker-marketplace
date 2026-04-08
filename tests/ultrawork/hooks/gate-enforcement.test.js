@@ -75,16 +75,15 @@ describe('gate-enforcement.js - Codex doc-review gate', () => {
   });
 
   describe('checkCodexDocGate', () => {
-    test('BLOCK when result file does not exist (criterion: file missing)', () => {
+    test('ALLOW when result file does not exist (advisory: file missing)', () => {
       const sessionId = 'test-no-file';
       createMockSessionForGate(sessionId, 'PLANNING');
 
       const command = `bun /path/to/session-update.js --session ${sessionId} --phase EXECUTION`;
       const result = checkCodexDocGate(sessionId, command);
 
-      expect(result).not.toBeNull();
-      expect(result.hookSpecificOutput.decision).toBe('block');
-      expect(result.hookSpecificOutput.reason).toContain('doc-review');
+      // Advisory: allow through when result file is missing
+      expect(result).toBeNull();
     });
 
     test('ALLOW when verdict is SKIP', () => {
@@ -196,16 +195,16 @@ describe('gate-enforcement.js - Codex doc-review gate', () => {
       fs.unlinkSync(resultPath);
     });
 
-    test('handles -p shorthand for --phase', () => {
+    test('handles -p shorthand for --phase (no file = allow)', () => {
       const sessionId = 'test-shorthand';
       createMockSessionForGate(sessionId, 'PLANNING');
 
-      // No result file, should block
+      // No result file, advisory: allow through
       const command = `bun /path/to/session-update.js --session ${sessionId} -p EXECUTION`;
       const result = checkCodexDocGate(sessionId, command);
 
-      expect(result).not.toBeNull();
-      expect(result.hookSpecificOutput.decision).toBe('block');
+      // Advisory: allow through when result file is missing
+      expect(result).toBeNull();
     });
   });
 });

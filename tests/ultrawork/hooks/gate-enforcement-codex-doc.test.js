@@ -122,9 +122,10 @@ describe('gate-enforcement.js - Codex doc-review gate (PLANNING→EXECUTION)', (
     });
   });
 
-  describe('Criterion: 게이트가 결과 파일 없으면 BLOCK', () => {
-    test('blocks session-update --phase EXECUTION when codex-doc file does not exist', async () => {
+  describe('Criterion: 결과 파일 없으면 ALLOW (advisory)', () => {
+    test('allows session-update --phase EXECUTION when codex-doc file does not exist', async () => {
       // No codex-doc file exists (default from beforeEach)
+      // Advisory: allow through when result file is missing
       const hookInput = {
         session_id: sessionId,
         tool_name: 'Bash',
@@ -137,10 +138,10 @@ describe('gate-enforcement.js - Codex doc-review gate (PLANNING→EXECUTION)', (
 
       expect(result.exitCode).toBe(0);
       expect(result.json).not.toBeNull();
-      expect(result.json.hookSpecificOutput.decision).toBe('block');
+      expect(result.json.hookSpecificOutput.decision).toBe('allow');
     });
 
-    test('blocks session-update -p EXECUTION (short form) when file does not exist', async () => {
+    test('allows session-update -p EXECUTION (short form) when file does not exist', async () => {
       const hookInput = {
         session_id: sessionId,
         tool_name: 'Bash',
@@ -153,26 +154,7 @@ describe('gate-enforcement.js - Codex doc-review gate (PLANNING→EXECUTION)', (
 
       expect(result.exitCode).toBe(0);
       expect(result.json).not.toBeNull();
-      expect(result.json.hookSpecificOutput.decision).toBe('block');
-    });
-
-    test('block message mentions codex-doc or doc-review', async () => {
-      const hookInput = {
-        session_id: sessionId,
-        tool_name: 'Bash',
-        tool_input: {
-          command: `bun session-update.js --session ${sessionId} --phase EXECUTION`
-        }
-      };
-
-      const result = await runHook(hookInput, session);
-
-      const additionalContext = result.json?.hookSpecificOutput?.additionalContext || '';
-      const reason = result.json?.hookSpecificOutput?.reason || '';
-      const combined = additionalContext + reason;
-
-      // Should mention what to do or the missing file
-      expect(combined.toLowerCase()).toMatch(/codex|doc.review|doc_review/i);
+      expect(result.json.hookSpecificOutput.decision).toBe('allow');
     });
   });
 

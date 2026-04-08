@@ -8,7 +8,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 const { getSessionDir, readSession } = require('../lib/session-utils.js');
 const { parseArgs, generateHelp } = require('../lib/args.js');
 const { writeJsonAtomically } = require('../lib/json-ops.js');
@@ -110,21 +109,8 @@ function validateArgs(args) {
 // ============================================================================
 
 /**
- * Check if codex CLI is available on the system
- * @returns {boolean}
- */
-function isCodexInstalled() {
-  try {
-    execSync('which codex', { stdio: ['pipe', 'pipe', 'pipe'] });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Check doc-review gate during PLANNING phase.
- * Blocks task creation if Codex doc-review has not passed.
+ * Advisory: allows through when result file missing, blocks only on FAIL verdict.
  * @param {string} sessionId - Session ID
  * @returns {void}
  */
@@ -143,11 +129,8 @@ function checkDocReviewGate(sessionId) {
   const resultPath = `/tmp/codex-doc-${sessionId}.json`;
 
   if (!fs.existsSync(resultPath)) {
-    if (!isCodexInstalled()) {
-      return; // Graceful degradation: Codex not installed
-    }
-    console.error('Error: Codex doc-review must pass before creating tasks during PLANNING phase.\nRun codex-verify.js --mode doc-review first.');
-    process.exit(1);
+    // Advisory: allow through when result file is missing
+    return;
   }
 
   try {

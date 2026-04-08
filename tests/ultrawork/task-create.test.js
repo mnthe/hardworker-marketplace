@@ -380,16 +380,16 @@ describe('task-create.js', () => {
       expect(result.stderr).toContain('Codex doc-review returned FAIL');
     });
 
-    test('PLANNING + no result + Codex installed → exit 1', async () => {
-      // No result file exists, and Codex is installed on this machine
+    test('PLANNING + no result → task created (advisory)', async () => {
+      // No result file exists - advisory gate allows through
       const result = await runScript(SCRIPT_PATH, [
         '--session', planningSession.sessionId,
         '--id', 'gate-no-result',
         '--subject', 'Gate no result test'
       ]);
 
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain('Codex doc-review must pass before creating tasks');
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('OK: Task gate-no-result created');
     });
 
     test('PLANNING + unknown verdict → exit 1', async () => {
