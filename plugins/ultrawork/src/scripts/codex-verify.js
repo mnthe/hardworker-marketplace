@@ -491,10 +491,17 @@ function buildDocReviewPrompt(designPath, goal) {
 
   prompt += `## Design Document\n${designContent}\n\n`;
   prompt += '## Review Criteria\n\n';
+  prompt += 'A design document\'s job is to align direction and define contracts, NOT to pre-specify every implementation detail. ';
+  prompt += 'Flag ONLY issues a competent worker cannot resolve without inventing new design decisions. ';
+  prompt += 'When in doubt, downgrade to warning.\n\n';
   prompt += 'Check the following and report issues:\n\n';
-  prompt += '1. **Context Sufficiency**: Can an AI worker implement each task using ONLY this document + the referenced source files? Report missing context that would force the worker to make undocumented decisions. IGNORE tool permissions, JSON field names, test file internals — those are implementation concerns, not design concerns.\n';
-  prompt += '2. **Goal-Result Alignment**: Does the document define a clear path from Goal to concrete Results? Check: problem statement connects to approach, approach connects to changed files, changed files connect to verification criteria. Report broken chains.\n';
-  prompt += '3. **Blocked Patterns**: Find TODO, TBD, FIXME, placeholder, empty sections, vague statements ("should work", "probably", "maybe"). Report as errors.\n\n';
+  prompt += '1. **Context Sufficiency**: Can an AI worker implement each task using ONLY this document + the referenced source files? Report missing context that would force the worker to make undocumented decisions — limited to: new type/schema shapes, new file paths for files that MUST be created, new API/function signatures referenced by tasks, or undefined behavior for a stated success criterion. IGNORE tool permissions, JSON field names, test file internals — those are implementation concerns, not design concerns. Also IGNORE as implementation details: exact line numbers or edit positions inside existing files, choice between equivalent code locations (inline type vs shared type, helper placement inside function A vs B), naming inconsistencies the document inherits from existing code (e.g., snake_case vs kebab-case in legacy values), whether existing unowned code is "fully" replaced, local variable names, metric/log field naming when the doc mentions them at a high level, whether examples are exhaustive (examples are illustrative, not authoritative), minor redundancy between sections that state the same contract.\n';
+  prompt += '2. **Goal-Result Alignment**: Does the document define a clear path from Goal to concrete Results? Check: problem statement connects to approach, approach connects to changed files, changed files connect to verification criteria. Report broken chains only. Style/clarity gaps are warnings, not errors.\n';
+  prompt += '3. **Blocked Patterns**: Find literal TODO, TBD, FIXME, placeholder, empty sections inside in-scope sections, and vague statements ("should work", "probably", "maybe") about in-scope behavior. TBD/placeholder inside explicitly out-of-scope sections ("Future Work", "Phase 2+", "Out of Scope") is ALLOWED and must NOT be flagged.\n\n';
+  prompt += '## Severity Rule\n';
+  prompt += '- **error**: worker WILL fabricate a design decision without this info — reserved for missing contracts.\n';
+  prompt += '- **warning**: style/clarity improvement but worker can proceed.\n';
+  prompt += 'When in doubt, it is a warning, not an error. Do NOT escalate style/consistency nits to error.\n\n';
   prompt += '## Output Format (JSON)\n';
   prompt += '{\n';
   prompt += '  "doc_issues": [\n';
